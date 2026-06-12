@@ -40,6 +40,9 @@ export interface BuySellChatConversation {
   sellerUserId: string;
   createdAt: string;
   status: 'ACTIVE' | 'CLOSED';
+  listingTitle?: string;
+  buyerName?: string;
+  sellerName?: string;
 }
 
 export interface BuySellChatMessage {

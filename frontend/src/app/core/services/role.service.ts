@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, tap } from 'rxjs';
 
 export type UserRole =
   | 'Member'
@@ -195,6 +195,37 @@ export class RoleService {
           )
       });
     return this.communityMembersSubject.asObservable();
+  }
+
+  createUser(user: {
+    firstName: string;
+    lastName: string;
+    telephoneNumber: string;
+    email: string;
+    roles: UserRole[];
+  }): Observable<CommunityMemberRoleAssignment> {
+    return this.http
+      .post<CommunityMemberRoleAssignment>(`${this.apiUrl}/admin/users`, user)
+      .pipe(
+        tap((created) =>
+          this.communityMembersSubject.next([
+            ...this.communityMembersSubject.value,
+            created
+          ])
+        )
+      );
+  }
+
+  removeUser(userId: number): Observable<void> {
+    return this.http
+      .delete<void>(`${this.apiUrl}/admin/users/${userId}`)
+      .pipe(
+        tap(() =>
+          this.communityMembersSubject.next(
+            this.communityMembersSubject.value.filter(({ id }) => id !== userId)
+          )
+        )
+      );
   }
 
   getActiveRole(): UserRole {

@@ -6,3 +6,6 @@ dist/
 coverage/
 *.log
 backend/uploads/
+backend/data/*.json
+work/
+outputs/

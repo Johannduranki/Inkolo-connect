@@ -17,6 +17,10 @@ const demoApplications = new Map();
 
 export function findDemoUser(telephoneNumber, pepper) {
   const suppliedHash = hashIdNumber(telephoneNumber, pepper);
+  const platformUser = readPlatformState().users.find(
+    (user) => hashIdNumber(user.telephoneNumber, pepper) === suppliedHash
+  );
+  if (platformUser) return getDemoUserById(platformUser.id);
   const user = demoUsers.find(
     (user) => hashIdNumber(user.telephone_number, pepper) === suppliedHash
   );
@@ -28,13 +32,16 @@ export function getDemoUserById(id) {
   const platformUser = readPlatformState().users.find(
     (item) => String(item.id) === String(id)
   );
-  if (!user) return null;
+  if (!user && !platformUser) return null;
   return {
-    ...user,
+    id: platformUser?.id ?? user.id,
+    telephone_number: platformUser?.telephoneNumber ?? user.telephone_number,
     first_name: platformUser?.firstName ?? user.first_name,
     last_name: platformUser?.lastName ?? user.last_name,
     email: platformUser?.email ?? user.email,
-    roles: platformUser?.roles ?? user.roles
+    roles: platformUser?.roles ?? user.roles,
+    status: platformUser?.status ?? user.status,
+    membership_type: user?.membership_type ?? null
   };
 }
 
@@ -56,9 +63,15 @@ export function updateDemoProfile(id, firstName, lastName) {
 }
 
 export function getDemoSubscriptions(userId) {
-  return [...demoSubscriptions.values()].filter(
+  const persisted = readPlatformState().serviceSubscriptions ?? [];
+  const stored = persisted.filter(
     (subscription) => String(subscription.userId) === String(userId)
   );
+  return stored.length
+    ? stored
+    : [...demoSubscriptions.values()].filter(
+        (subscription) => String(subscription.userId) === String(userId)
+      );
 }
 
 export function saveDemoSubscription(userId, subscription) {
@@ -69,6 +82,19 @@ export function saveDemoSubscription(userId, subscription) {
     subscribedAt: new Date().toISOString()
   };
   demoSubscriptions.set(`${userId}:${subscription.serviceCode}`, saved);
+  updatePlatformState((state) => {
+    state.serviceSubscriptions ??= [];
+    const index = state.serviceSubscriptions.findIndex(
+      (item) =>
+        String(item.userId) === String(userId) &&
+        item.serviceCode === subscription.serviceCode
+    );
+    if (index >= 0) {
+      state.serviceSubscriptions[index] = saved;
+    } else {
+      state.serviceSubscriptions.push(saved);
+    }
+  });
   return saved;
 }
 
@@ -95,4 +121,9 @@ export function resetDemoUserServices(userId) {
       demoApplications.delete(key);
     }
   }
+  updatePlatformState((state) => {
+    state.serviceSubscriptions = (state.serviceSubscriptions ?? []).filter(
+      (subscription) => String(subscription.userId) !== String(userId)
+    );
+  });
 }

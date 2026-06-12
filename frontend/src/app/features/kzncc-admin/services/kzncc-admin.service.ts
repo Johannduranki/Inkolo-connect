@@ -1,9 +1,12 @@
-import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, map, of } from 'rxjs';
 import { KznccChurch } from '../models/kzncc-church.model';
 
 @Injectable({ providedIn: 'root' })
 export class KznccAdminService {
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = '/api/platform/kzncc-admin/users';
   private readonly churchesSubject = new BehaviorSubject<KznccChurch[]>([
     {
       id: 1,
@@ -148,4 +151,30 @@ export class KznccAdminService {
   linkMemberToChurch(memberId: number, churchId: number): Observable<boolean> {
     return of(memberId > 0 && churchId > 0);
   }
+
+  getKznccUsers(): Observable<KznccManagedUser[]> {
+    return this.http.get<KznccManagedUser[]>(this.apiUrl);
+  }
+
+  createKznccUser(user: {
+    firstName: string;
+    lastName: string;
+    telephoneNumber: string;
+    email: string;
+    role: 'KZNCC User' | 'KZNCC Admin';
+  }): Observable<KznccManagedUser> {
+    return this.http.post<KznccManagedUser>(this.apiUrl, user);
+  }
+
+  removeKznccUser(userId: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${userId}`);
+  }
+}
+
+export interface KznccManagedUser {
+  id: number;
+  fullName: string;
+  telephoneNumber: string;
+  email: string;
+  roles: ('Member' | 'KZNCC User' | 'KZNCC Admin')[];
 }

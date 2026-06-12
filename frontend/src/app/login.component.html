@@ -20,33 +20,58 @@
       </div>
 
       <p class="eyebrow dark">ACCOUNT ACCESS</p>
-      <h2>Tell us who you are</h2>
-      <p class="form-intro">Choose a demo user, then continue to their assigned dashboard roles.</p>
+      <h2>{{ mode() === 'register' ? 'Create your account' : 'Tell us who you are' }}</h2>
+      <p class="form-intro">
+        @if (mode() === 'register') {
+          Register as an Inkolo Connect member using your name, surname and telephone number.
+        } @else {
+          Choose a registered user, then continue to their assigned dashboard roles.
+        }
+      </p>
 
-      <section class="demo-user-picker" aria-labelledby="demo-users-heading">
-        <div class="demo-picker-heading">
-          <strong id="demo-users-heading">Choose a demo user</strong>
-          <span>{{ demoUsers.length }} profiles</span>
-        </div>
-        <div class="demo-user-grid">
-          @for (demoUser of demoUsers; track demoUser.id) {
-            <button
-              type="button"
-              class="demo-user"
-              [class.selected]="telephoneNumber.value === demoUser.telephoneNumber"
-              (click)="chooseDemoUser(demoUser)"
-            >
-              <span class="demo-avatar">
-                {{ demoUser.firstName.charAt(0) }}{{ demoUser.lastName.charAt(0) }}
-              </span>
-              <span>
-                <strong>{{ demoUser.firstName }} {{ demoUser.lastName }}</strong>
-                <small>{{ demoUser.description }}</small>
-              </span>
-            </button>
-          }
-        </div>
-      </section>
+      <div class="access-mode-switcher" aria-label="Choose account access method">
+        <button
+          type="button"
+          [class.active]="mode() === 'login'"
+          (click)="setMode('login')"
+        >
+          Member login
+        </button>
+        <button
+          type="button"
+          [class.active]="mode() === 'register'"
+          (click)="setMode('register')"
+        >
+          Register
+        </button>
+      </div>
+
+      @if (mode() === 'login') {
+        <section class="demo-user-picker" aria-labelledby="demo-users-heading">
+          <div class="demo-picker-heading">
+            <strong id="demo-users-heading">Choose a registered user</strong>
+            <span>{{ demoUsers.length }} profiles</span>
+          </div>
+          <div class="demo-user-grid">
+            @for (demoUser of demoUsers; track demoUser.id) {
+              <button
+                type="button"
+                class="demo-user"
+                [class.selected]="telephoneNumber.value === demoUser.telephoneNumber"
+                (click)="chooseDemoUser(demoUser)"
+              >
+                <span class="demo-avatar">
+                  {{ demoUser.firstName.charAt(0) }}{{ demoUser.lastName.charAt(0) }}
+                </span>
+                <span>
+                  <strong>{{ demoUser.firstName }} {{ demoUser.lastName }}</strong>
+                  <small>{{ demoUser.description }}</small>
+                </span>
+              </button>
+            }
+          </div>
+        </section>
+      }
 
       <div class="name-fields">
         <label>
@@ -87,7 +112,11 @@
         aria-describedby="telephone-help"
       >
       <p id="telephone-help" class="field-help">
-        The selected user's registered demo number is filled automatically.
+        @if (mode() === 'register') {
+          This number becomes your secure Inkolo Connect login.
+        } @else {
+          The selected user's registered number is filled automatically.
+        }
       </p>
 
       @if (telephoneNumber.touched && telephoneNumber.invalid) {
@@ -98,11 +127,19 @@
       }
 
       <button type="submit" [disabled]="loading()">
-        {{ loading() ? 'Signing in...' : 'Continue' }}
+        {{
+          loading()
+            ? (mode() === 'register' ? 'Creating account...' : 'Signing in...')
+            : (mode() === 'register' ? 'Register and continue' : 'Continue')
+        }}
       </button>
 
       <p class="privacy">
-        Your telephone number is transmitted securely and is not stored in your browser.
+        @if (mode() === 'register') {
+          Your account will be created with the Member role. Additional roles can only be assigned by an administrator.
+        } @else {
+          Your telephone number is transmitted securely and is not stored in your browser.
+        }
       </p>
     </form>
   </section>

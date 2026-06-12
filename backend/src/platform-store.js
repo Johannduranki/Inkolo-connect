@@ -122,7 +122,17 @@ function initialState() {
     [5, 'Ayanda', 'Dlamini', '0741002003', 'ayanda@inkoloconnect.local', ['Member', 'KZNCC Admin']],
     [6, 'Sipho', 'Ncube', '0763004005', 'sipho@inkoloconnect.local', ['Admin User']],
     [7, 'Zanele', 'Mkhize', '0795006007', 'zanele@africanbank.local', ['Service Provider Admin']],
-    [8, 'Mandla', 'Cele', '0817008009', 'mandla@africanbank.local', ['Service Provider User']]
+    [8, 'Mandla', 'Cele', '0817008009', 'mandla@africanbank.local', ['Service Provider User']],
+    [9, 'Bongani', 'Zulu', '0714101001', 'bongani.zulu@inkoloconnect.local', ['Member']],
+    [10, 'Nomusa', 'Khumalo', '0714101002', 'nomusa.khumalo@inkoloconnect.local', ['Member']],
+    [11, 'Sibusiso', 'Dlamini', '0714101003', 'sibusiso.dlamini@inkoloconnect.local', ['Member']],
+    [12, 'Thandeka', 'Mthembu', '0714101004', 'thandeka.mthembu@inkoloconnect.local', ['Member']],
+    [13, 'Mandla', 'Ngcobo', '0714101005', 'mandla.ngcobo@inkoloconnect.local', ['Member']],
+    [14, 'Zanele', 'Buthelezi', '0714101006', 'zanele.buthelezi@inkoloconnect.local', ['Member']],
+    [15, 'Nhlanhla', 'Cele', '0714101007', 'nhlanhla.cele@inkoloconnect.local', ['Member']],
+    [16, 'Lindiwe', 'Nxumalo', '0714101008', 'lindiwe.nxumalo@inkoloconnect.local', ['Member']],
+    [17, 'Themba', 'Mkhize', '0714101009', 'themba.mkhize@inkoloconnect.local', ['Member']],
+    [18, 'Precious', 'Gumede', '0714101010', 'precious.gumede@inkoloconnect.local', ['Member']]
   ].map(([id, firstName, lastName, telephoneNumber, email, roles]) => ({
     id,
     firstName,
@@ -134,7 +144,7 @@ function initialState() {
   }));
 
   return {
-    version: 3,
+    version: 4,
     users,
     profiles: users.map((user) => ({
       userId: user.id,
@@ -237,6 +247,7 @@ function initialState() {
     ],
     contacts: [],
     directMessages: [],
+    serviceSubscriptions: [],
     wallets: users.slice(0, 6).map((user) => ({
       id: `member-${user.id}`,
       ownerType: 'MEMBER',
@@ -263,6 +274,8 @@ function initialState() {
     ],
     referrals: [],
     marketplaceListings: marketplaceSeed(),
+    marketplaceConversations: [],
+    marketplaceMessages: [],
     jobListings: jobSeed(),
     legalAcceptances: []
   };
@@ -281,7 +294,12 @@ function loadState() {
         : jobSeed();
     }
     if ((loaded.version ?? 1) < 3) loaded.legalAcceptances ??= [];
-    loaded.version = 3;
+    loaded.serviceSubscriptions ??= [];
+    if ((loaded.version ?? 1) < 4) {
+      loaded.marketplaceConversations ??= [];
+      loaded.marketplaceMessages ??= [];
+    }
+    loaded.version = 4;
     writeFileSync(storePath, JSON.stringify(loaded, null, 2));
     return loaded;
   } catch {

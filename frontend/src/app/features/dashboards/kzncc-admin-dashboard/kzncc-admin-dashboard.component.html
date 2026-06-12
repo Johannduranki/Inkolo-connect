@@ -14,6 +14,7 @@
 
   <nav class="admin-nav">
     <button [class.active]="activeTab() === 'overview'" (click)="showTab('overview')">Overview</button>
+    <button [class.active]="activeTab() === 'users'" (click)="showTab('users')">Users</button>
     <button [class.active]="activeTab() === 'churches'" (click)="showTab('churches')">Churches</button>
     <button [class.active]="activeTab() === 'revenue'" (click)="showTab('revenue')">Paid revenue</button>
     <button [class.active]="activeTab() === 'communication'" (click)="showTab('communication')">Communication</button>
@@ -66,6 +67,38 @@
           <article>
             <div><strong>{{ transaction.description }}</strong><span>{{ transaction.createdAt | date:'medium' }}</span></div>
             <b>{{ transaction.amount | currency:'ZAR':'symbol-narrow':'1.2-2' }}</b>
+          </article>
+        }
+      </div>
+    </section>
+  }
+
+  @if (activeTab() === 'users') {
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p>KZNCC ACCESS ADMINISTRATION</p><h2>KZNCC users and administrators</h2></div>
+        <span class="paid-badge">{{ managedUsers().length }} users</span>
+      </div>
+      <div class="filters">
+        <input [formControl]="newUserFirstName" placeholder="Name">
+        <input [formControl]="newUserLastName" placeholder="Surname">
+        <input [formControl]="newUserTelephone" placeholder="Telephone number">
+        <input [formControl]="newUserEmail" placeholder="Email address">
+        <select [formControl]="newUserRole">
+          <option value="KZNCC User">KZNCC User</option>
+          <option value="KZNCC Admin">KZNCC Admin</option>
+        </select>
+        <button type="button" (click)="createKznccUser()">Create user</button>
+      </div>
+      <div class="transaction-list">
+        @for (managedUser of managedUsers(); track managedUser.id) {
+          <article>
+            <div>
+              <strong>{{ managedUser.fullName }}</strong>
+              <span>{{ managedUser.telephoneNumber }} · {{ managedUser.email }}</span>
+              <small>{{ managedUser.roles.join(', ') }}</small>
+            </div>
+            <button type="button" (click)="removeKznccUser(managedUser)">Remove</button>
           </article>
         }
       </div>

@@ -1,12 +1,20 @@
 <main class="kzncc-page">
   <header class="topbar">
     <div class="brand-group">
-      <a href="/dashboard" aria-label="Inkolo Connect dashboard">
+      <a
+        href=""
+        aria-label="Inkolo Connect dashboard"
+        (click)="$event.preventDefault(); openRoleDashboard()"
+      >
         <img src="/inkolo-connect-logo.png" alt="Inkolo Connect">
       </a>
       <span>Powered by Duranki</span>
     </div>
-    <a class="my-services" href="/dashboard">My Services</a>
+    <a
+      class="my-services"
+      href=""
+      (click)="$event.preventDefault(); openRoleDashboard()"
+    >Service Dashboard</a>
     <div class="account">
       @if (user()) {
         <app-role-switcher
@@ -42,6 +50,21 @@
         @if (error()) {
           <strong role="alert">{{ error() }}</strong>
         }
+        <section class="kzncc-terms-panel" aria-labelledby="kzncc-terms-title">
+          <div>
+            <p>REQUIRED AGREEMENT</p>
+            <h3 id="kzncc-terms-title">KZNCC Service Terms and Conditions</h3>
+            <a
+              href="/kzncc-service-terms.docx"
+              target="_blank"
+              rel="noopener"
+            >Open Word document</a>
+          </div>
+          <iframe
+            src="/kzncc-service-terms.html"
+            title="KZNCC Service Terms and Conditions"
+          ></iframe>
+        </section>
         <label class="terms-check">
           <input
             type="checkbox"
@@ -65,7 +88,14 @@
         <p>ACTIVE KZNCC MEMBER</p>
         <h2>Welcome, {{ user()?.firstName }}</h2>
       </div>
-      <span>R7 monthly membership active</span>
+      <div class="active-membership-actions">
+        <span>R7 monthly membership active</span>
+        <a
+          href="/kzncc-service-terms.html"
+          target="_blank"
+          rel="noopener"
+        >View accepted terms</a>
+      </div>
     </section>
 
     <div class="dashboard-grid">

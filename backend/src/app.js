@@ -24,6 +24,7 @@ import {
   updateDemoProfile
 } from './demo-store.js';
 import { hashIdNumber, isValidIdNumber, lastFour, normalizeIdNumber } from './id-number.js';
+import { readPlatformState, updatePlatformState } from './platform-store.js';
 
 function mapUser(user, idNumberLast4 = user.id_number_last4) {
   return {
@@ -35,6 +36,26 @@ function mapUser(user, idNumberLast4 = user.id_number_last4) {
     membershipType: user.membership_type,
     roles: user.roles ?? ['Member']
   };
+}
+
+function normalizeTelephoneNumber(value) {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  return digits.startsWith('27') && digits.length === 11
+    ? `0${digits.slice(2)}`
+    : digits;
+}
+
+function validateMemberDetails(firstName, lastName, telephoneNumber) {
+  if (
+    !/^[\p{L}][\p{L}\s'-]{1,99}$/u.test(firstName) ||
+    !/^[\p{L}][\p{L}\s'-]{1,99}$/u.test(lastName)
+  ) {
+    return 'Enter your name and surname.';
+  }
+  if (!/^0\d{9}$/.test(telephoneNumber)) {
+    return 'Enter a valid 10-digit South African telephone number.';
+  }
+  return '';
 }
 
 const servicePlans = {
@@ -142,6 +163,167 @@ export function createApp({ databaseAvailable = true } = {}) {
   });
 
   app.post(
+    '/api/auth/register',
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      limit: 5,
+      standardHeaders: 'draft-7',
+      legacyHeaders: false,
+      message: { message: 'Too many registration attempts. Please try again later.' }
+    }),
+    async (req, res, next) => {
+      const firstName = String(req.body?.firstName ?? '').trim();
+      const lastName = String(req.body?.lastName ?? '').trim();
+      const telephoneNumber = normalizeTelephoneNumber(req.body?.telephoneNumber);
+      const validationError = validateMemberDetails(
+        firstName,
+        lastName,
+        telephoneNumber
+      );
+
+      if (validationError) {
+        return res.status(400).json({ message: validationError });
+      }
+
+      try {
+        let user;
+
+        if (databaseAvailable) {
+          const pool = getPool();
+          const telephoneHash = hashIdNumber(telephoneNumber, config.idPepper);
+          const [existingRows] = await pool.execute(
+            'SELECT id FROM users WHERE id_number_hash = ? LIMIT 1',
+            [telephoneHash]
+          );
+          if (existingRows.length) {
+            return res.status(409).json({
+              message: 'A member with this telephone number is already registered.'
+            });
+          }
+
+          const connection = await pool.getConnection();
+          try {
+            await connection.beginTransaction();
+            const [result] = await connection.execute(
+              `INSERT INTO users
+                (id_number_hash, id_number_last4, first_name, last_name, email, status)
+               VALUES (?, ?, ?, ?, NULL, 'active')`,
+              [
+                telephoneHash,
+                lastFour(telephoneNumber),
+                firstName,
+                lastName
+              ]
+            );
+            const userId = Number(result.insertId);
+            await connection.execute(
+              'INSERT INTO user_roles (user_id, role_code) VALUES (?, ?)',
+              [userId, 'Member']
+            );
+            await connection.execute(
+              `INSERT INTO member_profiles
+                (user_id, telephone_number, email, address, city, postal_code,
+                 emergency_contact_name, emergency_contact_number)
+               VALUES (?, ?, NULL, '', '', '', '', '')`,
+              [userId, telephoneNumber]
+            );
+            await connection.execute(
+              `INSERT INTO wallets
+                (id, owner_type, owner_id, wallet_name, balance, available_balance,
+                 pending_balance, currency, status)
+               VALUES (?, 'MEMBER', ?, ?, 0, 0, 0, 'ZAR', 'ACTIVE')`,
+              [
+                `member-${userId}`,
+                String(userId),
+                `${firstName} ${lastName} Wallet`
+              ]
+            );
+            await connection.commit();
+            user = {
+              id: userId,
+              first_name: firstName,
+              last_name: lastName,
+              email: null,
+              roles: ['Member'],
+              status: 'active',
+              membership_type: null
+            };
+          } catch (error) {
+            await connection.rollback();
+            throw error;
+          } finally {
+            connection.release();
+          }
+        } else if (config.allowDemoAuth) {
+          const existing = readPlatformState().users.find(
+            (candidate) =>
+              normalizeTelephoneNumber(candidate.telephoneNumber) === telephoneNumber
+          );
+          if (existing) {
+            return res.status(409).json({
+              message: 'A member with this telephone number is already registered.'
+            });
+          }
+
+          user = updatePlatformState((state) => {
+            const id =
+              Math.max(0, ...state.users.map(({ id }) => Number(id))) + 1;
+            const created = {
+              id,
+              firstName,
+              lastName,
+              telephoneNumber,
+              email: null,
+              roles: ['Member'],
+              status: 'active'
+            };
+            state.users.push(created);
+            state.profiles.push({
+              userId: id,
+              idNumber: '',
+              telephoneNumber,
+              email: '',
+              address: '',
+              city: '',
+              postalCode: '',
+              emergencyContactName: '',
+              emergencyContactNumber: ''
+            });
+            state.wallets.push({
+              id: `member-${id}`,
+              ownerType: 'MEMBER',
+              ownerId: String(id),
+              walletName: `${firstName} ${lastName} Wallet`,
+              balance: 0,
+              availableBalance: 0,
+              pendingBalance: 0,
+              currency: 'ZAR',
+              status: 'ACTIVE'
+            });
+            return getDemoUserById(id);
+          });
+        }
+
+        if (!user) {
+          return res.status(503).json({ message: 'Registration is unavailable.' });
+        }
+
+        return res.status(201).json({
+          accessToken: createAccessToken(user),
+          user: mapUser(user, lastFour(telephoneNumber))
+        });
+      } catch (error) {
+        if (error?.code === 'ER_DUP_ENTRY') {
+          return res.status(409).json({
+            message: 'A member with this telephone number is already registered.'
+          });
+        }
+        return next(error);
+      }
+    }
+  );
+
+  app.post(
     '/api/auth/login',
     rateLimit({
       windowMs: 15 * 60 * 1000,
@@ -152,7 +334,7 @@ export function createApp({ databaseAvailable = true } = {}) {
     }),
     async (req, res, next) => {
       try {
-        const telephoneNumber = normalizeIdNumber(req.body?.telephoneNumber);
+        const telephoneNumber = normalizeTelephoneNumber(req.body?.telephoneNumber);
         const firstName = String(req.body?.firstName ?? '').trim();
         const lastName = String(req.body?.lastName ?? '').trim();
 

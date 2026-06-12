@@ -14,12 +14,15 @@ import {
   KznccRevenueSummary,
   KznccServiceRevenue
 } from '../../kzncc-admin/models/kzncc-service-revenue.model';
-import { KznccAdminService } from '../../kzncc-admin/services/kzncc-admin.service';
+import {
+  KznccAdminService,
+  KznccManagedUser
+} from '../../kzncc-admin/services/kzncc-admin.service';
 import { KznccCommunicationService } from '../../kzncc-admin/services/kzncc-communication.service';
 import { KznccEventService } from '../../kzncc-admin/services/kzncc-event.service';
 import { KznccRevenueService } from '../../kzncc-admin/services/kzncc-revenue.service';
 
-type AdminTab = 'overview' | 'churches' | 'revenue' | 'communication' | 'events';
+type AdminTab = 'overview' | 'users' | 'churches' | 'revenue' | 'communication' | 'events';
 
 @Component({
   selector: 'app-kzncc-admin-dashboard',
@@ -46,12 +49,21 @@ export class KznccAdminDashboardComponent implements OnInit {
   readonly walletTransactions = signal<WalletTransaction[]>([]);
   readonly messages = signal<KznccAdminMessage[]>([]);
   readonly events = signal<KznccAdminEvent[]>([]);
+  readonly managedUsers = signal<KznccManagedUser[]>([]);
   readonly selectedChurch = signal<KznccChurch | null>(null);
   readonly search = new FormControl('', { nonNullable: true });
   readonly region = new FormControl('All', { nonNullable: true });
   readonly status = new FormControl('All', { nonNullable: true });
   readonly sort = new FormControl('members', { nonNullable: true });
   readonly notice = signal('');
+  readonly newUserFirstName = new FormControl('', { nonNullable: true });
+  readonly newUserLastName = new FormControl('', { nonNullable: true });
+  readonly newUserTelephone = new FormControl('', { nonNullable: true });
+  readonly newUserEmail = new FormControl('', { nonNullable: true });
+  readonly newUserRole = new FormControl<'KZNCC User' | 'KZNCC Admin'>(
+    'KZNCC User',
+    { nonNullable: true }
+  );
 
   filteredChurches(): KznccChurch[] {
     const query = this.search.value.trim().toLowerCase();
@@ -108,6 +120,7 @@ export class KznccAdminDashboardComponent implements OnInit {
     this.admin.getKznccChurches().subscribe((churches) => this.churches.set(churches));
     this.communication.getMessageHistory().subscribe((messages) => this.messages.set(messages));
     this.eventsService.getKznccEvents().subscribe((events) => this.events.set(events));
+    this.loadManagedUsers();
   }
 
   showTab(tab: AdminTab): void {
@@ -179,8 +192,50 @@ export class KznccAdminDashboardComponent implements OnInit {
     );
   }
 
+  createKznccUser(): void {
+    this.admin.createKznccUser({
+      firstName: this.newUserFirstName.value.trim(),
+      lastName: this.newUserLastName.value.trim(),
+      telephoneNumber: this.newUserTelephone.value.trim(),
+      email: this.newUserEmail.value.trim(),
+      role: this.newUserRole.value
+    }).subscribe({
+      next: (created) => {
+        this.managedUsers.update((users) => [...users, created]);
+        this.notice.set(`${created.fullName} was added as ${this.newUserRole.value}.`);
+        this.newUserFirstName.setValue('');
+        this.newUserLastName.setValue('');
+        this.newUserTelephone.setValue('');
+        this.newUserEmail.setValue('');
+      },
+      error: (error) =>
+        this.notice.set(error.error?.message ?? 'The KZNCC user could not be created.')
+    });
+  }
+
+  removeKznccUser(managedUser: KznccManagedUser): void {
+    this.admin.removeKznccUser(managedUser.id).subscribe({
+      next: () => {
+        this.managedUsers.update((users) =>
+          users.filter(({ id }) => id !== managedUser.id)
+        );
+        this.notice.set(`${managedUser.fullName} was removed.`);
+      },
+      error: (error) =>
+        this.notice.set(error.error?.message ?? 'The KZNCC user could not be removed.')
+    });
+  }
+
   logout(): void {
     this.auth.logout();
     void this.router.navigate(['/login']);
+  }
+
+  private loadManagedUsers(): void {
+    this.admin.getKznccUsers().subscribe({
+      next: (users) => this.managedUsers.set(users),
+      error: (error) =>
+        this.notice.set(error.error?.message ?? 'KZNCC users could not be loaded.')
+    });
   }
 }

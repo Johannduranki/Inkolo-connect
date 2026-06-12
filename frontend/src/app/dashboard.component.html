@@ -14,6 +14,10 @@
         <app-role-switcher
           [userFullName]="user()!.firstName + ' ' + user()!.lastName"
         ></app-role-switcher>
+        <div class="monthly-subscription-total" aria-label="Total monthly subscription fee">
+          <span>Monthly subscriptions</span>
+          <strong>{{ monthlySubscriptionTotal() }}</strong>
+        </div>
         <span class="avatar" aria-hidden="true">
           {{ user()!.firstName.charAt(0) }}{{ user()!.lastName.charAt(0) }}
         </span>
@@ -68,7 +72,17 @@
         <p class="no-active-services">Subscribe to a service below and it will appear here.</p>
       }
 
+      @if (subscriptionFor('community')) {
+        <div class="workspace-switcher wallet-community-link" aria-label="Community navigation">
+          <a href="/community">{{ communityHeading() }}</a>
+        </div>
+      }
       @if (subscriptionFor('wallet')) {
+        <div class="wallet-actions" aria-label="Wallet actions">
+          <button type="button" (click)="openWalletAction('topup')">Top Up</button>
+          <button type="button" (click)="openWalletAction('cashout')">Cash Out</button>
+          <button type="button" (click)="openWalletAction('transfer')">Transfer</button>
+        </div>
         <button
           class="wallet-bank-card banner-wallet"
           [class.flipped]="walletOpen()"
@@ -108,14 +122,6 @@
             </span>
           </span>
         </button>
-        <div class="workspace-switcher wallet-community-link" aria-label="Community navigation">
-          <a href="/community">My Community</a>
-        </div>
-        <div class="wallet-actions" aria-label="Wallet actions">
-          <button type="button" (click)="openWalletAction('topup')">Top Up</button>
-          <button type="button" (click)="openWalletAction('cashout')">Cash Out</button>
-          <button type="button" (click)="openWalletAction('transfer')">Transfer</button>
-        </div>
       }
   </section>
 
@@ -445,6 +451,13 @@
                 </p>
               </div>
             }
+
+            <a
+              class="accepted-terms-link"
+              href="/funeral-services-terms.html"
+              target="_blank"
+              rel="noopener"
+            >View accepted Funeral Services terms and conditions</a>
           </section>
         } @else if (isActiveReferralView(service)) {
           <section class="referral-workspace">
@@ -533,6 +546,133 @@
               </section>
             </div>
           </section>
+        } @else if (isActiveWalletView(service)) {
+          <section class="wallet-workspace" aria-labelledby="wallet-workspace-title">
+            <div class="wallet-workspace-heading">
+              <div>
+                <p class="eyebrow">INKOLO WALLET</p>
+                <h3 id="wallet-workspace-title">Wallet activity</h3>
+                <p>Review money received, money spent and your upcoming monthly payments.</p>
+              </div>
+              <span>Active</span>
+            </div>
+
+            <div class="wallet-summary-grid">
+              <article class="wallet-summary-card balance">
+                <small>Available balance</small>
+                <strong>{{ walletBalance() | number:'1.2-2' }} Izaka</strong>
+              </article>
+              <article class="wallet-summary-card received">
+                <small>Money received</small>
+                <strong>+{{ walletMoneyReceived() | number:'1.2-2' }} Izaka</strong>
+              </article>
+              <article class="wallet-summary-card spent">
+                <small>Money spent</small>
+                <strong>-{{ walletMoneySpent() | number:'1.2-2' }} Izaka</strong>
+              </article>
+              <article class="wallet-summary-card upcoming">
+                <small>Upcoming spending</small>
+                <strong>{{ upcomingWalletSpendingTotal() | number:'1.2-2' }} Izaka</strong>
+              </article>
+            </div>
+
+            <div class="wallet-workspace-actions" aria-label="Wallet actions">
+              <button type="button" (click)="openWalletAction('topup')">Top Up</button>
+              <button type="button" (click)="openWalletAction('cashout')">Cash Out</button>
+              <button type="button" (click)="openWalletAction('transfer')">Transfer</button>
+            </div>
+
+            <div class="wallet-activity-columns">
+              <section class="wallet-ledger">
+                <div class="wallet-section-heading">
+                  <div>
+                    <p class="eyebrow">TRANSACTIONS</p>
+                    <h4>All wallet transactions</h4>
+                  </div>
+                  <span>{{ walletTransactions().length }}</span>
+                </div>
+
+                @if (walletTransactions().length > 0) {
+                  <div class="wallet-ledger-list">
+                    @for (transaction of walletTransactions(); track $index) {
+                      <article>
+                        <span
+                          class="wallet-transaction-icon"
+                          [class.received]="transaction.amount > 0"
+                          [class.spent]="transaction.amount < 0"
+                        >
+                          {{ transaction.amount > 0 ? '↓' : transaction.amount < 0 ? '↑' : '•' }}
+                        </span>
+                        <div>
+                          <strong>{{ transaction.description }}</strong>
+                          <small>{{ transaction.date }}</small>
+                        </div>
+                        <span
+                          class="wallet-transaction-amount"
+                          [class.received]="transaction.amount > 0"
+                          [class.spent]="transaction.amount < 0"
+                        >
+                          <small>
+                            {{ transaction.amount > 0 ? 'Received' : transaction.amount < 0 ? 'Spent' : 'Activity' }}
+                          </small>
+                          <b>
+                            {{ transaction.amount > 0 ? '+' : '' }}{{ transaction.amount | number:'1.2-2' }}
+                            Izaka
+                          </b>
+                        </span>
+                      </article>
+                    }
+                  </div>
+                } @else {
+                  <p class="wallet-empty-state">No wallet transactions yet.</p>
+                }
+              </section>
+
+              <section class="wallet-upcoming">
+                <div class="wallet-section-heading">
+                  <div>
+                    <p class="eyebrow">UPCOMING</p>
+                    <h4>Expected monthly spending</h4>
+                  </div>
+                </div>
+                <p class="wallet-collection-date">
+                  Next collection: <strong>{{ nextSubscriptionCollectionDate() }}</strong>
+                </p>
+
+                @if (upcomingWalletSpending().length > 0) {
+                  <div class="wallet-upcoming-list">
+                    @for (spending of upcomingWalletSpending(); track spending.serviceCode) {
+                      <article>
+                        <div>
+                          <strong>{{ spending.serviceName }}</strong>
+                          <small>{{ spending.planName }}</small>
+                        </div>
+                        <b>{{ spending.amount | number:'1.2-2' }} Izaka</b>
+                      </article>
+                    }
+                  </div>
+                  <div class="wallet-upcoming-total">
+                    <span>Expected total</span>
+                    <strong>{{ upcomingWalletSpendingTotal() | number:'1.2-2' }} Izaka</strong>
+                  </div>
+                } @else {
+                  <p class="wallet-empty-state">You have no paid monthly services due.</p>
+                }
+              </section>
+            </div>
+          </section>
+        } @else if (isActiveEduUView(service)) {
+          <section class="eduu-coming-soon" aria-labelledby="eduu-coming-soon-title">
+            <img src="/service-education.png" alt="" aria-hidden="true">
+            <div>
+              <p class="eyebrow">EDUU LEARNING SERVICES</p>
+              <h3 id="eduu-coming-soon-title">Coming soon</h3>
+              <p>
+                Your EduU subscription is active. Courses, learning resources and
+                education opportunities will be available here soon.
+              </p>
+            </div>
+          </section>
         } @else if (service.code === 'community') {
           <div class="vas-purchase-form">
             <label>
@@ -563,7 +703,12 @@
           </div>
         }
 
-        @if (isActiveFuneralView(service) || isActiveReferralView(service)) {
+        @if (
+          isActiveFuneralView(service) ||
+          isActiveReferralView(service) ||
+          isActiveWalletView(service) ||
+          isActiveEduUView(service)
+        ) {
         } @else if (service.application) {
           <div class="application-documents">
             <label class="document-upload">
@@ -820,6 +965,8 @@
         @if (
           !isActiveFuneralView(service) &&
           !isActiveReferralView(service) &&
+          !isActiveWalletView(service) &&
+          !isActiveEduUView(service) &&
           !service.application &&
           !vasPurchaseEnabled(service)
         ) {
@@ -848,7 +995,12 @@
           <p class="subscription-error" role="alert">{{ subscriptionError() }}</p>
         }
 
-        @if (isActiveFuneralView(service) || isActiveReferralView(service)) {
+        @if (
+          isActiveFuneralView(service) ||
+          isActiveReferralView(service) ||
+          isActiveWalletView(service) ||
+          isActiveEduUView(service)
+        ) {
           <button
             class="confirm-subscription"
             type="button"
@@ -877,7 +1029,7 @@
             Buy now
           </button>
           <p class="payment-note">
-            Demo purchase only. A live payment provider will be connected later.
+            Purchase confirmation will be recorded against your Inkolo Connect account.
           </p>
         } @else {
           <button
@@ -999,6 +1151,22 @@
                 Publish item
               </button>
             </div>
+          </section>
+        }
+
+        @if (marketplaceConversations().length) {
+          <section class="marketplace-filters" aria-label="Buy and Sell conversations">
+            <strong>My conversations</strong>
+            @for (conversation of marketplaceConversations(); track conversation.id) {
+              <button type="button" (click)="openMarketplaceConversation(conversation)">
+                {{ conversation.listingTitle }} ·
+                {{
+                  conversation.sellerUserId === currentUserId()
+                    ? conversation.buyerName
+                    : conversation.sellerName
+                }}
+              </button>
+            }
           </section>
         }
 

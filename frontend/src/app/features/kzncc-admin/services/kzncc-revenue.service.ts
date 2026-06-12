@@ -1,55 +1,72 @@
-import { Injectable } from '@angular/core';
-import { Observable, map, of } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { Observable, map } from 'rxjs';
+import { RevenueShareFormulaService } from '../../../core/services/revenue-share-formula.service';
 import {
   KznccRevenueSummary,
   KznccServiceRevenue
 } from '../models/kzncc-service-revenue.model';
 
+interface PaidServiceActivity {
+  serviceId: number;
+  membersSubscribed: number;
+  monthlyPrice: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class KznccRevenueService {
-  private readonly services: KznccServiceRevenue[] = [
-    this.createPaidService(1, 'Funeral Cover', 5000, 99, 250000, 49500),
-    this.createPaidService(2, 'Airtime and Data', 4200, 35, 73500, 14700),
-    this.createPaidService(3, 'Electricity Recharge', 3100, 80, 124000, 24800),
-    this.createPaidService(4, 'Fibre Connect', 980, 399, 234612, 39102),
-    this.createPaidService(5, 'Wallet transaction fees', 7200, 8, 23040, 5760),
-    this.createPaidService(6, 'VAS Services', 3900, 20, 35100, 7800),
-    this.createPaidService(7, 'Job Search Premium', 1200, 25, 12000, 3000),
-    this.createPaidService(8, 'Education Services', 1600, 49, 39200, 7840),
-    this.createPaidService(9, 'Keytcha Property Listings', 430, 75, 16125, 3225),
-    this.createPaidService(10, 'Catch-a-Lift Paid Rides', 2100, 30, 31500, 6300),
-    {
-      id: 11,
-      serviceName: 'My Community',
-      serviceType: 'FREE',
-      membersSubscribed: 45000,
-      monthlyPrice: 0,
-      totalRevenue: 0,
-      serviceProviderShare: 0,
-      operatingCost: 0,
-      kznccShare: 0,
-      churchShare: 0,
-      netPayableToKzncc: 0,
-      netPayableToChurches: 0
-    },
-    {
-      id: 12,
-      serviceName: 'Announcements',
-      serviceType: 'FREE',
-      membersSubscribed: 45000,
-      monthlyPrice: 0,
-      totalRevenue: 0,
-      serviceProviderShare: 0,
-      operatingCost: 0,
-      kznccShare: 0,
-      churchShare: 0,
-      netPayableToKzncc: 0,
-      netPayableToChurches: 0
-    }
+  private readonly formulas = inject(RevenueShareFormulaService);
+  private readonly activity: PaidServiceActivity[] = [
+    activity(1, 5000, 99),
+    activity(2, 4200, 35),
+    activity(3, 3100, 80),
+    activity(4, 980, 399),
+    activity(5, 7200, 8),
+    activity(6, 3900, 20),
+    activity(7, 1200, 25),
+    activity(8, 1600, 49),
+    activity(9, 430, 75),
+    activity(10, 2100, 30),
+    activity(11, 760, 125),
+    activity(12, 8400, 7),
+    activity(13, 520, 45)
   ];
 
   getPaidServices(): Observable<KznccServiceRevenue[]> {
-    return of(this.services.filter(({ serviceType }) => serviceType === 'PAID'));
+    return this.formulas.getFormulas().pipe(
+      map((formulas) =>
+        formulas.map((formula) => {
+          const serviceActivity = this.activity.find(
+            ({ serviceId }) => serviceId === formula.serviceId
+          ) ?? activity(formula.serviceId, 0, 0);
+          const totalRevenue =
+            serviceActivity.membersSubscribed * serviceActivity.monthlyPrice;
+          const serviceProviderShare =
+            totalRevenue * (formula.serviceProviderRate / 100);
+          const operatingCost = totalRevenue * (formula.operatingRate / 100);
+          const kznccShare = totalRevenue * (formula.kznccRate / 100);
+          const churchShare = totalRevenue * (formula.churchRate / 100);
+
+          return {
+            id: formula.serviceId,
+            serviceName: formula.serviceName,
+            serviceType: 'PAID' as const,
+            membersSubscribed: serviceActivity.membersSubscribed,
+            monthlyPrice: serviceActivity.monthlyPrice,
+            totalRevenue,
+            serviceProviderRate: formula.serviceProviderRate,
+            operatingRate: formula.operatingRate,
+            kznccRate: formula.kznccRate,
+            churchRate: formula.churchRate,
+            serviceProviderShare,
+            operatingCost,
+            kznccShare,
+            churchShare,
+            netPayableToKzncc: kznccShare,
+            netPayableToChurches: churchShare
+          };
+        })
+      )
+    );
   }
 
   getRevenueByPaidService(): Observable<KznccServiceRevenue[]> {
@@ -57,7 +74,7 @@ export class KznccRevenueService {
   }
 
   getRevenueByService(): Observable<KznccServiceRevenue[]> {
-    return this.getRevenueByPaidService();
+    return this.getPaidServices();
   }
 
   getRevenueByChurchForPaidServices(): Observable<
@@ -112,38 +129,6 @@ export class KznccRevenueService {
     return serviceRevenue.churchShare;
   }
 
-  private createPaidService(
-    id: number,
-    serviceName: string,
-    membersSubscribed: number,
-    monthlyPrice: number,
-    serviceProviderShare: number,
-    operatingCost: number
-  ): KznccServiceRevenue {
-    const totalRevenue = membersSubscribed * monthlyPrice;
-    const remainingRevenue = Math.max(
-      totalRevenue - serviceProviderShare - operatingCost,
-      0
-    );
-    const kznccShare = remainingRevenue * 0.4;
-    const churchShare = remainingRevenue * 0.6;
-
-    return {
-      id,
-      serviceName,
-      serviceType: 'PAID',
-      membersSubscribed,
-      monthlyPrice,
-      totalRevenue,
-      serviceProviderShare,
-      operatingCost,
-      kznccShare,
-      churchShare,
-      netPayableToKzncc: kznccShare,
-      netPayableToChurches: churchShare
-    };
-  }
-
   private sumRevenue(services: KznccServiceRevenue[]): KznccRevenueSummary {
     return services.reduce<KznccRevenueSummary>(
       (summary, service) => ({
@@ -169,4 +154,12 @@ export class KznccRevenueService {
       }
     );
   }
+}
+
+function activity(
+  serviceId: number,
+  membersSubscribed: number,
+  monthlyPrice: number
+): PaidServiceActivity {
+  return { serviceId, membersSubscribed, monthlyPrice };
 }

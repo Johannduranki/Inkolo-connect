@@ -10,6 +10,7 @@ import { KznccAnnouncementsComponent } from '../kzncc-announcements/kzncc-announ
 import { KznccCommunicationComponent } from '../kzncc-communication/kzncc-communication.component';
 import { KznccEventsComponent } from '../kzncc-events/kzncc-events.component';
 import { RoleSwitcherComponent } from '../../../shared/components/role-switcher/role-switcher.component';
+import { RoleService } from '../../../core/services/role.service';
 
 @Component({
   selector: 'app-kzncc-dashboard',
@@ -26,6 +27,7 @@ import { RoleSwitcherComponent } from '../../../shared/components/role-switcher/
 export class KznccDashboardComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly kzncc = inject(KznccService);
+  private readonly roles = inject(RoleService);
   private readonly router = inject(Router);
 
   readonly user = signal<User | null>(null);
@@ -78,6 +80,12 @@ export class KznccDashboardComponent implements OnInit {
   logout(): void {
     this.auth.logout();
     void this.router.navigate(['/login']);
+  }
+
+  openRoleDashboard(): void {
+    void this.router.navigate([
+      this.roles.getDashboardRouteForRole(this.roles.getActiveRole())
+    ]);
   }
 
   private loadDashboard(userId: number): void {

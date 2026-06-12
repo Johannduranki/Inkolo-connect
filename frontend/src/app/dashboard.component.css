@@ -89,6 +89,33 @@ nav .active {
   min-width: 12rem;
 }
 
+.monthly-subscription-total {
+  display: grid;
+  min-width: 7.8rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid #c4dded;
+  border-radius: 0.7rem;
+  text-align: right;
+  background: linear-gradient(145deg, #f6fbff, #e8f5ff);
+  box-shadow: 0 5px 14px rgba(20, 91, 147, 0.08);
+}
+
+.monthly-subscription-total span {
+  color: #60798c;
+  font-size: 0.58rem;
+  font-weight: 750;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.monthly-subscription-total strong {
+  margin-top: 0.12rem;
+  color: var(--inkolo-navy);
+  font-size: 0.82rem;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
 .account-copy {
   display: grid;
   text-align: right;
@@ -1377,6 +1404,299 @@ footer {
   border-radius: 1.35rem;
   background: #fff;
   box-shadow: 0 2rem 5rem rgba(0, 0, 0, 0.24);
+}
+
+.subscription-modal:has(.wallet-workspace) {
+  width: min(100%, 64rem);
+  max-height: calc(100vh - 2.5rem);
+  overflow-y: auto;
+}
+
+.wallet-workspace {
+  display: grid;
+  gap: 1rem;
+}
+
+.wallet-workspace-heading,
+.wallet-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.wallet-workspace-heading h3,
+.wallet-section-heading h4 {
+  margin: 0;
+  color: var(--inkolo-navy);
+}
+
+.wallet-workspace-heading h3 {
+  font-size: 1.45rem;
+}
+
+.wallet-workspace-heading p:last-child {
+  margin: 0.35rem 0 0;
+  color: #667f91;
+  font-size: 0.78rem;
+}
+
+.wallet-workspace-heading > span {
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  color: #197532;
+  background: #e5f8e7;
+  font-size: 0.7rem;
+  font-weight: 850;
+}
+
+.wallet-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.wallet-summary-card {
+  display: grid;
+  min-height: 5.5rem;
+  padding: 0.9rem;
+  align-content: space-between;
+  border: 1px solid #c8daea;
+  border-radius: 0.9rem;
+  color: #fff;
+  background: linear-gradient(145deg, #126ec9, #072f70);
+}
+
+.wallet-summary-card small {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.67rem;
+  font-weight: 750;
+}
+
+.wallet-summary-card strong {
+  font-size: 1rem;
+}
+
+.wallet-summary-card.received {
+  background: linear-gradient(145deg, #35ad34, #176e26);
+}
+
+.wallet-summary-card.spent {
+  background: linear-gradient(145deg, #566d80, #263d52);
+}
+
+.wallet-summary-card.upcoming {
+  color: var(--inkolo-navy);
+  background: linear-gradient(145deg, #e6f4ff, #d9ecff);
+}
+
+.wallet-summary-card.upcoming small {
+  color: #587087;
+}
+
+.wallet-workspace-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.wallet-workspace-actions button {
+  padding: 0.75rem;
+  border: 0;
+  border-radius: 0.7rem;
+  color: #fff;
+  background: linear-gradient(145deg, var(--inkolo-bright), var(--inkolo-navy));
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.wallet-workspace-actions button:nth-child(2) {
+  color: var(--inkolo-navy);
+  border: 1px solid #b9d3e7;
+  background: #eef7fd;
+}
+
+.wallet-workspace-actions button:last-child {
+  background: linear-gradient(145deg, var(--inkolo-green), #247d12);
+}
+
+.wallet-activity-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 0.75fr);
+  gap: 0.85rem;
+}
+
+.wallet-ledger,
+.wallet-upcoming {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid #c8dce9;
+  border-radius: 1rem;
+  background: #f9fcff;
+}
+
+.wallet-section-heading > span {
+  display: grid;
+  width: 1.8rem;
+  height: 1.8rem;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--inkolo-blue);
+  background: #e4f2fb;
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.wallet-ledger-list,
+.wallet-upcoming-list {
+  display: grid;
+  margin-top: 0.75rem;
+  gap: 0.55rem;
+}
+
+.wallet-ledger-list article {
+  display: grid;
+  padding: 0.7rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: center;
+  border: 1px solid #d8e5ee;
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.wallet-ledger-list article > div,
+.wallet-transaction-amount,
+.wallet-upcoming-list article > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.wallet-ledger-list strong,
+.wallet-upcoming-list strong {
+  color: #234861;
+  font-size: 0.73rem;
+}
+
+.wallet-ledger-list small,
+.wallet-upcoming-list small {
+  color: #748a99;
+  font-size: 0.62rem;
+}
+
+.wallet-transaction-icon {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 50%;
+  color: #62788a;
+  background: #eaf1f5;
+  font-weight: 900;
+}
+
+.wallet-transaction-icon.received {
+  color: #16702d;
+  background: #e1f6e3;
+}
+
+.wallet-transaction-icon.spent {
+  color: #af4d2c;
+  background: #fff0e9;
+}
+
+.wallet-transaction-amount {
+  text-align: right;
+}
+
+.wallet-transaction-amount b {
+  color: #526979;
+  font-size: 0.7rem;
+}
+
+.wallet-transaction-amount.received b {
+  color: #20813a;
+}
+
+.wallet-transaction-amount.spent b {
+  color: #b65130;
+}
+
+.wallet-collection-date {
+  margin: 0.65rem 0 0;
+  color: #61798a;
+  font-size: 0.68rem;
+}
+
+.wallet-upcoming-list article {
+  display: flex;
+  padding: 0.7rem 0;
+  justify-content: space-between;
+  gap: 0.8rem;
+  border-bottom: 1px solid #d9e6ee;
+}
+
+.wallet-upcoming-list article > b {
+  color: var(--inkolo-navy);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.wallet-upcoming-total {
+  display: flex;
+  margin-top: 0.85rem;
+  padding: 0.8rem;
+  justify-content: space-between;
+  gap: 1rem;
+  border-radius: 0.7rem;
+  color: #fff;
+  background: linear-gradient(145deg, var(--inkolo-blue), var(--inkolo-navy));
+  font-size: 0.72rem;
+}
+
+.wallet-empty-state {
+  margin: 0.75rem 0 0;
+  padding: 0.8rem;
+  border-radius: 0.7rem;
+  color: #6e8493;
+  background: #edf4f8;
+  font-size: 0.7rem;
+}
+
+@media (max-width: 760px) {
+  .wallet-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .wallet-activity-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .wallet-workspace-heading {
+    align-items: flex-start;
+  }
+
+  .wallet-summary-grid,
+  .wallet-workspace-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .wallet-summary-card {
+    min-height: 4.6rem;
+  }
+
+  .wallet-ledger-list article {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .wallet-transaction-amount {
+    grid-column: 2;
+    text-align: left;
+  }
 }
 
 .marketplace-modal {
@@ -2877,6 +3197,19 @@ footer {
     flex: 1;
   }
 
+  .monthly-subscription-total {
+    min-width: 6.4rem;
+    padding-inline: 0.5rem;
+  }
+
+  .monthly-subscription-total span {
+    font-size: 0.52rem;
+  }
+
+  .monthly-subscription-total strong {
+    font-size: 0.72rem;
+  }
+
   .reset-services {
     max-width: 7rem;
     padding-inline: 0.5rem;
@@ -3454,7 +3787,65 @@ footer {
   color: var(--inkolo-navy);
 }
 
+.accepted-terms-link {
+  justify-self: start;
+  color: var(--inkolo-blue);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.eduu-coming-soon {
+  display: grid;
+  padding: 1.25rem;
+  grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid #6ab7ff;
+  border-radius: 1rem;
+  color: #fff;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(52, 222, 147, 0.3), transparent 34%),
+    linear-gradient(135deg, #061c63, #074dac 62%, #0785df);
+  box-shadow: 0 18px 40px rgba(4, 46, 113, 0.22);
+}
+
+.eduu-coming-soon img {
+  width: 100%;
+  max-height: 9rem;
+  object-fit: contain;
+  border-radius: 0.8rem;
+}
+
+.eduu-coming-soon h3,
+.eduu-coming-soon p {
+  margin: 0;
+}
+
+.eduu-coming-soon h3 {
+  margin-top: 0.25rem;
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  line-height: 1;
+}
+
+.eduu-coming-soon div > p:last-child {
+  max-width: 34rem;
+  margin-top: 0.75rem;
+  color: #e1efff;
+  line-height: 1.6;
+}
+
 @media (max-width: 520px) {
+  .eduu-coming-soon {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .eduu-coming-soon img {
+    width: min(11rem, 75%);
+    justify-self: center;
+  }
+
   .active-funeral-plans article {
     grid-template-columns: 3.5rem 1fr;
   }

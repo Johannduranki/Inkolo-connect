@@ -54,6 +54,20 @@ export class AuthService {
       .pipe(tap(({ accessToken }) => this.storeToken(accessToken)));
   }
 
+  register(
+    telephoneNumber: string,
+    firstName: string,
+    lastName: string
+  ): Observable<LoginResponse> {
+    return this.http
+      .post<LoginResponse>(`${this.apiUrl}/auth/register`, {
+        telephoneNumber,
+        firstName,
+        lastName
+      })
+      .pipe(tap(({ accessToken }) => this.storeToken(accessToken)));
+  }
+
   getProfile(): Observable<User> {
     return this.http.get<User>(`${this.apiUrl}/auth/me`);
   }

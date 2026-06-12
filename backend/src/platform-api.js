@@ -33,6 +33,69 @@ export function createPlatformRouter({ requireAuth }) {
     }
     return next();
   };
+  const requireKznccAdmin = (req, res, next) => {
+    const user = readPlatformState().users.find(
+      ({ id }) => String(id) === currentUserId(req)
+    );
+    if (!user?.roles.includes('KZNCC Admin')) {
+      return res.status(403).json({ message: 'KZNCC Admin access is required.' });
+    }
+    return next();
+  };
+  const createUser = (roles, body) => {
+    const firstName = String(body?.firstName ?? '').trim();
+    const lastName = String(body?.lastName ?? '').trim();
+    const telephoneNumber = cleanPhone(body?.telephoneNumber);
+    const email = String(body?.email ?? '').trim();
+    if (!firstName || !lastName || !/^\d{10}$/.test(telephoneNumber)) {
+      return { error: 'Enter a name, surname and valid 10-digit telephone number.' };
+    }
+    if (readPlatformState().users.some((user) => cleanPhone(user.telephoneNumber) === telephoneNumber)) {
+      return { error: 'A user with this telephone number already exists.' };
+    }
+    return {
+      user: updatePlatformState((state) => {
+        const id = Math.max(0, ...state.users.map((user) => Number(user.id))) + 1;
+        const created = {
+          id,
+          firstName,
+          lastName,
+          telephoneNumber,
+          email,
+          roles: [...new Set(roles)],
+          status: 'active'
+        };
+        state.users.push(created);
+        state.profiles.push({
+          userId: id,
+          idNumber: '',
+          telephoneNumber,
+          email,
+          address: '',
+          city: '',
+          postalCode: '',
+          emergencyContactName: '',
+          emergencyContactNumber: ''
+        });
+        return created;
+      })
+    };
+  };
+  const removeUser = (userId) =>
+    updatePlatformState((state) => {
+      const index = state.users.findIndex(({ id }) => String(id) === String(userId));
+      if (index < 0) return null;
+      const [removed] = state.users.splice(index, 1);
+      state.profiles = state.profiles.filter(
+        ({ userId: profileUserId }) => String(profileUserId) !== String(userId)
+      );
+      state.contacts = state.contacts.filter(
+        ({ ownerUserId, contactUserId }) =>
+          String(ownerUserId) !== String(userId) &&
+          String(contactUserId) !== String(userId)
+      );
+      return removed;
+    });
 
   router.get('/profile', (req, res) => {
     const profile = readPlatformState().profiles.find(
@@ -78,6 +141,59 @@ export function createPlatformRouter({ requireAuth }) {
     res.json(readPlatformState().users.map(publicUser));
   });
 
+  router.get('/admin/analytics', requireAdminUser, (_req, res) => {
+    const state = readPlatformState();
+    const activeUsers = state.users.filter(({ status }) => status === 'active');
+    let subscriptions = state.serviceSubscriptions ?? [];
+
+    if (!subscriptions.length) {
+      const uniqueAcceptedServices = new Map();
+      for (const acceptance of state.legalAcceptances ?? []) {
+        const key = `${acceptance.userId}:${acceptance.serviceCode}`;
+        uniqueAcceptedServices.set(key, {
+          userId: acceptance.userId,
+          serviceCode: acceptance.serviceCode
+        });
+      }
+      subscriptions = [...uniqueAcceptedServices.values()];
+    }
+
+    const counts = new Map();
+    for (const subscription of subscriptions) {
+      counts.set(
+        subscription.serviceCode,
+        (counts.get(subscription.serviceCode) ?? 0) + 1
+      );
+    }
+
+    res.json({
+      totalMembers: activeUsers.filter(({ roles }) => roles.includes('Member')).length,
+      totalRegisteredUsers: activeUsers.length,
+      totalActiveSubscriptions: subscriptions.length,
+      subscriptionsByService: [...counts.entries()]
+        .map(([serviceCode, count]) => ({ serviceCode, count }))
+        .sort((a, b) => b.count - a.count || a.serviceCode.localeCompare(b.serviceCode))
+    });
+  });
+
+  router.post('/admin/users', requireAdminUser, (req, res) => {
+    const roles = Array.isArray(req.body?.roles) && req.body.roles.length
+      ? req.body.roles.map(String)
+      : ['Member'];
+    const result = createUser(roles, req.body);
+    if (result.error) return res.status(400).json({ message: result.error });
+    return res.status(201).json(publicUser(result.user));
+  });
+
+  router.delete('/admin/users/:userId', requireAdminUser, (req, res) => {
+    if (req.params.userId === currentUserId(req)) {
+      return res.status(400).json({ message: 'You cannot remove your own admin account.' });
+    }
+    const removed = removeUser(req.params.userId);
+    if (!removed) return res.status(404).json({ message: 'User not found.' });
+    return res.status(204).end();
+  });
+
   router.put('/admin/users/:userId/roles', requireAdminUser, (req, res) => {
     const roles = Array.isArray(req.body?.roles)
       ? [...new Set(req.body.roles.map((role) => String(role)))]
@@ -92,6 +208,40 @@ export function createPlatformRouter({ requireAuth }) {
     });
     if (!user) return res.status(404).json({ message: 'User not found.' });
     return res.json(publicUser(user));
+  });
+
+  router.get('/kzncc-admin/users', requireKznccAdmin, (_req, res) => {
+    res.json(
+      readPlatformState().users
+        .filter(({ roles }) =>
+          roles.some((role) => ['KZNCC User', 'KZNCC Admin'].includes(role))
+        )
+        .map(publicUser)
+    );
+  });
+
+  router.post('/kzncc-admin/users', requireKznccAdmin, (req, res) => {
+    const requestedRole = String(req.body?.role ?? 'KZNCC User');
+    if (!['KZNCC User', 'KZNCC Admin'].includes(requestedRole)) {
+      return res.status(400).json({ message: 'Choose KZNCC User or KZNCC Admin.' });
+    }
+    const result = createUser(['Member', requestedRole], req.body);
+    if (result.error) return res.status(400).json({ message: result.error });
+    return res.status(201).json(publicUser(result.user));
+  });
+
+  router.delete('/kzncc-admin/users/:userId', requireKznccAdmin, (req, res) => {
+    if (req.params.userId === currentUserId(req)) {
+      return res.status(400).json({ message: 'You cannot remove your own KZNCC Admin account.' });
+    }
+    const target = readPlatformState().users.find(
+      ({ id }) => String(id) === req.params.userId
+    );
+    if (!target?.roles.some((role) => ['KZNCC User', 'KZNCC Admin'].includes(role))) {
+      return res.status(404).json({ message: 'KZNCC user not found.' });
+    }
+    removeUser(req.params.userId);
+    return res.status(204).end();
   });
 
   router.get('/agreements/me', (req, res) => {
@@ -559,6 +709,131 @@ export function createPlatformRouter({ requireAuth }) {
     });
     if (!listing) return res.status(404).json({ message: 'Listing not found.' });
     return res.json(listing);
+  });
+
+  router.post('/marketplace/listings/:id/conversations', (req, res) => {
+    const state = readPlatformState();
+    const listing = state.marketplaceListings.find(({ id }) => id === req.params.id);
+    if (!listing) return res.status(404).json({ message: 'Listing not found.' });
+
+    const buyerUserId = currentUserId(req);
+    const sellerUserId = String(listing.sellerUserId);
+    if (buyerUserId === sellerUserId) {
+      return res.status(400).json({ message: 'You cannot start a seller chat on your own listing.' });
+    }
+
+    const conversation = updatePlatformState((platformState) => {
+      const existing = platformState.marketplaceConversations.find(
+        (item) =>
+          item.listingId === listing.id &&
+          item.buyerUserId === buyerUserId &&
+          item.sellerUserId === sellerUserId &&
+          item.status === 'ACTIVE'
+      );
+      if (existing) return existing;
+
+      const created = {
+        id: createPlatformId('marketplace-conversation'),
+        listingId: listing.id,
+        buyerUserId,
+        sellerUserId,
+        createdAt: new Date().toISOString(),
+        status: 'ACTIVE'
+      };
+      platformState.marketplaceConversations.unshift(created);
+      return created;
+    });
+    return res.status(201).json(conversation);
+  });
+
+  router.get('/marketplace/conversations', (req, res) => {
+    const state = readPlatformState();
+    const userId = currentUserId(req);
+    const usersById = new Map(
+      state.users.map((user) => [String(user.id), `${user.firstName} ${user.lastName}`])
+    );
+    res.json(
+      state.marketplaceConversations
+        .filter(({ buyerUserId, sellerUserId }) =>
+          [buyerUserId, sellerUserId].includes(userId)
+        )
+        .map((conversation) => {
+          const listing = state.marketplaceListings.find(
+            ({ id }) => id === conversation.listingId
+          );
+          return {
+            ...conversation,
+            listingTitle: listing?.title ?? 'Marketplace item',
+            buyerName: usersById.get(conversation.buyerUserId) ?? 'Buyer',
+            sellerName: usersById.get(conversation.sellerUserId) ?? listing?.sellerName ?? 'Seller'
+          };
+        })
+        .sort((first, second) => second.createdAt.localeCompare(first.createdAt))
+    );
+  });
+
+  router.get('/marketplace/conversations/:id', (req, res) => {
+    const conversation = readPlatformState().marketplaceConversations.find(
+      ({ id }) => id === req.params.id
+    );
+    if (!conversation) return res.status(404).json({ message: 'Conversation not found.' });
+    if (![conversation.buyerUserId, conversation.sellerUserId].includes(currentUserId(req))) {
+      return res.status(403).json({ message: 'You do not have access to this conversation.' });
+    }
+    return res.json(conversation);
+  });
+
+  router.get('/marketplace/conversations/:id/messages', (req, res) => {
+    const state = readPlatformState();
+    const conversation = state.marketplaceConversations.find(({ id }) => id === req.params.id);
+    if (!conversation) return res.status(404).json({ message: 'Conversation not found.' });
+    if (![conversation.buyerUserId, conversation.sellerUserId].includes(currentUserId(req))) {
+      return res.status(403).json({ message: 'You do not have access to this conversation.' });
+    }
+    return res.json(
+      state.marketplaceMessages
+        .filter(({ conversationId }) => conversationId === conversation.id)
+        .sort((first, second) => first.createdAt.localeCompare(second.createdAt))
+    );
+  });
+
+  router.post('/marketplace/conversations/:id/messages', (req, res) => {
+    const state = readPlatformState();
+    const conversation = state.marketplaceConversations.find(({ id }) => id === req.params.id);
+    if (!conversation) return res.status(404).json({ message: 'Conversation not found.' });
+    const senderUserId = currentUserId(req);
+    if (![conversation.buyerUserId, conversation.sellerUserId].includes(senderUserId)) {
+      return res.status(403).json({ message: 'You do not have access to this conversation.' });
+    }
+
+    const messageType = String(req.body?.messageType ?? 'TEXT');
+    const allowedTypes = new Set([
+      'TEXT',
+      'PAYMENT_REQUEST',
+      'PAYMENT_CONFIRMATION',
+      'LISTING_STATUS'
+    ]);
+    const messageText = String(req.body?.messageText ?? '').trim();
+    if (!allowedTypes.has(messageType) || !messageText || messageText.length > 2000) {
+      return res.status(400).json({ message: 'Enter a valid message up to 2,000 characters.' });
+    }
+
+    const message = updatePlatformState((platformState) => {
+      const created = {
+        id: createPlatformId('marketplace-message'),
+        conversationId: conversation.id,
+        senderUserId,
+        messageType,
+        messageText,
+        paymentRequestId: req.body?.paymentRequestId
+          ? String(req.body.paymentRequestId)
+          : undefined,
+        createdAt: new Date().toISOString()
+      };
+      platformState.marketplaceMessages.push(created);
+      return created;
+    });
+    return res.status(201).json(message);
   });
 
   router.get('/jobs', (_req, res) => {

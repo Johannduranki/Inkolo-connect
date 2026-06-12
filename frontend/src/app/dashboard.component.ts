@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -99,11 +99,19 @@ interface WalletTransaction {
   amount: number;
 }
 
+interface UpcomingWalletSpending {
+  serviceCode: string;
+  serviceName: string;
+  planName: string;
+  amount: number;
+}
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [
     DatePipe,
+    DecimalPipe,
     ReactiveFormsModule,
     ProfileModalComponent,
     RoleSwitcherComponent
@@ -216,6 +224,7 @@ export class DashboardComponent implements OnInit {
   readonly marketplaceStatus = new FormControl('AVAILABLE', { nonNullable: true });
   readonly selectedMarketplaceListing = signal<BuySellListing | null>(null);
   readonly marketplaceConversation = signal<BuySellChatConversation | null>(null);
+  readonly marketplaceConversations = signal<BuySellChatConversation[]>([]);
   readonly marketplaceMessages = signal<BuySellChatMessage[]>([]);
   readonly marketplacePaymentRequests = signal<BuySellPaymentRequest[]>([]);
   readonly marketplaceChatText = new FormControl('', { nonNullable: true });
@@ -581,26 +590,7 @@ export class DashboardComponent implements OnInit {
       next: (user) => {
         this.user.set(user);
         this.profiles.load().subscribe();
-        this.walletService.getMemberWallet(String(user.id)).subscribe((wallet) => {
-          if (wallet) this.walletBalance.set(wallet.balance);
-        });
-        this.walletService
-          .getWalletTransactions(`member-${user.id}`)
-          .subscribe((transactions) =>
-            this.walletTransactions.set(
-              transactions.map((transaction) => ({
-                description: transaction.description,
-                date: new Intl.DateTimeFormat('en-ZA', {
-                  day: 'numeric',
-                  month: 'short'
-                }).format(new Date(transaction.createdAt)),
-                amount:
-                  transaction.direction === 'OUT'
-                    ? -transaction.amount
-                    : transaction.amount
-              }))
-            )
-          );
+        this.refreshWallet();
         this.communities.getMemberCommunity(String(user.id)).subscribe((community) => {
           this.memberCommunity.set(community);
           if (community) {
@@ -628,6 +618,7 @@ export class DashboardComponent implements OnInit {
   openService(service: Service): void {
     if (service.code === 'build-up-balance' && this.isServiceActive(service)) {
       this.marketplaceOpen.set(true);
+      this.loadMarketplaceConversations();
       return;
     }
 
@@ -644,6 +635,10 @@ export class DashboardComponent implements OnInit {
     if (service.code === 'kzncc' && this.isServiceActive(service)) {
       void this.router.navigate(['/kzncc']);
       return;
+    }
+
+    if (service.code === 'wallet' && this.isServiceActive(service)) {
+      this.refreshWallet();
     }
 
     if (service.availability === 'coming-soon') {
@@ -851,6 +846,14 @@ export class DashboardComponent implements OnInit {
     return service.code === 'referral' && Boolean(this.subscriptionFor('referral'));
   }
 
+  isActiveWalletView(service: Service): boolean {
+    return service.code === 'wallet' && Boolean(this.subscriptionFor('wallet'));
+  }
+
+  isActiveEduUView(service: Service): boolean {
+    return service.code === 'eduu' && Boolean(this.subscriptionFor('eduu'));
+  }
+
   hasServiceTerms(service: Service): boolean {
     return [
       'build-up-balance',
@@ -861,6 +864,7 @@ export class DashboardComponent implements OnInit {
       'keycha-properties',
       'referral',
       'job-search',
+      'eduu',
       'wallet'
     ].includes(service.code);
   }
@@ -875,6 +879,7 @@ export class DashboardComponent implements OnInit {
       'keycha-properties': 'Keytcha Properties',
       referral: 'Referral Service',
       'job-search': 'Job Search',
+      eduu: 'EduU Service',
       wallet: 'Wallet'
     };
     return titles[service.code] ?? service.name;
@@ -890,6 +895,7 @@ export class DashboardComponent implements OnInit {
       'keycha-properties': 'keytcha-properties-terms',
       referral: 'referral-service-terms',
       'job-search': 'job-search-terms',
+      eduu: 'eduu-service-terms',
       wallet: 'wallet-terms'
     };
     return slugs[service.code] ?? '';
@@ -1076,7 +1082,70 @@ export class DashboardComponent implements OnInit {
       subscription.amountCents === 0
         ? 'Free'
         : `R${(subscription.amountCents / 100).toFixed(2)}`
+      );
+  }
+
+  monthlySubscriptionTotal(): string {
+    const totalCents = this.subscriptions()
+      .filter((subscription) => subscription.status === 'active')
+      .reduce((total, subscription) => total + subscription.amountCents, 0);
+
+    return `R${(totalCents / 100).toFixed(2)} p/m`;
+  }
+
+  walletMoneyReceived(): number {
+    return this.walletTransactions()
+      .filter(({ amount }) => amount > 0)
+      .reduce((total, { amount }) => total + amount, 0);
+  }
+
+  walletMoneySpent(): number {
+    return Math.abs(
+      this.walletTransactions()
+        .filter(({ amount }) => amount < 0)
+        .reduce((total, { amount }) => total + amount, 0)
     );
+  }
+
+  upcomingWalletSpending(): UpcomingWalletSpending[] {
+    return this.subscriptions()
+      .filter(
+        (subscription) =>
+          subscription.status === 'active' && subscription.amountCents > 0
+      )
+      .map((subscription) => {
+        const service = this.services.find(
+          ({ code }) => code === subscription.serviceCode
+        );
+        const plan = service?.plans.find(
+          ({ code }) => code === subscription.planCode
+        );
+
+        return {
+          serviceCode: subscription.serviceCode,
+          serviceName: service?.name ?? subscription.serviceCode,
+          planName: plan?.name ?? subscription.planCode,
+          amount: subscription.amountCents / 100
+        };
+      });
+  }
+
+  upcomingWalletSpendingTotal(): number {
+    return this.upcomingWalletSpending().reduce(
+      (total, spending) => total + spending.amount,
+      0
+    );
+  }
+
+  nextSubscriptionCollectionDate(): string {
+    const nextCollection = new Date();
+    nextCollection.setMonth(nextCollection.getMonth() + 1, 1);
+
+    return new Intl.DateTimeFormat('en-ZA', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }).format(nextCollection);
   }
 
   isServiceActive(service: Service): boolean {
@@ -1097,6 +1166,33 @@ export class DashboardComponent implements OnInit {
 
   toggleWalletCard(): void {
     this.walletOpen.update((open) => !open);
+  }
+
+  private refreshWallet(): void {
+    const userId = this.user()?.id;
+    if (!userId) return;
+
+    this.walletService.getMemberWallet(String(userId)).subscribe((wallet) => {
+      if (wallet) this.walletBalance.set(wallet.balance);
+    });
+    this.walletService
+      .getWalletTransactions(`member-${userId}`)
+      .subscribe((transactions) =>
+        this.walletTransactions.set(
+          transactions.map((transaction) => ({
+            description: transaction.description,
+            date: new Intl.DateTimeFormat('en-ZA', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric'
+            }).format(new Date(transaction.createdAt)),
+            amount:
+              transaction.direction === 'OUT'
+                ? -transaction.amount
+                : transaction.amount
+          }))
+        )
+      );
   }
 
   openWalletAction(action: 'topup' | 'cashout' | 'transfer'): void {
@@ -1343,24 +1439,19 @@ export class DashboardComponent implements OnInit {
       currentUserId === listing.sellerUserId ? 'demo-buyer' : currentUserId;
     this.buySellChats
       .startChatForListing(listing.id, buyerUserId, listing.sellerUserId)
-      .subscribe((conversation) => {
-        this.selectedMarketplaceListing.set(listing);
-        this.marketplaceConversation.set(conversation);
-        this.buySellPayments
-          .getPaymentRequests(conversation.id)
-          .subscribe((requests) => {
-            if (currentUserId !== listing.sellerUserId && requests.length === 0) {
-              this.buySellPayments.sendPaymentRequest(conversation.id, {
-                listingId: listing.id,
-                requestedByUserId: listing.sellerUserId,
-                requestedFromUserId: currentUserId,
-                requestedAmount: listing.price,
-                description: `Payment request for ${listing.title}`
-              }).subscribe(() => this.refreshMarketplaceChat());
-              return;
-            }
-            this.refreshMarketplaceChat();
-          });
+      .subscribe({
+        next: (conversation) => {
+          this.selectedMarketplaceListing.set(listing);
+          this.marketplaceConversation.set(conversation);
+          this.marketplaceNotice.set(`Chat with ${listing.sellerName} is ready.`);
+          this.loadMarketplaceConversations();
+          this.refreshMarketplaceChat();
+        },
+        error: (error) => {
+          this.marketplaceNotice.set(
+            error.error?.message ?? 'The seller chat could not be opened.'
+          );
+        }
       });
   }
 
@@ -1375,9 +1466,17 @@ export class DashboardComponent implements OnInit {
       senderUserId: userId,
       messageType: 'TEXT',
       messageText: text
-    }).subscribe(() => {
-      this.marketplaceChatText.setValue('');
-      this.refreshMarketplaceChat();
+    }).subscribe({
+      next: () => {
+        this.marketplaceChatText.setValue('');
+        this.marketplaceNotice.set('Message sent.');
+        this.refreshMarketplaceChat();
+      },
+      error: (error) => {
+        this.marketplaceNotice.set(
+          error.error?.message ?? 'Your message could not be sent.'
+        );
+      }
     });
   }
 
@@ -1459,10 +1558,27 @@ export class DashboardComponent implements OnInit {
     return String(this.user()?.id ?? '');
   }
 
+  openMarketplaceConversation(conversation: BuySellChatConversation): void {
+    const listing = this.marketplaceListings().find(
+      ({ id }) => id === conversation.listingId
+    );
+    if (listing) this.selectedMarketplaceListing.set(listing);
+    this.marketplaceConversation.set(conversation);
+    this.marketplaceNotice.set('');
+    this.refreshMarketplaceChat();
+  }
+
   private loadMarketplaceListings(): void {
     this.buySell.getBuySellListings().subscribe((listings) =>
       this.marketplaceListings.set(listings)
     );
+  }
+
+  private loadMarketplaceConversations(): void {
+    this.buySellChats.getMyConversations().subscribe({
+      next: (conversations) => this.marketplaceConversations.set(conversations),
+      error: () => this.marketplaceConversations.set([])
+    });
   }
 
   private refreshMarketplaceChat(): void {

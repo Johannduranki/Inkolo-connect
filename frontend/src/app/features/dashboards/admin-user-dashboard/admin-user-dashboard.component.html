@@ -22,6 +22,86 @@
   </section>
 
   <div class="admin-layout">
+    <section class="analytics-panel">
+      <div class="panel-heading">
+        <div>
+          <p>PLATFORM OVERVIEW</p>
+          <h2>Members and service subscriptions</h2>
+        </div>
+        <span>{{ analytics()?.totalActiveSubscriptions ?? 0 }} subscriptions</span>
+      </div>
+
+      <div class="analytics-content">
+        <div
+          class="subscription-donut"
+          [style.background]="donutBackground()"
+          role="img"
+          [attr.aria-label]="
+            (analytics()?.totalMembers ?? 0) +
+            ' total members and ' +
+            (analytics()?.totalActiveSubscriptions ?? 0) +
+            ' active service subscriptions'
+          "
+        >
+          <div>
+            <strong>{{ analytics()?.totalMembers ?? 0 }}</strong>
+            <span>Total members</span>
+          </div>
+        </div>
+
+        <div class="subscription-legend">
+          @if (subscriptionChartItems().length) {
+            @for (item of subscriptionChartItems(); track item.serviceCode) {
+              <article>
+                <i [style.background]="item.color" aria-hidden="true"></i>
+                <span>{{ item.name }}</span>
+                <strong>{{ item.count }}</strong>
+              </article>
+            }
+          } @else {
+            <p>No active service subscriptions have been recorded yet.</p>
+          }
+        </div>
+
+        <div class="analytics-totals">
+          <article>
+            <span>Registered users</span>
+            <strong>{{ analytics()?.totalRegisteredUsers ?? members().length }}</strong>
+          </article>
+          <article>
+            <span>Members</span>
+            <strong>{{ analytics()?.totalMembers ?? 0 }}</strong>
+          </article>
+          <article>
+            <span>Active subscriptions</span>
+            <strong>{{ analytics()?.totalActiveSubscriptions ?? 0 }}</strong>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="user-management-panel">
+      <div class="panel-heading">
+        <div><p>USER ADMINISTRATION</p><h2>Add or remove platform users</h2></div>
+        @if (selectedMember(); as member) {
+          <button type="button" class="danger-button" (click)="removeSelectedUser()">
+            Remove {{ member.fullName }}
+          </button>
+        }
+      </div>
+      <div class="new-user-form">
+        <input [formControl]="newFirstName" placeholder="Name">
+        <input [formControl]="newLastName" placeholder="Surname">
+        <input [formControl]="newTelephone" placeholder="Telephone number">
+        <input [formControl]="newEmail" placeholder="Email address">
+        <select [formControl]="newRole">
+          @for (role of allRoles; track role) { <option [value]="role">{{ role }}</option> }
+        </select>
+        <button type="button" (click)="createUser()">Create user</button>
+      </div>
+      @if (userNotice()) { <p class="user-notice">{{ userNotice() }}</p> }
+    </section>
+
     <aside>
       <label for="member-select">Choose a member</label>
       <select
@@ -113,6 +193,67 @@
           <p class="role-note">This member has no recorded service acceptances yet.</p>
         }
       }
+    </section>
+
+    <section class="revenue-formula-panel">
+      <div class="panel-heading">
+        <div>
+          <p>PLATFORM REVENUE RULES</p>
+          <h2>Paid-service revenue share formulas</h2>
+        </div>
+        <button type="button" (click)="resetRevenueFormulas()">Reset defaults</button>
+      </div>
+      <p class="formula-note">
+        Duranki Admin controls these percentages. Provider + operating + KZNCC +
+        church must equal 100% for each paid service.
+      </p>
+      <div class="formula-table-wrap">
+        <table class="formula-table">
+          <thead>
+            <tr>
+              <th>Paid service</th>
+              <th>Provider %</th>
+              <th>Duranki operating %</th>
+              <th>KZNCC %</th>
+              <th>Church %</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (formula of revenueFormulas(); track formula.serviceId) {
+              <tr [class.invalid-formula]="formulaTotal(formula) !== 100">
+                <td><strong>{{ formula.serviceName }}</strong></td>
+                <td>
+                  <input type="number" min="0" max="100"
+                    [value]="formula.serviceProviderRate"
+                    (change)="updateRevenueRate(formula.serviceId, 'serviceProviderRate', $event)">
+                </td>
+                <td>
+                  <input type="number" min="0" max="100"
+                    [value]="formula.operatingRate"
+                    (change)="updateRevenueRate(formula.serviceId, 'operatingRate', $event)">
+                </td>
+                <td>
+                  <input type="number" min="0" max="100"
+                    [value]="formula.kznccRate"
+                    (change)="updateRevenueRate(formula.serviceId, 'kznccRate', $event)">
+                </td>
+                <td>
+                  <input type="number" min="0" max="100"
+                    [value]="formula.churchRate"
+                    (change)="updateRevenueRate(formula.serviceId, 'churchRate', $event)">
+                </td>
+                <td>
+                  <b>{{ formulaTotal(formula) }}%</b>
+                  @if (formulaTotal(formula) !== 100) {
+                    <small>Must equal 100%</small>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     </section>
   </div>
 </main>

@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { Observable } from 'rxjs';
 import {
   BuySellChatConversation,
   BuySellChatMessage
@@ -7,60 +8,41 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class BuySellChatService {
-  private readonly conversations: BuySellChatConversation[] = [];
-  private readonly messages: BuySellChatMessage[] = [];
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = '/api/platform/marketplace';
 
   startChatForListing(
     listingId: string,
-    buyerUserId: string,
-    sellerUserId: string
+    _buyerUserId: string,
+    _sellerUserId: string
   ): Observable<BuySellChatConversation> {
-    let conversation = this.conversations.find(
-      (item) =>
-        item.listingId === listingId &&
-        item.buyerUserId === buyerUserId &&
-        item.sellerUserId === sellerUserId
+    return this.http.post<BuySellChatConversation>(
+      `${this.apiUrl}/listings/${listingId}/conversations`,
+      {}
     );
-    if (!conversation) {
-      conversation = {
-        id: `conversation-${Date.now()}`,
-        listingId,
-        buyerUserId,
-        sellerUserId,
-        createdAt: new Date().toISOString(),
-        status: 'ACTIVE'
-      };
-      this.conversations.push(conversation);
-    }
-    return of(conversation);
+  }
+
+  getMyConversations(): Observable<BuySellChatConversation[]> {
+    return this.http.get<BuySellChatConversation[]>(
+      `${this.apiUrl}/conversations`
+    );
   }
 
   getBuySellChatConversation(
     conversationId: string,
-    userId: string
+    _userId: string
   ): Observable<BuySellChatConversation | undefined> {
-    return of(
-      this.conversations.find(
-        (conversation) =>
-          conversation.id === conversationId &&
-          [conversation.buyerUserId, conversation.sellerUserId].includes(userId)
-      )
+    return this.http.get<BuySellChatConversation>(
+      `${this.apiUrl}/conversations/${conversationId}`
     );
   }
 
   getMessagesForConversation(
     conversationId: string,
-    userId: string
+    _userId: string
   ): Observable<BuySellChatMessage[]> {
-    const allowed = this.conversations.some(
-      (conversation) =>
-        conversation.id === conversationId &&
-        [conversation.buyerUserId, conversation.sellerUserId].includes(userId)
-    );
-    return of(
-      allowed
-        ? this.messages.filter((message) => message.conversationId === conversationId)
-        : []
+    return this.http.get<BuySellChatMessage[]>(
+      `${this.apiUrl}/conversations/${conversationId}/messages`
     );
   }
 
@@ -68,22 +50,9 @@ export class BuySellChatService {
     conversationId: string,
     message: Omit<BuySellChatMessage, 'id' | 'conversationId' | 'createdAt'>
   ): Observable<BuySellChatMessage> {
-    const conversation = this.conversations.find(({ id }) => id === conversationId);
-    if (
-      !conversation ||
-      ![conversation.buyerUserId, conversation.sellerUserId].includes(
-        message.senderUserId
-      )
-    ) {
-      throw new Error('You do not have access to this conversation.');
-    }
-    const created: BuySellChatMessage = {
-      ...message,
-      id: `message-${Date.now()}`,
-      conversationId,
-      createdAt: new Date().toISOString()
-    };
-    this.messages.push(created);
-    return of(created);
+    return this.http.post<BuySellChatMessage>(
+      `${this.apiUrl}/conversations/${conversationId}/messages`,
+      message
+    );
   }
 }

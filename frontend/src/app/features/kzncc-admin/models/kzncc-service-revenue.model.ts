@@ -7,6 +7,10 @@ export interface KznccServiceRevenue {
   membersSubscribed: number;
   monthlyPrice: number;
   totalRevenue: number;
+  serviceProviderRate: number;
+  operatingRate: number;
+  kznccRate: number;
+  churchRate: number;
   serviceProviderShare: number;
   operatingCost: number;
   kznccShare: number;

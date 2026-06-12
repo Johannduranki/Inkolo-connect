@@ -60,6 +60,12 @@ export class RoleDashboardShellComponent implements OnInit {
     }
   }
 
+  openRoleDashboard(): void {
+    void this.router.navigate([
+      this.roles.getDashboardRouteForRole(this.roles.getActiveRole())
+    ]);
+  }
+
   logout(): void {
     this.auth.logout();
     void this.router.navigate(['/login']);

@@ -31,7 +31,9 @@ const archivedDocuments = {
   'keycha-properties': 'keytcha-properties-terms.html',
   referral: 'referral-service-terms.html',
   'job-search': 'job-search-terms.html',
-  wallet: 'wallet-terms.html'
+  eduu: 'eduu-service-terms.html',
+  wallet: 'wallet-terms.html',
+  kzncc: 'kzncc-service-terms.html'
 };
 
 function genericTerms(serviceCode, planCode) {
@@ -41,6 +43,7 @@ function genericTerms(serviceCode, planCode) {
 <body>
 <h1>${serviceName} Terms and Conditions</h1>
 <p>Version 1.0, effective 10 June 2026.</p>
+<p>Inkolo Connect (Pty) Ltd, registration number 2025/674136/07.</p>
 <p>The member requests activation of the ${serviceName} service under plan ${planCode}.</p>
 <p>The member confirms that the information supplied is accurate, agrees to applicable service fees,
 privacy processing, service rules, provider requirements, and electronic record keeping.</p>
