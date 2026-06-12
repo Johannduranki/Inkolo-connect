@@ -1,0 +1,40 @@
+<section class="panel" aria-labelledby="kzncc-announcements-title">
+  <header>
+    <div>
+      <p>OFFICIAL KZNCC NEWS</p>
+      <h2 id="kzncc-announcements-title">Announcements</h2>
+    </div>
+    <span>{{ announcements.length }} notices</span>
+  </header>
+
+  <div class="announcement-list">
+    @for (announcement of visibleAnnouncements(); track announcement.id) {
+      <article>
+        <div class="meta">
+          <span>{{ announcement.category }}</span>
+          <time>{{ announcement.date | date: 'd MMM y' }}</time>
+        </div>
+        <h3>{{ announcement.title }}</h3>
+        <p>{{ announcement.shortDescription }}</p>
+        <button type="button" (click)="selected.set(announcement)">Read full message</button>
+      </article>
+    }
+  </div>
+
+  @if (announcements.length > 3) {
+    <button class="view-all" type="button" (click)="showAll.set(!showAll())">
+      {{ showAll() ? 'Show latest announcements' : 'View all announcements' }}
+    </button>
+  }
+</section>
+
+@if (selected(); as announcement) {
+  <div class="message-backdrop" (click)="selected.set(null)">
+    <article class="full-message" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <button class="close" type="button" aria-label="Close message" (click)="selected.set(null)">×</button>
+      <span>{{ announcement.category }} · {{ announcement.date | date: 'd MMMM y' }}</span>
+      <h2>{{ announcement.title }}</h2>
+      <p>{{ announcement.message }}</p>
+    </article>
+  </div>
+}

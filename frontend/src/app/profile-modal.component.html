@@ -1,0 +1,73 @@
+<div class="profile-backdrop" (click)="closed.emit()">
+  <section class="profile-modal" role="dialog" aria-modal="true" aria-labelledby="profile-title" (click)="$event.stopPropagation()">
+    <button class="profile-close" type="button" aria-label="Close profile" (click)="closed.emit()">×</button>
+    <p>MEMBER DETAILS</p>
+    <h2 id="profile-title">My Profile</h2>
+    <span class="profile-intro">Add the personal information used by your Inkolo Connect services.</span>
+
+    <nav class="profile-tabs" aria-label="Profile sections">
+      <button
+        type="button"
+        [class.active]="activeTab() === 'details'"
+        (click)="activeTab.set('details')"
+      >
+        Personal details
+      </button>
+      <button
+        type="button"
+        [class.active]="activeTab() === 'documents'"
+        (click)="activeTab.set('documents')"
+      >
+        My Documents
+      </button>
+    </nav>
+
+    @if (activeTab() === 'details') {
+      <div class="profile-grid">
+        <div class="profile-community">
+          <span>My Community</span>
+          <strong>{{ communityHeading() }}</strong>
+        </div>
+        <label>
+          <span>ID number</span>
+          <input type="text" [formControl]="idNumber" placeholder="Enter ID number">
+        </label>
+        <label>
+          <span>Telephone number</span>
+          <input type="tel" [formControl]="telephoneNumber" placeholder="Enter telephone number">
+        </label>
+        <label class="wide">
+          <span>Email address</span>
+          <input type="email" [formControl]="email" placeholder="Enter email address">
+        </label>
+        <label class="wide">
+          <span>Street address</span>
+          <input type="text" [formControl]="address" placeholder="Enter home address">
+        </label>
+        <label>
+          <span>Town or city</span>
+          <input type="text" [formControl]="city" placeholder="Enter town or city">
+        </label>
+        <label>
+          <span>Postal code</span>
+          <input type="text" [formControl]="postalCode" placeholder="Enter postal code">
+        </label>
+        <label>
+          <span>Emergency contact</span>
+          <input type="text" [formControl]="emergencyContactName" placeholder="Contact name">
+        </label>
+        <label>
+          <span>Emergency contact number</span>
+          <input type="tel" [formControl]="emergencyContactNumber" placeholder="Contact number">
+        </label>
+      </div>
+
+      <button class="profile-save" type="button" (click)="save()">Save personal details</button>
+      <small>Your details are securely saved to your Inkolo Connect account.</small>
+    } @else {
+      <div class="profile-documents">
+        <app-my-documents [memberId]="memberId"></app-my-documents>
+      </div>
+    }
+  </section>
+</div>

@@ -1,0 +1,1611 @@
+<main class="dashboard-shell">
+  <header class="topbar">
+    <div class="header-brand-group">
+      <a class="brand" href="/dashboard" aria-label="Inkolo Connect dashboard">
+        <img class="header-logo" src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+      </a>
+      <span class="top-powered-by">Powered by Duranki</span>
+    </div>
+
+    <span aria-hidden="true"></span>
+
+    <div class="account">
+      @if (user()) {
+        <app-role-switcher
+          [userFullName]="user()!.firstName + ' ' + user()!.lastName"
+        ></app-role-switcher>
+        <span class="avatar" aria-hidden="true">
+          {{ user()!.firstName.charAt(0) }}{{ user()!.lastName.charAt(0) }}
+        </span>
+      }
+      <button class="profile-button" type="button" (click)="profileOpen.set(true)">My Profile</button>
+      <button
+        class="reset-services"
+        type="button"
+        [disabled]="resetLoading()"
+        (click)="resetServices()"
+      >
+        {{ resetLoading() ? 'Resetting...' : 'Reset' }}
+      </button>
+      <button class="sign-out" type="button" (click)="logout()">Sign out</button>
+    </div>
+  </header>
+
+  <section class="subscribed-banner" aria-labelledby="subscribed-heading">
+      <div class="subscribed-heading">
+        <div>
+          <p class="eyebrow">YOUR ACTIVE ECOSYSTEM</p>
+          <h2 id="subscribed-heading">My active services</h2>
+        </div>
+        <span>{{ subscribedServices().length }} active</span>
+      </div>
+
+      @if (subscribedServices().length > 0) {
+      <div class="subscribed-list">
+        @for (service of subscribedServices(); track service.code) {
+          <article class="subscribed-service" [style.--accent]="service.accent">
+            <div class="subscribed-logo">
+              <img [src]="service.image" [alt]="service.name">
+            </div>
+            <div class="subscribed-copy">
+              <span>{{ service.tag }}</span>
+              <h3>{{ serviceDisplayName(service) }}</h3>
+              @if (service.application) {
+                <p>Application submitted for review</p>
+              } @else {
+                <p>{{ subscriptionFor(service.code)?.planLabel }}</p>
+                <strong class="active-service-price">{{ subscriptionPrice(service) }}</strong>
+              }
+            </div>
+            <button type="button" (click)="openService(service)">
+              Open
+              <span aria-hidden="true">→</span>
+            </button>
+          </article>
+        }
+      </div>
+      } @else {
+        <p class="no-active-services">Subscribe to a service below and it will appear here.</p>
+      }
+
+      @if (subscriptionFor('wallet')) {
+        <button
+          class="wallet-bank-card banner-wallet"
+          [class.flipped]="walletOpen()"
+          type="button"
+          (click)="toggleWalletCard()"
+          [attr.aria-label]="walletOpen() ? 'Show wallet card front' : 'Show wallet balance and transactions'"
+        >
+          <span class="wallet-card-inner">
+            <span class="wallet-card-face wallet-card-front">
+              <span class="bank-card-top">
+                <img src="/inkolo-connect-logo.png" alt="">
+                <b>INKOLO WALLET</b>
+              </span>
+              <span class="bank-card-chip" aria-hidden="true"></span>
+              <strong>•••• •••• •••• 2086</strong>
+              <span class="bank-card-bottom">
+                <small>{{ user()?.firstName }} {{ user()?.lastName }}</small>
+                <small>View balance →</small>
+              </span>
+            </span>
+            <span class="wallet-card-face wallet-card-back">
+              <span class="wallet-back-heading">
+                <small>AVAILABLE BALANCE</small>
+                <strong>{{ walletBalance().toFixed(2) }} Izaka</strong>
+              </span>
+              <span class="wallet-back-transactions">
+                @for (transaction of walletTransactions().slice(0, 2); track $index) {
+                  <span>
+                    <small>{{ transaction.description }}</small>
+                    <b [class.credit]="transaction.amount >= 0">
+                      {{ transaction.amount > 0 ? '+' : '' }}{{ transaction.amount.toFixed(2) }} Izaka
+                    </b>
+                  </span>
+                }
+              </span>
+              <small class="flip-hint">← Card front</small>
+            </span>
+          </span>
+        </button>
+        <div class="workspace-switcher wallet-community-link" aria-label="Community navigation">
+          <a href="/community">My Community</a>
+        </div>
+        <div class="wallet-actions" aria-label="Wallet actions">
+          <button type="button" (click)="openWalletAction('topup')">Top Up</button>
+          <button type="button" (click)="openWalletAction('cashout')">Cash Out</button>
+          <button type="button" (click)="openWalletAction('transfer')">Transfer</button>
+        </div>
+      }
+  </section>
+
+  <section class="hero">
+    <div>
+      <p class="eyebrow">YOUR INKOLO CONNECT ECOSYSTEM</p>
+      <h1 class="welcome-line">
+        @if (user()) {
+          Hi, {{ user()!.firstName }} {{ user()!.lastName }}
+        } @else {
+          Hi
+        }
+      </h1>
+      <p class="hero-copy">
+        Everything you need, connected in one place. Choose a service to get started.
+      </p>
+    </div>
+
+    @if (subscriptionFor('wallet')) {
+      <button
+        class="wallet-bank-card"
+        [class.flipped]="walletOpen()"
+        type="button"
+        (click)="toggleWalletCard()"
+        [attr.aria-label]="walletOpen() ? 'Show wallet card front' : 'Show wallet balance and transactions'"
+      >
+        <span class="wallet-card-inner">
+          <span class="wallet-card-face wallet-card-front">
+            <span class="bank-card-top">
+              <img src="/inkolo-connect-logo.png" alt="">
+              <b>INKOLO WALLET</b>
+            </span>
+            <span class="bank-card-chip" aria-hidden="true"></span>
+            <strong>•••• •••• •••• 2086</strong>
+            <span class="bank-card-bottom">
+              <small>{{ user()?.firstName }} {{ user()?.lastName }}</small>
+              <small>View balance →</small>
+            </span>
+          </span>
+          <span class="wallet-card-face wallet-card-back">
+            <span class="wallet-back-heading">
+              <small>AVAILABLE BALANCE</small>
+              <strong>{{ walletBalance().toFixed(2) }} Izaka</strong>
+            </span>
+            <span class="wallet-back-transactions">
+              @for (transaction of walletTransactions().slice(0, 2); track $index) {
+                <span>
+                  <small>{{ transaction.description }}</small>
+                  <b [class.credit]="transaction.amount >= 0">
+                    {{ transaction.amount > 0 ? '+' : '' }}{{ transaction.amount.toFixed(2) }} Izaka
+                  </b>
+                </span>
+              }
+            </span>
+            <small class="flip-hint">← Card front</small>
+          </span>
+        </span>
+      </button>
+    }
+  </section>
+
+  <div class="dashboard-content">
+    <section class="services-section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">EXPLORE</p>
+          <h2>Inkolo Connect services</h2>
+        </div>
+        <span>{{ availableServices().length }} services available</span>
+      </div>
+
+      <div class="service-grid">
+        @for (service of availableServices(); track service.name) {
+          <article
+            class="service-card"
+            [style.--accent]="service.accent"
+          >
+            <div class="image-wrap">
+              <span class="service-tag">{{ service.tag }}</span>
+              <img [src]="service.image" [alt]="service.name">
+            </div>
+            <button
+              class="image-subscribe-button"
+              type="button"
+              (click)="openService(service)"
+            >
+              {{
+                subscriptionFor(service.code)
+                  ? 'Open'
+                  : service.application
+                    ? 'Apply now'
+                    : 'Subscribe'
+              }}
+            </button>
+            <div class="service-content">
+              <h3>{{ serviceDisplayName(service) }}</h3>
+              <p>{{ service.description }}</p>
+              <button
+                type="button"
+                [class.subscribed]="subscriptionFor(service.code)"
+                (click)="openService(service)"
+              >
+                @if (service.availability === 'coming-soon') {
+                  Coming soon
+                } @else if (service.application && stepUpApplicationStatus()) {
+                  Application submitted
+                } @else if (service.application) {
+                  Apply now
+                } @else if (subscriptionFor(service.code)) {
+                  Open
+                } @else {
+                  Subscribe
+                }
+                <span aria-hidden="true">→</span>
+              </button>
+            </div>
+          </article>
+        }
+      </div>
+
+      @if (availableServices().length === 0) {
+        <div class="all-subscribed">
+          <span>✓</span>
+          <h3>All services are active</h3>
+          <p>Your subscribed services are available in the banner above.</p>
+        </div>
+      }
+    </section>
+
+    <div class="right-rail">
+      <aside class="announcements" aria-labelledby="announcement-title">
+        <div class="announcement-heading">
+          <div>
+            <p class="eyebrow">STAY INFORMED</p>
+            <h2 id="announcement-title">Community announcements</h2>
+          </div>
+          <span class="live-dot" aria-label="New announcements"></span>
+        </div>
+
+        <div class="announcement-list">
+          @for (announcement of announcements; track announcement.title) {
+            <article
+              class="announcement-card"
+              [class.featured]="announcement.featured"
+            >
+              <div class="announcement-meta">
+                <span>{{ announcement.category }}</span>
+                <time>{{ announcement.date }}</time>
+              </div>
+              <h3>{{ announcement.title }}</h3>
+              <p>{{ announcement.summary }}</p>
+            </article>
+          }
+        </div>
+
+        <button class="all-announcements" type="button">
+          View all announcements
+          <span aria-hidden="true">→</span>
+        </button>
+      </aside>
+
+      <aside class="community-chat" aria-labelledby="chat-title">
+        <div class="chat-heading">
+          <div>
+            <span class="online-dot" aria-hidden="true"></span>
+            <div>
+              <h2 id="chat-title">Community chat</h2>
+              <p>Members online now</p>
+            </div>
+          </div>
+          <button type="button" aria-label="Chat options">•••</button>
+        </div>
+
+        <div class="chat-channel">
+          <span>#</span>
+          General community
+        </div>
+
+        <div class="message-list" aria-live="polite">
+          @for (chat of chatMessages(); track $index) {
+            <article class="chat-message" [class.mine]="chat.mine">
+              <span class="chat-avatar">{{ chat.initials }}</span>
+              <div>
+                <div class="message-meta">
+                  <strong>{{ chat.mine ? 'You' : chat.author }}</strong>
+                  <time>{{ chat.time }}</time>
+                </div>
+                <p>{{ chat.message }}</p>
+              </div>
+            </article>
+          }
+        </div>
+
+        <form
+          class="chat-composer"
+          (submit)="sendMessage(); $event.preventDefault()"
+        >
+          <input
+            type="text"
+            [formControl]="chatMessage"
+            placeholder="Write a message..."
+            aria-label="Community chat message"
+            maxlength="500"
+          >
+          <button
+            type="submit"
+            [disabled]="!chatMessage.value.trim()"
+            aria-label="Send message"
+          >
+            ↑
+          </button>
+        </form>
+        <p class="chat-note">Be kind and keep conversations community-friendly.</p>
+      </aside>
+    </div>
+  </div>
+
+  <section class="coming-soon">
+    <div class="coming-icon">+</div>
+    <div>
+      <p class="eyebrow">THE ECOSYSTEM IS GROWING</p>
+      <h2>More services are on the way.</h2>
+      <p>New Inkolo Connect services will appear here as they become available.</p>
+    </div>
+  </section>
+
+  <footer>
+    <span>Inkolo Connect Platform</span>
+    <span>One account. A growing ecosystem.</span>
+  </footer>
+
+  @if (selectedService(); as service) {
+    <div class="modal-backdrop" (click)="closeSubscription()">
+      <section
+        class="subscription-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="subscription-title"
+        (click)="$event.stopPropagation()"
+      >
+        <button
+          class="modal-close"
+          type="button"
+          aria-label="Close subscription"
+          (click)="closeSubscription()"
+        >
+          ×
+        </button>
+
+        <div class="modal-service">
+          <img [src]="service.image" [alt]="service.name">
+          <div>
+            <p class="eyebrow">SERVICE SUBSCRIPTION</p>
+            <h2 id="subscription-title">{{ service.name }}</h2>
+            <p>{{ service.billingNote }}</p>
+          </div>
+        </div>
+
+        @if (hasServiceTerms(service) && !subscriptionFor(service.code)) {
+          <section class="buy-sell-terms-panel" aria-labelledby="buy-sell-terms-heading">
+            <div class="buy-sell-terms-heading">
+              <div>
+                <p class="eyebrow">REQUIRED AGREEMENT</p>
+                <h3 id="buy-sell-terms-heading">
+                  {{ serviceTermsTitle(service) }} Terms and Conditions
+                </h3>
+              </div>
+              <a
+                [href]="'/' + serviceTermsSlug(service) + '.docx'"
+                target="_blank"
+                rel="noopener"
+              >
+                Open Word document
+              </a>
+            </div>
+            <p>
+              Read the complete terms below before activating
+              {{ serviceTermsTitle(service) }}.
+            </p>
+            <iframe
+              class="buy-sell-terms-frame"
+              [src]="serviceTermsUrl(service)"
+              [title]="serviceTermsTitle(service) + ' Service Terms and Conditions'"
+            ></iframe>
+          </section>
+        }
+
+        @if (isActiveFuneralView(service)) {
+          <section class="active-funeral-summary">
+            <div class="active-funeral-heading">
+              <span class="active-policy-check" aria-hidden="true">✓</span>
+              <div>
+                <p class="eyebrow">YOUR ACTIVE COVER</p>
+                <h3>Funeral Services subscriptions</h3>
+                <p>Your selected funeral cover options are active.</p>
+              </div>
+            </div>
+
+            <div class="active-funeral-plans">
+              @for (plan of activeFuneralPlans(); track plan.code) {
+                <article>
+                  @if (plan.image) {
+                    <img [src]="plan.image" [alt]="plan.name">
+                  }
+                  <div>
+                    <small>{{ plan.provider || 'Inkolo Connect' }}</small>
+                    <strong>{{ plan.name }}</strong>
+                    <span>{{ plan.description }}</span>
+                  </div>
+                  <b>{{ plan.price }}</b>
+                </article>
+              }
+            </div>
+
+            @if (activeFuneralPlans().length === 0) {
+              <p class="subscription-error">
+                Your Funeral Services subscription is active. Plan details are being updated.
+              </p>
+            }
+
+            @if (hasActiveAfricanBankFuneral()) {
+              <div class="plan-notice">
+                <strong>African Bank card collection</strong>
+                <p>
+                  You can collect your African Bank card at your closest African Bank
+                  branch or at your church reception.
+                </p>
+              </div>
+            }
+          </section>
+        } @else if (isActiveReferralView(service)) {
+          <section class="referral-workspace">
+            <div class="referral-heading">
+              <div>
+                <p class="eyebrow">REFER & ACKNOWLEDGE</p>
+                <h3>Your referral network</h3>
+                <p>Both members must confirm who referred whom before the referral is accepted.</p>
+              </div>
+              <span>{{ referralOutgoing().length }} sent</span>
+            </div>
+
+            <div class="referral-form">
+              <label>
+                <span>Name</span>
+                <input type="text" [formControl]="referralFirstName" placeholder="Name">
+              </label>
+              <label>
+                <span>Surname</span>
+                <input type="text" [formControl]="referralLastName" placeholder="Surname">
+              </label>
+              <label>
+                <span>Cellphone number</span>
+                <input
+                  type="tel"
+                  inputmode="tel"
+                  [formControl]="referralTelephone"
+                  placeholder="e.g. 0725550184"
+                >
+              </label>
+              <button type="button" (click)="submitReferral()">Send referral request</button>
+            </div>
+
+            @if (referralNotice()) {
+              <p class="referral-notice" role="status">{{ referralNotice() }}</p>
+            }
+
+            <div class="referral-columns">
+              <section>
+                <h4>People you referred</h4>
+                @if (referralOutgoing().length > 0) {
+                  @for (referral of referralOutgoing(); track referral.id) {
+                    <article>
+                      <div>
+                        <strong>{{ referral.referredName }}</strong>
+                        <small>{{ referral.referredPhone }}</small>
+                      </div>
+                      <span [class.accepted]="referral.status === 'ACCEPTED'">
+                        {{ referral.status }}
+                      </span>
+                    </article>
+                  }
+                } @else {
+                  <p>No referral requests sent yet.</p>
+                }
+              </section>
+
+              <section>
+                <h4>Who referred you</h4>
+                @if (referralIncoming().length > 0) {
+                  @for (referral of referralIncoming(); track referral.id) {
+                    <article class="incoming-referral">
+                      <div>
+                        <strong>{{ referral.referrerName }}</strong>
+                        <small>says they referred you</small>
+                      </div>
+                      @if (referral.status === 'PENDING') {
+                        <div class="referral-decisions">
+                          <button type="button" (click)="acknowledgeReferral(referral, true)">
+                            Acknowledge
+                          </button>
+                          <button type="button" (click)="acknowledgeReferral(referral, false)">
+                            Decline
+                          </button>
+                        </div>
+                      } @else {
+                        <span [class.accepted]="referral.status === 'ACCEPTED'">
+                          {{ referral.status }}
+                        </span>
+                      }
+                    </article>
+                  }
+                } @else {
+                  <p>No referral requests received yet.</p>
+                }
+              </section>
+            </div>
+          </section>
+        } @else if (service.code === 'community') {
+          <div class="vas-purchase-form">
+            <label>
+              <span>Church</span>
+              <select
+                [formControl]="communityChurchId"
+                (change)="onCommunityChurchChange()"
+              >
+                <option value="">Select a church</option>
+                @for (churchOption of communityChurches(); track churchOption.id) {
+                  <option [value]="churchOption.id">
+                    {{ churchOption.name }} · {{ churchOption.region }}
+                  </option>
+                }
+              </select>
+            </label>
+            @if (communityChurchId.value && communityBranches().length > 0) {
+              <label>
+                <span>Church branch</span>
+                <select [formControl]="communityBranchId">
+                  <option value="">Select a church branch</option>
+                  @for (branch of communityBranches(); track branch.id) {
+                    <option [value]="branch.id">{{ branch.branchName }}</option>
+                  }
+                </select>
+              </label>
+            }
+          </div>
+        }
+
+        @if (isActiveFuneralView(service) || isActiveReferralView(service)) {
+        } @else if (service.application) {
+          <div class="application-documents">
+            <label class="document-upload">
+              <span class="document-number">1</span>
+              <span class="document-copy">
+                <strong>Bank account confirmation letter</strong>
+                <small>PDF, JPG or PNG · Maximum 5 MB</small>
+                @if (bankConfirmationFile()) {
+                  <em>{{ bankConfirmationFile()!.name }}</em>
+                }
+              </span>
+              <span class="choose-file">Choose file</span>
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                (change)="selectApplicationFile('bank', $event)"
+              >
+            </label>
+
+            <label class="document-upload">
+              <span class="document-number">2</span>
+              <span class="document-copy">
+                <strong>ID document</strong>
+                <small>PDF, JPG or PNG · Maximum 5 MB</small>
+                @if (idDocumentFile()) {
+                  <em>{{ idDocumentFile()!.name }}</em>
+                }
+              </span>
+              <span class="choose-file">Choose file</span>
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                (change)="selectApplicationFile('id', $event)"
+              >
+            </label>
+          </div>
+        } @else {
+          <div class="plan-list">
+            @for (plan of service.plans; track plan.code) {
+              @if (
+                service.code !== 'vas-services' ||
+                (vasPurchaseEnabled(service) ? plan.code !== 'free' : plan.code === 'free')
+              ) {
+                <label
+                  class="plan-option"
+                  [class.vas-plan]="vasPurchaseEnabled(service)"
+                  [class.provider-plan]="plan.image"
+                  [class.selected]="
+                    service.code === 'funeral'
+                      ? isFuneralPlanSelected(plan.code)
+                      : selectedPlanCode() === plan.code
+                  "
+                >
+                  <input
+                    [type]="
+                      service.code === 'funeral' && plan.code === 'african-bank'
+                        ? 'checkbox'
+                        : 'radio'
+                    "
+                    [name]="
+                      service.code === 'funeral' && plan.code === 'african-bank'
+                        ? 'africanBankFuneralCover'
+                        : 'servicePlan'
+                    "
+                    [value]="plan.code"
+                    [checked]="
+                      service.code === 'funeral'
+                        ? isFuneralPlanSelected(plan.code)
+                        : selectedPlanCode() === plan.code
+                    "
+                    (change)="
+                      service.code === 'funeral'
+                        ? selectFuneralPlan(plan.code)
+                        : selectedPlanCode.set(plan.code)
+                    "
+                  >
+                  <span class="plan-radio"></span>
+                  @if (plan.image) {
+                    <span class="plan-image">
+                      <img [src]="plan.image" [alt]="plan.provider || plan.name">
+                    </span>
+                  }
+                  <span class="plan-copy">
+                    @if (plan.provider) {
+                      <em>{{ plan.provider }}</em>
+                    }
+                    <strong>{{ plan.name }}</strong>
+                    <small>{{ plan.description }}</small>
+                  </span>
+                  <b>{{ plan.price }}</b>
+                </label>
+              }
+            }
+          </div>
+        }
+
+        @if (vasPurchaseEnabled(service)) {
+          <div class="vas-purchase-form">
+            @if (savedVasBeneficiaries().length > 0) {
+              <label>
+                <span>Saved beneficiary</span>
+                <select
+                  [formControl]="vasSelectedBeneficiary"
+                  (change)="selectVasBeneficiary()"
+                >
+                  <option value="">Add new recipient</option>
+                  @for (beneficiary of savedVasBeneficiaries(); track beneficiary.id) {
+                    <option [value]="beneficiary.id">
+                      {{ beneficiary.beneficiaryName }} · {{ beneficiary.beneficiaryType }}
+                    </option>
+                  }
+                </select>
+              </label>
+              <button
+                class="vas-delete-beneficiary"
+                type="button"
+                [disabled]="!vasSelectedBeneficiary.value"
+                (click)="deleteSelectedVasBeneficiary()"
+              >
+                Delete selected
+              </button>
+            }
+            <label>
+              <span>Buying for</span>
+              <select [formControl]="vasBuyingFor" (change)="onVasBuyingForChange()">
+                <option value="MYSELF">Myself</option>
+                <option value="SOMEONE_ELSE">Someone else</option>
+              </select>
+            </label>
+            @if (vasBuyingFor.value === 'SOMEONE_ELSE') {
+              <label>
+                <span>Recipient name (optional)</span>
+                <input
+                  type="text"
+                  [formControl]="vasRecipientName"
+                  placeholder="Recipient name"
+                >
+              </label>
+            }
+            @if (selectedPlanCode() === 'electricity') {
+              <label>
+                <span>Municipality / provider</span>
+                <select [formControl]="vasProvider">
+                  @for (provider of vasProviders(); track provider) {
+                    <option [value]="provider">{{ provider }}</option>
+                  }
+                </select>
+              </label>
+            } @else {
+              <label>
+                <span>Network</span>
+                <select [formControl]="vasNetwork" (change)="onVasNetworkChange()">
+                  @for (network of vasNetworks(); track network) {
+                    <option [value]="network">{{ network.replace('_', ' ') }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                <span>Purchase type</span>
+                <select [formControl]="vasPurchaseType">
+                  <option value="AIRTIME">Airtime</option>
+                  <option value="DATA">Data</option>
+                  <option value="COMBO">Combo / bundle</option>
+                </select>
+              </label>
+              @if (vasPurchaseType.value !== 'AIRTIME') {
+                <label>
+                  <span>Data bundle</span>
+                  <select [formControl]="vasBundleName" (change)="selectVasBundle()">
+                    <option value="">Choose a bundle</option>
+                    @for (bundle of vasBundles(); track bundle.bundleName) {
+                      <option [value]="bundle.bundleName">
+                        {{ bundle.bundleName }} · {{ bundle.dataSize }} · R{{ bundle.price }}
+                      </option>
+                    }
+                  </select>
+                </label>
+              }
+            }
+            <label>
+              <span>
+                {{ selectedPlanCode() === 'electricity' ? 'Meter number' : 'Mobile number' }}
+              </span>
+              <input
+                type="text"
+                [formControl]="vasAccount"
+                [placeholder]="selectedPlanCode() === 'electricity' ? 'Enter meter number' : 'Enter mobile number'"
+              >
+            </label>
+            <label>
+              <span>
+                {{ selectedPlanCode() === 'electricity' ? 'Confirm meter number' : 'Confirm mobile number' }}
+              </span>
+              <input
+                type="text"
+                [formControl]="vasConfirmAccount"
+                [placeholder]="selectedPlanCode() === 'electricity' ? 'Confirm meter number' : 'Confirm mobile number'"
+              >
+            </label>
+            <label>
+              <span>Purchase amount</span>
+              <div class="amount-input">
+                <b>R</b>
+                <input type="number" min="1" step="1" [formControl]="vasAmount" placeholder="0.00">
+              </div>
+            </label>
+            @if (vasBuyingFor.value === 'SOMEONE_ELSE') {
+              <label class="vas-save-recipient">
+                <input type="checkbox" [formControl]="vasSaveBeneficiary">
+                <span>Save recipient for later</span>
+              </label>
+            }
+          </div>
+          @if (vasPurchaseComplete()) {
+            <p class="purchase-success">{{ vasPurchaseComplete() }}</p>
+          }
+        }
+
+        @if (
+          service.code === 'funeral' &&
+          !isActiveFuneralView(service) &&
+          africanBankFuneralSelected()
+        ) {
+          <div class="plan-notice">
+            <strong>African Bank card collection</strong>
+            <p>
+              You can collect your African Bank card at your closest African Bank
+              branch or at your church reception.
+            </p>
+          </div>
+        }
+
+        @if (service.code === 'vuma-fibre' && !subscriptionFor(service.code)) {
+          <section class="vuma-consent-panel">
+            <strong>Vuma Fibre availability enquiry</strong>
+            <p>
+              Do you want to share your personal details with Vuma so they can contact you
+              about fibre availability in your area?
+            </p>
+            <label>
+              <input
+                type="checkbox"
+                [checked]="vumaSharingConsent()"
+                (change)="vumaSharingConsent.set($any($event.target).checked)"
+              >
+              <span>
+                Yes, I consent to Inkolo Connect sharing my name, contact details and address
+                with Vuma for this fibre availability enquiry.
+              </span>
+            </label>
+          </section>
+        }
+
+        @if (
+          !isActiveFuneralView(service) &&
+          !isActiveReferralView(service) &&
+          !service.application &&
+          !vasPurchaseEnabled(service)
+        ) {
+          <label class="terms-acceptance">
+            <input
+              type="checkbox"
+              [checked]="termsAccepted()"
+              (change)="termsAccepted.set($any($event.target).checked)"
+            >
+            <span>
+              @if (hasServiceTerms(service)) {
+                I confirm that I have read and accepted the
+                {{ serviceTermsTitle(service) }} Terms and Conditions.
+                I agree that my electronic acceptance, identity, date and time,
+                document version, document fingerprint, IP address and browser
+                details may be retained as an acceptance record.
+              } @else {
+                I have read and accept the Terms and Conditions for this service,
+                and agree that my electronic acceptance may be retained as a record.
+              }
+            </span>
+          </label>
+        }
+
+        @if (subscriptionError()) {
+          <p class="subscription-error" role="alert">{{ subscriptionError() }}</p>
+        }
+
+        @if (isActiveFuneralView(service) || isActiveReferralView(service)) {
+          <button
+            class="confirm-subscription"
+            type="button"
+            (click)="closeSubscription()"
+          >
+            Close
+          </button>
+        } @else if (service.application) {
+          <button
+            class="confirm-subscription"
+            type="button"
+            [disabled]="!bankConfirmationFile() || !idDocumentFile() || subscriptionLoading()"
+            (click)="submitStepUpApplication()"
+          >
+            {{ subscriptionLoading() ? 'Uploading...' : 'Submit application' }}
+          </button>
+          <p class="payment-note">
+            Your documents are private and will only be used to review this application.
+          </p>
+        } @else if (vasPurchaseEnabled(service)) {
+          <button
+            class="confirm-subscription"
+            type="button"
+            (click)="completeVasPurchase()"
+          >
+            Buy now
+          </button>
+          <p class="payment-note">
+            Demo purchase only. A live payment provider will be connected later.
+          </p>
+        } @else {
+          <button
+            class="confirm-subscription"
+            type="button"
+            [disabled]="
+              !termsAccepted() ||
+              subscriptionLoading() ||
+              (service.code === 'vuma-fibre' && !vumaSharingConsent())
+            "
+            (click)="confirmSubscription()"
+          >
+            @if (subscriptionLoading()) {
+              Processing...
+            } @else {
+              Confirm subscription
+            }
+          </button>
+          <p class="payment-note">
+            Paid plans are recorded for testing. Payment gateway collection will be connected separately.
+          </p>
+        }
+      </section>
+    </div>
+  }
+
+  @if (marketplaceOpen()) {
+    <div class="modal-backdrop" (click)="closeMarketplace()">
+      <section
+        class="marketplace-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="marketplace-title"
+        (click)="$event.stopPropagation()"
+      >
+        <button
+          class="modal-close"
+          type="button"
+          aria-label="Close marketplace"
+          (click)="closeMarketplace()"
+        >
+          ×
+        </button>
+
+        <header class="marketplace-heading">
+          <div>
+            <p class="eyebrow">COMMUNITY MARKETPLACE</p>
+            <h2 id="marketplace-title">Buy and Sell</h2>
+            <p>Discover items offered by trusted Inkolo Connect members.</p>
+          </div>
+          <button type="button" (click)="listingFormOpen.set(!listingFormOpen())">
+            {{ listingFormOpen() ? 'Close form' : '+ List an item' }}
+          </button>
+        </header>
+
+        @if (listingFormOpen()) {
+          <section class="listing-form" aria-labelledby="listing-form-title">
+            <div class="listing-image-upload">
+              <label>
+                @if (listingImage()) {
+                  <img [src]="listingImage()" alt="Item preview">
+                } @else {
+                  <span>Upload item picture</span>
+                  <small>PNG or JPG</small>
+                }
+                <input type="file" accept="image/png,image/jpeg" (change)="selectListingImage($event)">
+              </label>
+            </div>
+            <div class="listing-fields">
+              <h3 id="listing-form-title">List your item</h3>
+              <div class="listing-row">
+                <label>
+                  <span>Item name</span>
+                  <input type="text" [formControl]="listingTitle" placeholder="What are you selling?">
+                </label>
+                <label>
+                  <span>Price</span>
+                  <div class="amount-input">
+                    <b>R</b>
+                    <input type="number" min="1" [formControl]="listingPrice" placeholder="0.00">
+                  </div>
+                </label>
+              </div>
+              <div class="listing-row">
+                <label>
+                  <span>Category</span>
+                  <select [formControl]="listingCategory">
+                    @for (category of buySellCategories; track category) {
+                      <option [value]="category">{{ category }}</option>
+                    }
+                  </select>
+                </label>
+                <label>
+                  <span>Condition</span>
+                  <select [formControl]="listingCondition">
+                    <option value="NEW">New</option>
+                    <option value="SECOND_HAND">Second-hand</option>
+                    <option value="USED">Used</option>
+                    <option value="REFURBISHED">Refurbished</option>
+                  </select>
+                </label>
+              </div>
+              <label>
+                <span>Area / location</span>
+                <input type="text" [formControl]="listingArea" placeholder="Town or area">
+              </label>
+              <label>
+                <span>Description</span>
+                <textarea
+                  rows="3"
+                  [formControl]="listingDescription"
+                  placeholder="Describe the condition and important details"
+                ></textarea>
+              </label>
+              <p class="listing-owner">
+                Seller: <strong>{{ user()?.firstName }} {{ user()?.lastName }}</strong>
+              </p>
+              <button class="publish-listing" type="button" (click)="addMarketplaceListing()">
+                Publish item
+              </button>
+            </div>
+          </section>
+        }
+
+        <section class="marketplace-filters" aria-label="Search Buy and Sell listings">
+          <input [formControl]="marketplaceSearch" placeholder="Search items">
+          <input [formControl]="marketplaceArea" placeholder="Area / location">
+          <select [formControl]="marketplaceCategory">
+            <option value="">All categories</option>
+            @for (category of buySellCategories; track category) {
+              <option [value]="category">{{ category }}</option>
+            }
+          </select>
+          <select [formControl]="marketplaceCondition">
+            <option value="">Any condition</option>
+            <option value="NEW">New</option>
+            <option value="SECOND_HAND">Second-hand</option>
+            <option value="USED">Used</option>
+            <option value="REFURBISHED">Refurbished</option>
+          </select>
+          <input type="number" min="0" [formControl]="marketplaceMinPrice" placeholder="Min price">
+          <input type="number" min="0" [formControl]="marketplaceMaxPrice" placeholder="Max price">
+          <input [formControl]="marketplaceCommunity" placeholder="Church / branch">
+          <select [formControl]="marketplaceRating">
+            <option value="">Any seller rating</option>
+            <option value="4">4+ stars</option>
+            <option value="4.5">4.5+ stars</option>
+          </select>
+          <select [formControl]="marketplaceStatus">
+            <option value="">Any status</option>
+            <option value="AVAILABLE">Available</option>
+            <option value="RESERVED">Reserved</option>
+            <option value="SOLD">Sold</option>
+          </select>
+          <button type="button" (click)="applyMarketplaceFilters()">Search</button>
+          <button type="button" (click)="clearMarketplaceFilters()">Clear</button>
+        </section>
+
+        <div class="marketplace-grid">
+          @for (listing of marketplaceListings(); track listing.id) {
+            <article class="marketplace-item">
+              <div class="marketplace-image">
+                <img [src]="listing.images?.[0] || '/service-buy-and-sell.png'" [alt]="listing.title">
+              </div>
+              <div class="marketplace-copy">
+                <span>Listed by {{ listing.sellerName }}</span>
+                <h3>{{ listing.title }}</h3>
+                <p>{{ listing.description }}</p>
+                <small>
+                  {{ listing.category }} · {{ listing.condition.replace('_', ' ') }} ·
+                  {{ listing.area }} · {{ listing.status }}
+                </small>
+                <div>
+                  <strong>R{{ listing.price.toFixed(2) }}</strong>
+                  <span class="marketplace-card-actions">
+                    <button type="button" (click)="viewMarketplaceListing(listing)">View details</button>
+                    <button type="button" (click)="startMarketplaceChat(listing)">Chat</button>
+                  </span>
+                </div>
+              </div>
+            </article>
+          }
+        </div>
+
+        @if (selectedMarketplaceListing(); as listing) {
+          <section class="marketplace-detail">
+            <div>
+              <p class="eyebrow">LISTING DETAILS</p>
+              <h3>{{ listing.title }}</h3>
+              <p>{{ listing.description }}</p>
+              <dl>
+                <div><dt>Category</dt><dd>{{ listing.category }}</dd></div>
+                <div><dt>Condition</dt><dd>{{ listing.condition.replace('_', ' ') }}</dd></div>
+                <div><dt>Area</dt><dd>{{ listing.area }}</dd></div>
+                <div><dt>Status</dt><dd>{{ listing.status }}</dd></div>
+                <div><dt>Listed</dt><dd>{{ listing.createdAt | date:'mediumDate' }}</dd></div>
+              </dl>
+            </div>
+            <aside>
+              <strong>{{ listing.sellerName }}</strong>
+              @if (listing.sellerChurchName || listing.sellerCommunityName) {
+                <span>{{ listing.sellerChurchName || listing.sellerCommunityName }}</span>
+              }
+              @if (listing.sellerBranchName) {
+                <span>{{ listing.sellerBranchName }}</span>
+              }
+              @if (listing.sellerRating) {
+                <span>{{ listing.sellerRating }} / 5 seller rating</span>
+              }
+              <button type="button" (click)="startMarketplaceChat(listing)">Chat with seller</button>
+            </aside>
+          </section>
+        }
+
+        @if (marketplaceConversation(); as conversation) {
+          <section class="marketplace-chat">
+            <header>
+              <div>
+                <p class="eyebrow">DIRECT CHAT</p>
+                <h3>{{ selectedMarketplaceListing()?.title }}</h3>
+              </div>
+              <span>Conversation {{ conversation.id }}</span>
+            </header>
+            <div class="marketplace-chat-messages">
+              @for (message of marketplaceMessages(); track message.id) {
+                <p [class.mine]="message.senderUserId === currentUserId()">
+                  <strong>{{ message.messageType.replace('_', ' ') }}</strong>
+                  {{ message.messageText }}
+                </p>
+              }
+              @for (request of marketplacePaymentRequests(); track request.id) {
+                <article class="marketplace-payment-request">
+                  <strong>Payment request: R{{ request.requestedAmount.toFixed(2) }}</strong>
+                  <p>{{ request.description }}</p>
+                  <span>{{ request.status }}</span>
+                  @if (
+                    request.status === 'PENDING' &&
+                    request.requestedFromUserId === currentUserId()
+                  ) {
+                    <div>
+                      <button type="button" (click)="payMarketplaceRequest(request)">Pay from Wallet</button>
+                      <button type="button" (click)="declineMarketplaceRequest(request)">Decline</button>
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+            <form (submit)="sendMarketplaceMessage(); $event.preventDefault()">
+              <input [formControl]="marketplaceChatText" placeholder="Write a message to the seller">
+              <button type="submit">Send</button>
+            </form>
+            @if (isMarketplaceSeller()) {
+              <div class="marketplace-payment-compose">
+                <input
+                  type="number"
+                  min="1"
+                  [formControl]="marketplaceRequestAmount"
+                  placeholder="Payment amount"
+                >
+                <button type="button" (click)="sendMarketplacePaymentRequest()">
+                  Send payment request
+                </button>
+              </div>
+            }
+            @if (marketplaceNotice()) {
+              <strong class="marketplace-notice">{{ marketplaceNotice() }}</strong>
+            }
+          </section>
+        }
+      </section>
+    </div>
+  }
+
+  @if (jobsOpen()) {
+    <div class="modal-backdrop" (click)="closeJobs()">
+      <section
+        class="marketplace-modal jobs-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="jobs-title"
+        (click)="$event.stopPropagation()"
+      >
+        <button class="modal-close" type="button" aria-label="Close jobs" (click)="closeJobs()">×</button>
+
+        <header class="marketplace-heading">
+          <div>
+            <p class="eyebrow">COMMUNITY OPPORTUNITIES</p>
+            <h2 id="jobs-title">Job Search</h2>
+            <p>Find available work or share a vacancy with Inkolo Connect members.</p>
+          </div>
+          <button type="button" (click)="jobFormOpen.set(!jobFormOpen())">
+            {{ jobFormOpen() ? 'Close form' : '+ Post a job' }}
+          </button>
+        </header>
+
+        @if (jobFormOpen()) {
+          <section class="job-form" aria-labelledby="job-form-title">
+            <h3 id="job-form-title">Post a job opportunity</h3>
+            <div class="job-form-grid">
+              <label>
+                <span>Job title</span>
+                <input type="text" [formControl]="jobTitle" placeholder="e.g. Sales Assistant">
+              </label>
+              <label>
+                <span>Company or organisation</span>
+                <input type="text" [formControl]="jobCompany" placeholder="Organisation name">
+              </label>
+              <label>
+                <span>Location</span>
+                <input type="text" [formControl]="jobLocation" placeholder="Town or remote">
+              </label>
+              <label>
+                <span>Job type</span>
+                <select [formControl]="jobType">
+                  <option value="FULL_TIME">Full-time</option>
+                  <option value="PART_TIME">Half-time / part-time</option>
+                  <option value="PERMANENT">Permanent</option>
+                  <option value="TEMPORARY">Temporary</option>
+                  <option value="CONTRACT">Contract</option>
+                  <option value="ONCE_OFF">Once-off</option>
+                </select>
+              </label>
+              <label>
+                <span>Job category</span>
+                <select [formControl]="jobCategory">
+                  @for (category of jobCategories; track category) {
+                    <option [value]="category">{{ category }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                <span>Work mode</span>
+                <select [formControl]="jobWorkMode">
+                  <option value="ON_SITE">On-site</option>
+                  <option value="REMOTE">Remote</option>
+                  <option value="HYBRID">Hybrid</option>
+                </select>
+              </label>
+              <label>
+                <span>Salary or payment amount</span>
+                <input type="number" min="0" [formControl]="jobSalary" placeholder="Optional amount">
+              </label>
+              <label>
+                <span>Payment frequency</span>
+                <select [formControl]="jobPaymentFrequency">
+                  <option value="HOURLY">Hourly</option>
+                  <option value="DAILY">Daily</option>
+                  <option value="WEEKLY">Weekly</option>
+                  <option value="MONTHLY">Monthly</option>
+                  <option value="ONCE_OFF">Once-off</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              <span>Description</span>
+              <textarea
+                rows="4"
+                [formControl]="jobDescription"
+                placeholder="Describe the role, requirements and how to apply"
+              ></textarea>
+            </label>
+            <p class="listing-owner">
+              Posted by: <strong>{{ user()?.firstName }} {{ user()?.lastName }}</strong>
+            </p>
+            <button class="publish-listing" type="button" (click)="addJobListing()">Publish job</button>
+          </section>
+        }
+
+        <section class="marketplace-filters" aria-label="Search jobs">
+          <input [formControl]="jobSearch" placeholder="Search jobs">
+          <input [formControl]="jobFilterArea" placeholder="Area / location">
+          <select [formControl]="jobFilterCategory">
+            <option value="">All categories</option>
+            @for (category of jobCategories; track category) {
+              <option [value]="category">{{ category }}</option>
+            }
+          </select>
+          <select [formControl]="jobFilterEmployment">
+            <option value="">Any employment type</option>
+            <option value="FULL_TIME">Full-time</option>
+            <option value="PART_TIME">Part-time</option>
+            <option value="PERMANENT">Permanent</option>
+            <option value="TEMPORARY">Temporary</option>
+            <option value="CONTRACT">Contract</option>
+            <option value="ONCE_OFF">Once-off</option>
+          </select>
+          <select [formControl]="jobFilterWorkMode">
+            <option value="">Any work mode</option>
+            <option value="ON_SITE">On-site</option>
+            <option value="REMOTE">Remote</option>
+            <option value="HYBRID">Hybrid</option>
+          </select>
+          <input type="number" min="0" [formControl]="jobFilterMinPay" placeholder="Minimum pay">
+          <input type="number" min="0" [formControl]="jobFilterMaxPay" placeholder="Maximum pay">
+          <input [formControl]="jobFilterCommunity" placeholder="Church / branch">
+          <select [formControl]="jobFilterStatus">
+            <option value="">Any status</option>
+            <option value="OPEN">Open</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="FILLED">Filled</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+          <button type="button" (click)="applyJobFilters()">Search</button>
+          <button type="button" (click)="clearJobFilters()">Clear</button>
+        </section>
+
+        <div class="job-grid">
+          @for (job of jobListings(); track job.id) {
+            <article class="job-card">
+              <div class="job-card-icon" aria-hidden="true">JOB</div>
+              <div class="job-card-copy">
+                <span>{{ job.employmentType.replace('_', ' ') }} · {{ job.area }}</span>
+                <h3>{{ job.title }}</h3>
+                <strong>{{ job.listedByUserName }}</strong>
+                <p>{{ job.description }}</p>
+                <div>
+                  <b>
+                    @if (job.paymentAmount) {
+                      R{{ job.paymentAmount.toFixed(2) }} {{ job.paymentFrequency?.replace('_', ' ') }}
+                    } @else {
+                      Payment negotiable
+                    }
+                  </b>
+                  <span class="marketplace-card-actions">
+                    <button type="button" (click)="viewJob(job)">View details</button>
+                    <button type="button" (click)="startJobChat(job)">Chat</button>
+                  </span>
+                </div>
+                <small>{{ job.category }} · {{ job.workMode?.replace('_', ' ') }} · {{ job.status }}</small>
+              </div>
+            </article>
+          }
+        </div>
+
+        @if (selectedJob(); as job) {
+          <section class="marketplace-detail">
+            <div>
+              <p class="eyebrow">JOB DETAILS</p>
+              <h3>{{ job.title }}</h3>
+              <p>{{ job.description }}</p>
+              <dl>
+                <div><dt>Category</dt><dd>{{ job.category }}</dd></div>
+                <div><dt>Employment</dt><dd>{{ job.employmentType.replace('_', ' ') }}</dd></div>
+                <div><dt>Work mode</dt><dd>{{ job.workMode?.replace('_', ' ') }}</dd></div>
+                <div><dt>Location</dt><dd>{{ job.area }}</dd></div>
+                <div><dt>Status</dt><dd>{{ job.status }}</dd></div>
+                <div><dt>Listed</dt><dd>{{ job.createdAt | date:'mediumDate' }}</dd></div>
+              </dl>
+              @if (!isSelectedJobLister()) {
+                <div class="job-application-row">
+                  <input [formControl]="jobApplicationMessage" placeholder="Short application message">
+                  <button type="button" (click)="applyForSelectedJob(job)">Apply / Contact</button>
+                </div>
+              }
+            </div>
+            <aside>
+              <strong>{{ job.listedByUserName }}</strong>
+              @if (job.listedByChurchName || job.listedByCommunityName) {
+                <span>{{ job.listedByChurchName || job.listedByCommunityName }}</span>
+              }
+              @if (job.listedByBranchName) {
+                <span>{{ job.listedByBranchName }}</span>
+              }
+              @if (job.listerRating) {
+                <span>{{ job.listerRating }} / 5 lister rating</span>
+              }
+              <button type="button" (click)="startJobChat(job)">Open job chat</button>
+            </aside>
+          </section>
+        }
+
+        @if (jobConversation(); as conversation) {
+          <section class="marketplace-chat">
+            <header>
+              <div>
+                <p class="eyebrow">JOB CONVERSATION</p>
+                <h3>{{ selectedJob()?.title }}</h3>
+              </div>
+              <span>{{ conversation.status }}</span>
+            </header>
+            <div class="marketplace-chat-messages">
+              @for (message of jobMessages(); track message.id) {
+                <p [class.mine]="message.senderUserId === currentUserId()">
+                  <strong>{{ message.messageType.replace('_', ' ') }}</strong>
+                  {{ message.messageText }}
+                </p>
+              }
+              @for (request of jobPaymentRequests(); track request.id) {
+                <article class="marketplace-payment-request">
+                  <strong>Job payment request: R{{ request.requestedAmount.toFixed(2) }}</strong>
+                  <p>{{ request.description }}</p>
+                  <span>{{ request.status }}</span>
+                  @if (request.status === 'PENDING' && request.requestedFromUserId === currentUserId()) {
+                    <div>
+                      <button type="button" (click)="payJobRequest(request)">Pay from Wallet</button>
+                      <button type="button" (click)="declineJobRequest(request)">Decline</button>
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+            <form (submit)="sendJobMessage(); $event.preventDefault()">
+              <input [formControl]="jobChatText" placeholder="Write a job message">
+              <button type="submit">Send</button>
+            </form>
+            <div class="marketplace-payment-compose">
+              @if (isSelectedJobLister()) {
+                <button type="button" (click)="sendInterviewRequest()">Send interview request</button>
+              }
+              <input type="number" min="1" [formControl]="jobPaymentAmount" placeholder="Payment amount">
+              <button type="button" (click)="sendJobPaymentRequest()">Send payment request</button>
+            </div>
+            @if (jobNotice()) {
+              <strong class="marketplace-notice">{{ jobNotice() }}</strong>
+            }
+          </section>
+        }
+      </section>
+    </div>
+  }
+
+  <div class="assistant-widget" [class.open]="assistantOpen()">
+    @if (assistantOpen()) {
+      <section class="assistant-panel" aria-labelledby="assistant-title">
+        <header class="assistant-header">
+          <div>
+            <span class="assistant-status"></span>
+            <div>
+              <h2 id="assistant-title">Inkolo Connect Assistant</h2>
+              <p>Here to help</p>
+            </div>
+          </div>
+          <button type="button" aria-label="Close assistant" (click)="toggleAssistant()">×</button>
+        </header>
+
+        <div class="assistant-messages" aria-live="polite">
+          @for (message of assistantMessages(); track $index) {
+            <div class="assistant-message" [class.user]="message.role === 'user'">
+              @if (message.role === 'assistant') {
+                <img src="/duranki-bot.png" alt="">
+              }
+              <p>{{ message.text }}</p>
+            </div>
+          }
+        </div>
+
+        @if (assistantMessages().length === 1) {
+          <div class="assistant-suggestions">
+            <button type="button" (click)="askSuggestedQuestion('How do I subscribe to a service?')">
+              How do I subscribe?
+            </button>
+            <button type="button" (click)="askSuggestedQuestion('How does Job Search work?')">
+              How does Job Search work?
+            </button>
+            <button type="button" (click)="askSuggestedQuestion('How does the Wallet work?')">
+              How does Wallet work?
+            </button>
+          </div>
+        }
+
+        <form
+          class="assistant-composer"
+          (submit)="askAssistant(); $event.preventDefault()"
+        >
+          <input
+            type="text"
+            [formControl]="assistantQuestion"
+            placeholder="Ask a question..."
+            aria-label="Ask the Inkolo Connect assistant"
+            maxlength="500"
+          >
+          <button
+            type="submit"
+            [disabled]="!assistantQuestion.value.trim()"
+            aria-label="Send question"
+          >
+            ↑
+          </button>
+        </form>
+      </section>
+    }
+
+    <button
+      class="assistant-launcher"
+      type="button"
+      [attr.aria-expanded]="assistantOpen()"
+      aria-label="Open Inkolo Connect help assistant"
+      (click)="toggleAssistant()"
+    >
+      <img src="/duranki-bot.png" alt="">
+      @if (!assistantOpen()) {
+        <span>Need help?</span>
+      }
+    </button>
+  </div>
+  @if (profileOpen()) {
+    <app-profile-modal
+      [memberId]="user()?.id || 0"
+      (closed)="profileOpen.set(false)"
+    ></app-profile-modal>
+  }
+
+  @if (walletAction()) {
+    <div class="wallet-action-backdrop" (click)="closeWalletAction()">
+      <section
+        class="wallet-action-modal"
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-labelledby]="'wallet-action-title'"
+        (click)="$event.stopPropagation()"
+      >
+        <button
+          class="wallet-action-close"
+          type="button"
+          aria-label="Close wallet action"
+          (click)="closeWalletAction()"
+        >×</button>
+
+        <p class="eyebrow">INKOLO WALLET</p>
+        <h2 id="wallet-action-title">
+          {{
+            walletAction() === 'topup'
+              ? 'Top Up with Cycle'
+              : walletAction() === 'cashout'
+                ? 'Cash Out to African Bank'
+                : 'Transfer to a Member'
+          }}
+        </h2>
+        <p class="wallet-action-copy">
+          @if (walletAction() === 'topup') {
+            Your bank card payment is processed securely by Cycle. Inkolo Connect does not
+            store your card details.
+          } @else if (walletAction() === 'cashout') {
+            Cash out your available Izaka directly to your personal African Bank account.
+          } @else {
+            Send Izaka instantly to another registered Inkolo Connect member wallet.
+          }
+        </p>
+
+        <label class="wallet-action-field">
+          <span>Amount</span>
+          <div>
+            <b>Izaka</b>
+            <input
+              type="number"
+              min="10"
+              step="1"
+              [formControl]="walletAmount"
+              placeholder="0.00"
+            >
+          </div>
+        </label>
+
+        @if (walletAction() === 'cashout') {
+          <label class="wallet-action-field">
+            <span>Account holder</span>
+            <input type="text" [formControl]="africanBankAccountHolder">
+          </label>
+          <label class="wallet-action-field">
+            <span>African Bank account number</span>
+            <input
+              type="text"
+              inputmode="numeric"
+              maxlength="11"
+              [formControl]="africanBankAccountNumber"
+              placeholder="Enter account number"
+            >
+          </label>
+          <label class="wallet-action-field">
+            <span>Account type</span>
+            <select [formControl]="africanBankAccountType">
+              <option value="SAVINGS">Savings</option>
+              <option value="CURRENT">Current</option>
+            </select>
+          </label>
+          <p class="wallet-bank-note">African Bank universal branch code: 430000</p>
+        } @else if (walletAction() === 'transfer') {
+          <label class="wallet-action-field">
+            <span>Recipient cellphone number</span>
+            <input
+              type="tel"
+              inputmode="tel"
+              [formControl]="walletRecipientTelephone"
+              placeholder="e.g. 0725550184"
+            >
+          </label>
+          <label class="wallet-action-field">
+            <span>Payment reference (optional)</span>
+            <input
+              type="text"
+              maxlength="40"
+              [formControl]="walletTransferReference"
+              placeholder="What is this payment for?"
+            >
+          </label>
+          <div class="member-transfer-note">
+            <strong>Member-to-member transfer</strong>
+            <span>The recipient must have an active Inkolo Connect wallet.</span>
+          </div>
+        } @else {
+          <div class="cycle-payment-note">
+            <strong>Cycle secure checkout</strong>
+            <span>Visa and Mastercard bank cards accepted</span>
+          </div>
+        }
+
+        @if (walletActionNotice()) {
+          <p class="wallet-action-notice" role="status">{{ walletActionNotice() }}</p>
+        }
+
+        <button
+          class="wallet-action-submit"
+          type="button"
+          [disabled]="walletActionLoading()"
+          (click)="submitWalletAction()"
+        >
+          @if (walletActionLoading()) {
+            Processing...
+          } @else if (walletAction() === 'topup') {
+            Continue with Cycle
+          } @else if (walletAction() === 'transfer') {
+            Send Izaka
+          } @else {
+            Cash Out
+          }
+        </button>
+      </section>
+    </div>
+  }
+</main>

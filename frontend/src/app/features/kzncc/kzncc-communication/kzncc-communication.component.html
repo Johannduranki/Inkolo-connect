@@ -1,0 +1,34 @@
+<section class="communication" aria-labelledby="kzncc-communication-title">
+  <header>
+    <div>
+      <p>COUNCIL COMMUNICATION</p>
+      <h2 id="kzncc-communication-title">Messages from KZNCC</h2>
+    </div>
+  </header>
+
+  <div class="filters" aria-label="Communication type filter">
+    @for (type of types; track type) {
+      <button
+        type="button"
+        [class.active]="selectedType() === type"
+        (click)="selectedType.set(type)"
+      >
+        {{ type }}
+      </button>
+    }
+  </div>
+
+  <div class="message-list">
+    @for (message of filteredMessages(); track message.id) {
+      <article [class.alert]="message.type === 'Important alert'">
+        <div class="message-heading">
+          <span>{{ message.type }}</span>
+          <time>{{ message.dateTime | date: 'd MMM y, HH:mm' }}</time>
+        </div>
+        <h3>{{ message.title }}</h3>
+        <small>From {{ message.senderName }}</small>
+        <p>{{ message.body }}</p>
+      </article>
+    }
+  </div>
+</section>

@@ -1,0 +1,29 @@
+<section class="events" aria-labelledby="kzncc-events-title">
+  <header>
+    <div>
+      <p>UPCOMING PROGRAMME</p>
+      <h2 id="kzncc-events-title">KZNCC events</h2>
+    </div>
+  </header>
+
+  <div class="event-list">
+    @for (event of events; track event.id) {
+      <article>
+        <div class="event-date">
+          <strong>{{ event.date | date: 'dd' }}</strong>
+          <span>{{ event.date | date: 'MMM' }}</span>
+        </div>
+        <div class="event-copy">
+          <h3>{{ event.title }}</h3>
+          <div class="facts">
+            <span>{{ event.date | date: 'EEEE, d MMMM y' }}</span>
+            <span>{{ event.time }}</span>
+            <span>{{ event.location }}</span>
+          </div>
+          <p>{{ event.description }}</p>
+          <button type="button">{{ event.status }} · RSVP</button>
+        </div>
+      </article>
+    }
+  </div>
+</section>

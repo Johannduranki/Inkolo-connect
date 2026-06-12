@@ -1,0 +1,200 @@
+<main class="admin-page">
+  <header>
+    <a class="brand" href="/dashboard/member">
+      <img src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+      <span>Powered by Duranki</span>
+    </a>
+    @if (user()) {
+      <app-role-switcher
+        [userFullName]="user()!.firstName + ' ' + user()!.lastName"
+      ></app-role-switcher>
+    }
+    <button type="button" (click)="logout()">Sign out</button>
+  </header>
+
+  <nav class="admin-nav">
+    <button [class.active]="activeTab() === 'overview'" (click)="showTab('overview')">Overview</button>
+    <button [class.active]="activeTab() === 'churches'" (click)="showTab('churches')">Churches</button>
+    <button [class.active]="activeTab() === 'revenue'" (click)="showTab('revenue')">Paid revenue</button>
+    <button [class.active]="activeTab() === 'communication'" (click)="showTab('communication')">Communication</button>
+    <button [class.active]="activeTab() === 'events'" (click)="showTab('events')">Events</button>
+  </nav>
+
+  @if (notice()) {
+    <p class="notice">{{ notice() }}</p>
+  }
+
+  <section class="hero">
+    <div>
+      <p>KZNCC ADMIN WORKSPACE</p>
+      <h1>Churches, paid services and council revenue</h1>
+      <span>Free services are excluded from every revenue figure and report.</span>
+    </div>
+    <img src="/service-kzncc.png" alt="KZNCC Christian Council">
+  </section>
+
+  @if (activeTab() === 'overview') {
+    <section class="summary-grid">
+      <article><span>Total churches</span><strong>{{ churches().length }}</strong></article>
+      <article><span>Registered members</span><strong>{{ totalMembers() }}</strong></article>
+      <article><span>Active members</span><strong>{{ activeMembers() }}</strong></article>
+      <article><span>Paid services active</span><strong>{{ revenueSummary()?.paidServicesActive }}</strong></article>
+      <article><span>Monthly paid revenue</span><strong>{{ revenueSummary()?.totalMonthlyRevenue | currency:'ZAR':'symbol-narrow':'1.0-0' }}</strong></article>
+      <article><span>KZNCC revenue share</span><strong>{{ revenueSummary()?.kznccRevenueShare | currency:'ZAR':'symbol-narrow':'1.0-0' }}</strong></article>
+      <article><span>Church revenue share</span><strong>{{ revenueSummary()?.churchRevenueShare | currency:'ZAR':'symbol-narrow':'1.0-0' }}</strong></article>
+    </section>
+
+    <section class="wallet-panel">
+      <div>
+        <p>KZNCC WALLET</p>
+        <h2>{{ walletSummary()?.walletBalance | currency:'ZAR':'symbol-narrow':'1.2-2' }}</h2>
+        <span>Only KZNCC paid-service revenue share accumulates here.</span>
+      </div>
+      <div class="wallet-stats">
+        <span>Monthly share <b>{{ walletSummary()?.monthlyRevenueShare | currency:'ZAR':'symbol-narrow':'1.0-0' }}</b></span>
+        <span>Pending settlements <b>{{ walletSummary()?.pendingPayouts | currency:'ZAR':'symbol-narrow':'1.0-0' }}</b></span>
+      </div>
+      <button type="button" (click)="requestPayout()">Request payout</button>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p>RECENT WALLET ACTIVITY</p><h2>KZNCC revenue transactions</h2></div>
+      </div>
+      <div class="transaction-list">
+        @for (transaction of walletTransactions(); track transaction.id) {
+          <article>
+            <div><strong>{{ transaction.description }}</strong><span>{{ transaction.createdAt | date:'medium' }}</span></div>
+            <b>{{ transaction.amount | currency:'ZAR':'symbol-narrow':'1.2-2' }}</b>
+          </article>
+        }
+      </div>
+    </section>
+  }
+
+  @if (activeTab() === 'churches') {
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p>MEMBER CHURCHES</p><h2>KZNCC church directory</h2></div>
+        <button type="button" (click)="addDemoChurch()">Add Church</button>
+      </div>
+      <div class="filters">
+        <input [formControl]="search" placeholder="Search church name">
+        <select [formControl]="region">
+          @for (item of regions(); track item) { <option>{{ item }}</option> }
+        </select>
+        <select [formControl]="status">
+          <option>All</option><option>Active</option><option>Pending</option><option>Suspended</option>
+        </select>
+        <select [formControl]="sort">
+          <option value="members">Sort by members</option>
+          <option value="revenue">Sort by revenue</option>
+        </select>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Church</th><th>Leader</th><th>Members</th><th>Paid activations</th><th>Revenue</th><th>Shares</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            @for (church of filteredChurches(); track church.id) {
+              <tr>
+                <td><strong>{{ church.name }}</strong><span>{{ church.region }}, {{ church.province }}</span></td>
+                <td>{{ church.leaderName }}<span>{{ church.contactNumber }}</span></td>
+                <td>{{ church.registeredMembers }}<span>{{ church.activeMembers }} active</span></td>
+                <td>{{ church.paidServicesActivated }}</td>
+                <td>{{ church.totalRevenue | currency:'ZAR':'symbol-narrow':'1.0-0' }}</td>
+                <td><span>KZNCC {{ church.kznccRevenueShare | currency:'ZAR':'symbol-narrow':'1.0-0' }}</span><span>Church {{ church.churchRevenueShare | currency:'ZAR':'symbol-narrow':'1.0-0' }}</span></td>
+                <td><span class="status" [class.pending]="church.status === 'Pending'">{{ church.status }}</span></td>
+                <td><button type="button" (click)="viewChurch(church)">View</button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (selectedChurch(); as church) {
+        <article class="church-detail">
+          <button type="button" (click)="selectedChurch.set(null)">Close</button>
+          <p>CHURCH DETAIL</p>
+          <h2>{{ church.name }}</h2>
+          <div>
+            <span>Leader <b>{{ church.leaderName }}</b></span>
+            <span>Members <b>{{ church.registeredMembers }}</b></span>
+            <span>Paid-service revenue <b>{{ church.totalRevenue | currency:'ZAR':'symbol-narrow':'1.0-0' }}</b></span>
+            <span>KZNCC share <b>{{ church.kznccRevenueShare | currency:'ZAR':'symbol-narrow':'1.0-0' }}</b></span>
+          </div>
+          <div class="growth-placeholder">Member growth graph placeholder</div>
+        </article>
+      }
+    </section>
+  }
+
+  @if (activeTab() === 'revenue') {
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p>PAID SERVICES ONLY</p><h2>Revenue share by paid service</h2></div>
+        <span class="paid-badge">{{ paidServices().length }} paid services</span>
+      </div>
+      <p class="exclusion-note">Announcements, My Community, free listings, events and basic communication are intentionally excluded.</p>
+      <div class="table-scroll">
+        <table class="revenue-table">
+          <thead><tr><th>Paid service</th><th>Members</th><th>Price</th><th>Total revenue</th><th>Provider</th><th>Operating</th><th>KZNCC share</th><th>Church share</th><th>Net KZNCC</th><th>Net churches</th></tr></thead>
+          <tbody>
+            @for (service of paidServices(); track service.id) {
+              <tr>
+                <td><strong>{{ service.serviceName }}</strong><span>{{ service.serviceType }}</span></td>
+                <td>{{ service.membersSubscribed }}</td>
+                <td>{{ service.monthlyPrice | currency:'ZAR':'symbol-narrow':'1.2-2' }}</td>
+                <td>{{ service.totalRevenue | currency:'ZAR':'symbol-narrow':'1.0-0' }}</td>
+                <td>{{ service.serviceProviderShare | currency:'ZAR':'symbol-narrow':'1.0-0' }}</td>
+                <td>{{ service.operatingCost | currency:'ZAR':'symbol-narrow':'1.0-0' }}</td>
+                <td>{{ service.kznccShare | currency:'ZAR':'symbol-narrow':'1.0-0' }}</td>
+                <td>{{ service.churchShare | currency:'ZAR':'symbol-narrow':'1.0-0' }}</td>
+                <td><b>{{ service.netPayableToKzncc | currency:'ZAR':'symbol-narrow':'1.0-0' }}</b></td>
+                <td><b>{{ service.netPayableToChurches | currency:'ZAR':'symbol-narrow':'1.0-0' }}</b></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
+  @if (activeTab() === 'communication') {
+    <section class="two-column">
+      <article class="panel form-card">
+        <p>COMMUNICATION CENTRE</p><h2>Send KZNCC message</h2>
+        <input value="KZNCC community update" aria-label="Message title">
+        <select aria-label="Message category"><option>General announcement</option><option>Important notice</option><option>Emergency alert</option><option>Revenue/payment notice</option></select>
+        <select aria-label="Target audience"><option>All Members and Leaders</option><option>All Church Leaders</option><option>Selected Churches</option><option>Individual Member</option></select>
+        <textarea aria-label="Message body">Enter the official KZNCC message here.</textarea>
+        <div><button type="button" (click)="sendDemoMessage()">Send now</button><button type="button" class="secondary" (click)="sendDemoMessage(true)">Save draft</button></div>
+      </article>
+      <article class="panel">
+        <p>MESSAGE HISTORY</p><h2>Recent communication</h2>
+        @for (message of messages(); track message.id) {
+          <div class="history-item"><strong>{{ message.title }}</strong><span>{{ message.targetAudience }} · {{ message.status }}</span><p>{{ message.body }}</p></div>
+        }
+      </article>
+    </section>
+  }
+
+  @if (activeTab() === 'events') {
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p>EVENT MANAGEMENT</p><h2>KZNCC events</h2></div>
+        <button type="button" (click)="createDemoEvent()">Create Event</button>
+      </div>
+      <div class="event-grid">
+        @for (event of events(); track event.id) {
+          <article>
+            <span>{{ event.category }} · {{ event.status }}</span>
+            <h3>{{ event.title }}</h3>
+            <p>{{ event.description }}</p>
+            <strong>{{ event.date | date:'longDate' }} · {{ event.startTime }}-{{ event.endTime }}</strong>
+            <small>{{ event.location }} · {{ event.targetAudience }} · Created by KZNCC</small>
+            <button type="button">RSVP placeholder</button>
+          </article>
+        }
+      </div>
+    </section>
+  }
+</main>

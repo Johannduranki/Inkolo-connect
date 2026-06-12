@@ -1,0 +1,409 @@
+<main class="community-page">
+  <header class="topbar">
+    <button class="back-button" type="button" (click)="backToDashboard()">
+      <span aria-hidden="true">←</span>
+      Services
+    </button>
+    <div class="community-header-brand">
+      <a class="brand" href="/dashboard" aria-label="Inkolo Connect dashboard">
+        <img class="brand-logo" src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+      </a>
+      <span class="top-powered-by">Powered by Duranki</span>
+    </div>
+    <div class="account">
+      @if (user()) {
+        <app-role-switcher
+          [userFullName]="user()!.firstName + ' ' + user()!.lastName"
+        ></app-role-switcher>
+      }
+      <button class="profile-button" type="button" (click)="profileOpen.set(true)">My Profile</button>
+      <button type="button" (click)="logout()">Sign out</button>
+    </div>
+  </header>
+
+  <section class="community-workspace-banner" aria-labelledby="community-active-heading">
+    <div class="community-workspace-switcher" aria-label="Workspace navigation">
+      <a href="/dashboard">My Services</a>
+    </div>
+
+    <div class="community-active-row">
+      <div class="community-active-content">
+        <div class="community-active-heading">
+          <div>
+            <p>YOUR ACTIVE ECOSYSTEM</p>
+            <h2 id="community-active-heading">My active services</h2>
+          </div>
+          <span>{{ activeServices().length }} active</span>
+        </div>
+        @if (activeServices().length > 0) {
+          <div class="community-active-list">
+            @for (service of activeServices(); track service.serviceCode) {
+              <a
+                class="community-active-service"
+                [style.--accent]="service.accent"
+                [href]="service.serviceCode === 'community' ? '/community' : '/dashboard'"
+              >
+                <img [src]="service.image" [alt]="service.name">
+                <span>
+                  <strong>{{ service.name }}</strong>
+                  <small>{{ service.planLabel }} · {{ subscriptionPrice(service) }}</small>
+                </span>
+                <b>Open →</b>
+              </a>
+            }
+          </div>
+        } @else {
+          <p class="community-no-active">Activate services from the Services dashboard.</p>
+        }
+      </div>
+
+      @if (hasWallet()) {
+        <button
+          class="community-wallet-card"
+          [class.flipped]="walletOpen()"
+          type="button"
+          (click)="walletOpen.set(!walletOpen())"
+        >
+          <span class="community-wallet-inner">
+            <span class="community-wallet-face community-wallet-front">
+              <span>INKOLO WALLET</span>
+              <strong>•••• 2086</strong>
+              <small>{{ user()?.firstName }} {{ user()?.lastName }}</small>
+            </span>
+            <span class="community-wallet-face community-wallet-back">
+              <small>AVAILABLE BALANCE</small>
+              <strong>850.00 Izaka</strong>
+              <span>Recent: Community payment +250.00 Izaka</span>
+            </span>
+          </span>
+        </button>
+      }
+    </div>
+  </section>
+
+  <section class="church-selector">
+    <div>
+      <p>KZNCC CHURCH DIRECTORY</p>
+      <h2>{{ communityHeading() === 'My Community' ? 'Choose your primary church' : communityHeading() }}</h2>
+      <span>Link one primary KZNCC church to receive its messages and events.</span>
+    </div>
+    <div class="church-selector-controls">
+      <select
+        [formControl]="churchSelection"
+        aria-label="Choose KZNCC church"
+        (change)="onChurchSelectionChange()"
+      >
+        <option value="">Select a church</option>
+        @for (item of kznccChurches(); track item.id) {
+          <option [value]="item.id">{{ item.name }} · {{ item.region }}</option>
+        }
+      </select>
+      @if (churchSelection.value && churchBranches().length > 0) {
+        <select [formControl]="branchSelection" aria-label="Choose church branch">
+          <option value="">Select a church branch</option>
+          @for (branch of churchBranches(); track branch.id) {
+            <option [value]="branch.id">{{ branch.branchName }}</option>
+          }
+        </select>
+      }
+      <button type="button" (click)="confirmPrimaryChurch()">This is my church</button>
+    </div>
+    @if (churchLinkedMessage()) {
+      <strong>{{ churchLinkedMessage() }}</strong>
+    }
+  </section>
+
+  <section class="church-hero">
+    <div class="hero-overlay"></div>
+    <div class="church-mark" aria-hidden="true">✝</div>
+    <div class="hero-content">
+      <p>MY COMMUNITY</p>
+      <h1>{{ communityHeading() === 'My Community' ? church.name : communityHeading() }}</h1>
+      <span>{{ church.denomination }}</span>
+    </div>
+  </section>
+
+  <section class="verse-card">
+    <span class="quote-mark">“</span>
+    <small>DAILY SCRIPTURE · DAY {{ dailyScripture().day }} OF 360</small>
+    <blockquote>“{{ dailyScripture().text }}”</blockquote>
+    <cite>{{ dailyScripture().reference }}</cite>
+  </section>
+
+  <section class="community-updates">
+    <aside class="community-announcements" aria-labelledby="community-announcement-title">
+      <div class="community-panel-heading">
+        <div>
+          <p>STAY INFORMED</p>
+          <h2 id="community-announcement-title">Community announcements</h2>
+        </div>
+        <span class="community-live-dot" aria-label="New announcements"></span>
+      </div>
+      <div class="community-announcement-list">
+        @for (announcement of announcements; track announcement.title) {
+          <article [class.featured]="announcement.featured">
+            <div>
+              <span>{{ announcement.category }}</span>
+              <time>{{ announcement.date }}</time>
+            </div>
+            <h3>{{ announcement.title }}</h3>
+            <p>{{ announcement.summary }}</p>
+          </article>
+        }
+      </div>
+    </aside>
+
+    <aside class="member-chat" aria-labelledby="member-chat-title">
+      <div class="community-panel-heading">
+        <div>
+          <p>MEMBERS ONLINE</p>
+          <h2 id="member-chat-title">Community chat</h2>
+        </div>
+        <span class="community-live-dot" aria-hidden="true"></span>
+      </div>
+      <div class="member-chat-list" aria-live="polite">
+        @for (chat of chatMessages(); track $index) {
+          <article [class.mine]="chat.mine">
+            <span>{{ chat.initials }}</span>
+            <div>
+              <strong>{{ chat.mine ? 'You' : chat.author }} <time>{{ chat.time }}</time></strong>
+              <p>{{ chat.message }}</p>
+            </div>
+          </article>
+        }
+      </div>
+      <form class="member-chat-form" (submit)="sendMessage(); $event.preventDefault()">
+        <input
+          type="text"
+          [formControl]="chatMessage"
+          placeholder="Write a message..."
+          aria-label="Community chat message"
+          maxlength="500"
+        >
+        <button type="submit" [disabled]="!chatMessage.value.trim()">Send</button>
+      </form>
+    </aside>
+  </section>
+
+  <section class="direct-communication" aria-labelledby="direct-communication-title">
+    <div class="direct-communication-heading">
+      <div>
+        <p>COMMUNITY CONNECTIONS</p>
+        <h2 id="direct-communication-title">Talk directly to community members</h2>
+        <span>Find a member by name or telephone number, add them, and start a private conversation.</span>
+      </div>
+      <div class="member-search-box">
+        <input
+          type="search"
+          [formControl]="memberSearch"
+          (input)="searchCommunityMembers()"
+          placeholder="Search name or telephone number"
+          aria-label="Search community members by name or telephone number"
+        >
+        <button type="button" (click)="searchCommunityMembers()">Search</button>
+      </div>
+    </div>
+
+    @if (memberSearchResults().length > 0) {
+      <div class="member-search-results">
+        @for (member of memberSearchResults(); track member.id) {
+          <article>
+            <span>{{ contactInitials(member) }}</span>
+            <div>
+              <strong>{{ member.fullName }}</strong>
+              <small>{{ member.telephoneNumber }}</small>
+            </div>
+            <button type="button" (click)="addDirectContact(member)">Add and message</button>
+          </article>
+        }
+      </div>
+    }
+
+    @if (directCommunicationNotice()) {
+      <p class="direct-communication-notice">{{ directCommunicationNotice() }}</p>
+    }
+
+    <div class="direct-communication-workspace">
+      <aside class="direct-contact-list">
+        <h3>My community contacts</h3>
+        @if (directContacts().length > 0) {
+          @for (contact of directContacts(); track contact.id) {
+            <button
+              type="button"
+              [class.active]="selectedDirectMember()?.id === contact.id"
+              (click)="openDirectConversation(contact)"
+            >
+              <span>{{ contactInitials(contact) }}</span>
+              <b>{{ contact.fullName }}</b>
+              <small>{{ contact.telephoneNumber }}</small>
+            </button>
+          }
+        } @else {
+          <p>Search for a member above to create your first direct contact.</p>
+        }
+      </aside>
+
+      <section class="direct-conversation">
+        @if (selectedDirectMember(); as contact) {
+          <header>
+            <span>{{ contactInitials(contact) }}</span>
+            <div>
+              <strong>{{ contact.fullName }}</strong>
+              <small>{{ contact.telephoneNumber }}</small>
+            </div>
+          </header>
+          <div class="direct-message-list" aria-live="polite">
+            @if (directMessages().length > 0) {
+              @for (message of directMessages(); track message.id) {
+                <article [class.mine]="directMessageIsMine(message)">
+                  <p>{{ message.text }}</p>
+                  <time>{{ directMessageTime(message) }}</time>
+                </article>
+              }
+            } @else {
+              <p class="empty-conversation">No messages yet. Say hello to {{ contact.firstName }}.</p>
+            }
+          </div>
+          <form (submit)="sendDirectMessage(); $event.preventDefault()">
+            <input
+              type="text"
+              [formControl]="directMessage"
+              maxlength="1000"
+              placeholder="Write a private message..."
+            >
+            <button type="submit" [disabled]="!directMessage.value.trim()">Send</button>
+          </form>
+        } @else {
+          <div class="select-conversation">
+            <strong>Select a community contact</strong>
+            <span>Your direct messages will appear here.</span>
+          </div>
+        }
+      </section>
+    </div>
+  </section>
+
+  <div class="community-layout">
+    <div class="main-column">
+      <section class="next-mass">
+        <div class="section-label">
+          <span class="pulse"></span>
+          NEXT SERVICE
+        </div>
+        <div class="mass-content">
+          <div class="mass-date">
+            <span>14</span>
+            <strong>JUN</strong>
+          </div>
+          <div class="mass-details">
+            <p>{{ church.nextMass.date }}</p>
+            <h2>{{ church.nextMass.type }}</h2>
+            <div class="mass-facts">
+              <span>
+                <b>Time</b>
+                {{ church.nextMass.time }}
+              </span>
+              <span>
+                <b>Venue</b>
+                {{ church.nextMass.location }}
+              </span>
+              <span>
+                <b>Address</b>
+                {{ church.nextMass.address }}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="map-placeholder">
+          <span class="map-pin">●</span>
+          <div>
+            <strong>{{ church.nextMass.location }}</strong>
+            <p>{{ church.nextMass.address }}</p>
+          </div>
+          <button type="button">View directions</button>
+        </div>
+      </section>
+
+      <section class="events-section">
+        <div class="section-heading">
+          <div>
+            <p>COMMUNITY CALENDAR</p>
+            <h2>Upcoming events</h2>
+          </div>
+          <button type="button">View calendar</button>
+        </div>
+
+        <div class="event-list">
+          @for (event of events; track event.title) {
+            <article class="event-card">
+              <div class="event-date">
+                <strong>{{ event.day }}</strong>
+                <span>{{ event.month }}</span>
+              </div>
+              <div>
+                <h3>{{ event.title }}</h3>
+                <p>{{ event.description }}</p>
+                <div class="event-meta">
+                  <span>{{ event.time }}</span>
+                  <span>{{ event.location }}</span>
+                </div>
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+    </div>
+
+    <aside class="community-sidebar">
+      <section class="pastor-card">
+        <div class="pastor-photo">
+          <span>TM</span>
+        </div>
+        <p>SERVICE LEADER</p>
+        <h2>{{ church.pastor.name }}</h2>
+        <span>{{ church.pastor.role }}</span>
+        <blockquote>{{ church.pastor.message }}</blockquote>
+        <button type="button">Send a message</button>
+      </section>
+
+      <section class="contact-card">
+        <p>CHURCH INFORMATION</p>
+        <h2>Get in touch</h2>
+        <dl>
+          <div>
+            <dt>Location</dt>
+            <dd>{{ church.address }}</dd>
+          </div>
+          <div>
+            <dt>Phone</dt>
+            <dd>{{ church.phone }}</dd>
+          </div>
+          <div>
+            <dt>Email</dt>
+            <dd>{{ church.email }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="friends-card">
+        <div>
+          <p>COMMUNITY FRIENDS</p>
+          <h2>Stay connected</h2>
+        </div>
+        <div class="friend-avatars">
+          <span>NM</span>
+          <span>TK</span>
+          <span>LS</span>
+          <span>+12</span>
+        </div>
+        <button type="button">View community friends</button>
+      </section>
+    </aside>
+  </div>
+  @if (profileOpen()) {
+    <app-profile-modal
+      [memberId]="user()?.id || 0"
+      (closed)="profileOpen.set(false)"
+    ></app-profile-modal>
+  }
+</main>

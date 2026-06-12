@@ -1,0 +1,70 @@
+:host {
+  display: block;
+  min-width: 12rem;
+}
+
+.role-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.role-identity {
+  display: grid;
+  min-width: 0;
+  text-align: right;
+}
+
+.role-identity strong {
+  overflow: hidden;
+  color: #173e69;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role-identity span {
+  color: #607b8f;
+  font-size: 0.67rem;
+  font-weight: 750;
+}
+
+select {
+  max-width: 9rem;
+  padding: 0.55rem 1.8rem 0.55rem 0.65rem;
+  border: 1px solid #b9d4e8;
+  border-radius: 0.65rem;
+  color: #073b78;
+  background: #fff;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 640px) {
+  :host {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .role-switcher {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .role-identity {
+    text-align: left;
+  }
+}

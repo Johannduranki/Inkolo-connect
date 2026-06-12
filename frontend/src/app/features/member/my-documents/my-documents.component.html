@@ -1,0 +1,61 @@
+<section class="documents-card">
+  <div class="heading">
+    <div>
+      <p>PRIVATE TO YOU</p>
+      <h2>My Documents</h2>
+    </div>
+    <span>{{ documents().length }} document{{ documents().length === 1 ? '' : 's' }}</span>
+  </div>
+  @if (documents().length) {
+    <div class="document-list">
+      @for (document of documents(); track document.id) {
+        <article>
+          <span class="document-icon">PDF</span>
+          <div>
+            <strong>{{ document.fileName }}</strong>
+            <span>{{ document.documentType }} · {{ document.uploadedBy }}</span>
+            <small>Uploaded {{ document.uploadedAt | date:'mediumDate' }} · {{ document.status }}</small>
+          </div>
+          <button type="button">View</button>
+          <button type="button">Download</button>
+        </article>
+      }
+    </div>
+  } @else {
+    <p class="empty">Documents uploaded for your paid services will appear here.</p>
+  }
+</section>
+
+<section class="documents-card agreement-card">
+  <div class="heading">
+    <div>
+      <p>ACCEPTANCE HISTORY</p>
+      <h2>Accepted contracts and terms</h2>
+    </div>
+    <span>{{ agreements().length }} record{{ agreements().length === 1 ? '' : 's' }}</span>
+  </div>
+  @if (agreements().length) {
+    <div class="document-list">
+      @for (agreement of agreements(); track agreement.id) {
+        <article>
+          <span class="document-icon agreement-icon">OK</span>
+          <div>
+            <strong>{{ agreement.serviceName }}</strong>
+            <span>
+              Accepted by {{ agreement.memberName }} ·
+              {{ agreement.acceptedAt | date:'medium' }}
+            </span>
+            <small>
+              Version {{ agreement.documentVersion }} · Plan {{ agreement.planCode }}
+            </small>
+            <code>SHA-256: {{ agreement.documentSha256 }}</code>
+          </div>
+          <button type="button" (click)="viewAgreement(agreement)">View terms</button>
+          <button type="button" (click)="downloadEvidence(agreement)">Evidence</button>
+        </article>
+      }
+    </div>
+  } @else {
+    <p class="empty">Accepted service contracts and terms will appear here.</p>
+  }
+</section>

@@ -1,0 +1,118 @@
+<main class="admin-page">
+  <header>
+    <a class="brand" href="/dashboard/member">
+      <img src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+      <span>Powered by Duranki</span>
+    </a>
+    @if (user()) {
+      <app-role-switcher
+        [userFullName]="user()!.firstName + ' ' + user()!.lastName"
+      ></app-role-switcher>
+    }
+    <button type="button" (click)="logout()">Sign out</button>
+  </header>
+
+  <section class="admin-hero">
+    <p>COMMUNITY ADMINISTRATION</p>
+    <h1>Member role management</h1>
+    <span>
+      Assign the roles each community member may use. Their role dropdown will
+      only show these assigned roles.
+    </span>
+  </section>
+
+  <div class="admin-layout">
+    <aside>
+      <label for="member-select">Choose a member</label>
+      <select
+        id="member-select"
+        [value]="selectedMemberId()"
+        (change)="selectMember($event)"
+      >
+        @for (member of members(); track member.id) {
+          <option [value]="member.id">
+            {{ member.fullName }}{{ member.isCurrentUser ? ' (You)' : '' }}
+          </option>
+        }
+      </select>
+
+      @if (selectedMember(); as member) {
+        <div class="member-summary">
+          <span>{{ member.fullName.charAt(0) }}</span>
+          <div>
+            <strong>{{ member.fullName }}</strong>
+            <small>{{ member.telephoneNumber }}</small>
+          </div>
+        </div>
+      }
+    </aside>
+
+    <section class="role-panel">
+      @if (selectedMember(); as member) {
+        <div class="panel-heading">
+          <div>
+            <p>ASSIGNED ACCESS</p>
+            <h2>Roles for {{ member.fullName }}</h2>
+          </div>
+          <span>{{ member.roles.length }} assigned</span>
+        </div>
+
+        <div class="role-grid">
+          @for (role of allRoles; track role) {
+            <label class="role-option" [class.assigned]="hasRole(member, role)">
+              <input
+                type="checkbox"
+                [checked]="hasRole(member, role)"
+                (change)="updateRole(role, $event)"
+              >
+              <span>
+                <strong>{{ role }}</strong>
+                <small>
+                  {{ hasRole(member, role) ? 'Available in role switcher' : 'No access' }}
+                </small>
+              </span>
+            </label>
+          }
+        </div>
+
+        <p class="role-note">
+          At least one role is retained. Changes to your own profile immediately
+          update the dropdown in this header and are saved for the next refresh.
+        </p>
+      }
+    </section>
+
+    <section class="agreement-panel">
+      @if (selectedMember(); as member) {
+        <div class="panel-heading">
+          <div>
+            <p>LEGAL EVIDENCE</p>
+            <h2>Accepted terms for {{ member.fullName }}</h2>
+          </div>
+          <span>{{ agreements().length }} records</span>
+        </div>
+
+        @if (agreements().length) {
+          <div class="agreement-list">
+            @for (agreement of agreements(); track agreement.id) {
+              <article>
+                <div>
+                  <strong>{{ agreement.serviceName }}</strong>
+                  <span>{{ agreement.acceptedAt | date:'medium' }}</span>
+                  <small>
+                    Version {{ agreement.documentVersion }} · {{ agreement.planCode }}
+                  </small>
+                  <code>SHA-256: {{ agreement.documentSha256 }}</code>
+                </div>
+                <button type="button" (click)="viewAgreement(agreement)">View terms</button>
+                <button type="button" (click)="downloadEvidence(agreement)">Evidence</button>
+              </article>
+            }
+          </div>
+        } @else {
+          <p class="role-note">This member has no recorded service acceptances yet.</p>
+        }
+      }
+    </section>
+  </div>
+</main>

@@ -1,0 +1,88 @@
+<main class="provider-page">
+  <header>
+    <a href="/dashboard/member"><img src="/inkolo-connect-logo.png" alt="Inkolo Connect"><span>Powered by Duranki</span></a>
+    @if (user()) { <app-role-switcher [userFullName]="user()!.firstName + ' ' + user()!.lastName"></app-role-switcher> }
+    <button (click)="logout()">Sign out</button>
+  </header>
+  <nav>
+    <button [class.active]="activeTab() === 'overview'" (click)="activeTab.set('overview')">Overview</button>
+    <button [class.active]="activeTab() === 'members'" (click)="activeTab.set('members')">Paid members</button>
+    <button [class.active]="activeTab() === 'billing'" (click)="activeTab.set('billing')">Billing</button>
+    <button [class.active]="activeTab() === 'invoices'" (click)="activeTab.set('invoices')">Invoices</button>
+    <button [class.active]="activeTab() === 'documents'" (click)="activeTab.set('documents')">Documents</button>
+  </nav>
+  @if (notice()) { <p class="notice">{{ notice() }}</p> }
+  <section class="hero">
+    <p>{{ role() }}</p><h1>{{ summary()?.provider?.name }}</h1>
+    <span>Restricted to this provider's Funeral Cover services and linked paid members.</span>
+  </section>
+
+  @if (activeTab() === 'overview') {
+    <section class="summary-grid">
+      <article><span>Active paid members</span><strong>{{ summary()?.activePaidMembers }}</strong></article>
+      <article><span>Pending members</span><strong>{{ summary()?.pendingMembers }}</strong></article>
+      <article><span>Cancelled members</span><strong>{{ summary()?.cancelledMembers }}</strong></article>
+      <article><span>Monthly premium value</span><strong>{{ summary()?.monthlyPremiumValue | currency:'ZAR' }}</strong></article>
+      <article><span>Payable to provider</span><strong>{{ summary()?.amountPayableToProvider | currency:'ZAR' }}</strong></article>
+      <article><span>Policies uploaded</span><strong>{{ summary()?.policiesUploaded }}</strong></article>
+      <article><span>Policies outstanding</span><strong>{{ summary()?.policiesOutstanding }}</strong></article>
+      <article><span>Next billing</span><strong>{{ summary()?.nextBillingCycleDate | date:'mediumDate' }}</strong></article>
+    </section>
+  }
+
+  @if (activeTab() === 'members') {
+    <section class="panel">
+      <div class="heading"><div><p>FUNERAL COVER</p><h2>Paid service members</h2></div><button>Export CSV</button></div>
+      <div class="filters">
+        <input [formControl]="search" placeholder="Member name or policy number">
+        <select [formControl]="paymentFilter"><option>ALL</option><option>PAID</option><option>DUE</option><option>FAILED</option><option>OVERDUE</option></select>
+        <select [formControl]="policyFilter"><option>ALL</option><option>ACTIVE</option><option>PENDING</option><option>CANCELLED</option><option>LAPSED</option></select>
+      </div>
+      <div class="table-scroll"><table><thead><tr><th>Member</th><th>Church</th><th>Product</th><th>Premium</th><th>Policy</th><th>Payment</th><th>Document</th><th>Action</th></tr></thead><tbody>
+        @for (member of filteredMembers(); track member.id) {
+          <tr>
+            <td><b>{{ member.memberName }}</b><span>{{ member.memberProfileNumber }} · {{ member.cellphone }}</span></td>
+            <td>{{ member.churchName }}</td><td>{{ member.productName }}<span>{{ member.planName }}</span></td>
+            <td>{{ member.monthlyPremium | currency:'ZAR' }}</td><td>{{ member.policyNumber || 'Pending' }}<span>{{ member.policyStatus }}</span></td>
+            <td><em [class.good]="member.paymentStatus === 'PAID'">{{ member.paymentStatus }}</em></td>
+            <td>{{ member.policyDocumentStatus }}</td>
+            <td><label class="upload">Upload policy<input type="file" accept=".pdf" (change)="uploadPolicy(member, $event)"></label></td>
+          </tr>
+        }
+      </tbody></table></div>
+    </section>
+  }
+
+  @if (activeTab() === 'billing') {
+    <section class="card-grid">
+      @for (cycle of cycles(); track cycle.id) {
+        <article><span>{{ cycle.status }}</span><h3>{{ cycle.cycleName }}</h3><p>{{ cycle.startDate | date }} - {{ cycle.endDate | date }}</p>
+          <dl><div><dt>Paid</dt><dd>{{ cycle.totalMembersPaid }}</dd></div><div><dt>Failed</dt><dd>{{ cycle.totalFailedPayments }}</dd></div><div><dt>Overdue</dt><dd>{{ cycle.totalOverduePayments }}</dd></div></dl>
+          <strong>{{ cycle.totalAmountPayableToProvider | currency:'ZAR' }} payable</strong>
+        </article>
+      }
+    </section>
+  }
+
+  @if (activeTab() === 'invoices') {
+    <section class="panel">
+      <div class="heading"><div><p>PAID MEMBERS ONLY</p><h2>Provider invoices</h2></div><button (click)="generateInvoice()">Generate invoice</button></div>
+      @if (!invoices().length) { <p>No invoices generated yet.</p> }
+      @for (invoice of invoices(); track invoice.id) {
+        <article class="invoice"><div><b>{{ invoice.invoiceNumber }}</b><span>{{ invoice.invoiceStatus }} · {{ invoice.totalMembersPaid }} paid members</span></div>
+          <strong>{{ invoice.serviceProviderShare | currency:'ZAR' }}</strong>
+          <button (click)="submitInvoice(invoice)">Submit</button><button>Download PDF</button>
+        </article>
+      }
+    </section>
+  }
+
+  @if (activeTab() === 'documents') {
+    <section class="panel"><div class="heading"><div><p>POLICY DOCUMENTS</p><h2>Provider uploads</h2></div></div>
+      @for (document of documents(); track document.id) {
+        <article class="invoice"><div><b>{{ document.fileName }}</b><span>{{ document.documentType }} · Member {{ document.memberId }}</span></div><strong>{{ document.status }}</strong><button>View</button>
+        </article>
+      }
+    </section>
+  }
+</main>

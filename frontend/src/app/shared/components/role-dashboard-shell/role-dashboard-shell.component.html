@@ -1,0 +1,83 @@
+<main class="role-page">
+  <header>
+    <a class="brand" href="/dashboard/member">
+      <img src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+      <span>Powered by Duranki</span>
+    </a>
+    @if (user()) {
+      <app-role-switcher
+        [userFullName]="user()!.firstName + ' ' + user()!.lastName"
+      ></app-role-switcher>
+    }
+    <button type="button" (click)="logout()">Sign out</button>
+  </header>
+
+  <div class="role-layout">
+    <aside>
+      <p>ROLE NAVIGATION</p>
+      <h2>{{ role }}</h2>
+      @for (item of menuItems(); track item.label) {
+        <button type="button" (click)="openItem(item)">
+          <strong>{{ item.label }}</strong>
+          <span>{{ item.description }}</span>
+        </button>
+      }
+    </aside>
+
+    <section class="role-content">
+      <p class="eyebrow">{{ role }} WORKSPACE</p>
+      <h1>{{ title }}</h1>
+      <p class="intro">{{ description }}</p>
+
+      @if (churchWallet(); as wallet) {
+        <section class="leadership-wallet">
+          <div>
+            <p>ASSIGNED CHURCH WALLET</p>
+            <h2>{{ wallet.churchName }}</h2>
+            <strong>{{ wallet.walletBalance | currency:'ZAR':'symbol-narrow':'1.2-2' }}</strong>
+          </div>
+          <dl>
+            <div><dt>Tithes received</dt><dd>{{ wallet.totalTithes | currency:'ZAR':'symbol-narrow':'1.0-0' }}</dd></div>
+            <div><dt>Offerings received</dt><dd>{{ wallet.totalOfferings | currency:'ZAR':'symbol-narrow':'1.0-0' }}</dd></div>
+            <div><dt>Paid-service share</dt><dd>{{ wallet.totalPaidServiceRevenueShare | currency:'ZAR':'symbol-narrow':'1.0-0' }}</dd></div>
+          </dl>
+          <small>Access is limited to the church assigned to this Pastor role.</small>
+        </section>
+      }
+
+      @if (bishopWallet(); as wallet) {
+        <section class="leadership-wallet">
+          <div>
+            <p>ASSIGNED BRANCH WALLET SUMMARY</p>
+            <h2>{{ wallet.bishopName }}</h2>
+            <strong>{{ wallet.totalWalletBalance | currency:'ZAR':'symbol-narrow':'1.2-2' }}</strong>
+          </div>
+          <dl>
+            <div><dt>Combined tithes</dt><dd>{{ wallet.totalTithes | currency:'ZAR':'symbol-narrow':'1.0-0' }}</dd></div>
+            <div><dt>Combined offerings</dt><dd>{{ wallet.totalOfferings | currency:'ZAR':'symbol-narrow':'1.0-0' }}</dd></div>
+            <div><dt>Revenue share</dt><dd>{{ wallet.totalRevenueShare | currency:'ZAR':'symbol-narrow':'1.0-0' }}</dd></div>
+          </dl>
+          <div class="branch-list">
+            @for (church of wallet.assignedChurches; track church.churchId) {
+              <span><b>{{ church.churchName }}</b>{{ church.walletBalance | currency:'ZAR':'symbol-narrow':'1.0-0' }}</span>
+            }
+          </div>
+          <small>Only branches assigned to this Bishop role are included.</small>
+        </section>
+      }
+
+      <div class="workspace-grid">
+        @for (item of menuItems(); track item.label) {
+          <article>
+            <span>{{ $index + 1 }}</span>
+            <h3>{{ item.label }}</h3>
+            <p>{{ item.description }}</p>
+            <button type="button" (click)="openItem(item)">
+              {{ item.route ? 'Open' : 'Coming soon' }}
+            </button>
+          </article>
+        }
+      </div>
+    </section>
+  </div>
+</main>

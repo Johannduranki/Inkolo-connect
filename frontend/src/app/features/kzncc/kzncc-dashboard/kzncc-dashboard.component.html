@@ -1,0 +1,82 @@
+<main class="kzncc-page">
+  <header class="topbar">
+    <div class="brand-group">
+      <a href="/dashboard" aria-label="Inkolo Connect dashboard">
+        <img src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+      </a>
+      <span>Powered by Duranki</span>
+    </div>
+    <a class="my-services" href="/dashboard">My Services</a>
+    <div class="account">
+      @if (user()) {
+        <app-role-switcher
+          [userFullName]="user()!.firstName + ' ' + user()!.lastName"
+        ></app-role-switcher>
+      }
+      <button type="button" (click)="logout()">Sign out</button>
+    </div>
+  </header>
+
+  <section class="kzncc-hero">
+    <img src="/service-kzncc.png" alt="KZNCC Christian Council">
+    <div>
+      <p>KZNCC MEMBER SERVICE</p>
+      <h1>KZNCC communication centre</h1>
+      <span>Announcements, council messages and events for subscribed members.</span>
+    </div>
+  </section>
+
+  @if (loading()) {
+    <section class="status-card">
+      <span class="loader" aria-hidden="true"></span>
+      <h2>Loading KZNCC services</h2>
+      <p>Please wait while your membership access is checked.</p>
+    </section>
+  } @else if (!subscribed()) {
+    <section class="subscribe-card">
+      <img src="/service-kzncc.png" alt="">
+      <div>
+        <p>KZNCC MEMBERSHIP</p>
+        <h2>Subscribe to KZNCC to receive announcements, events, and community communication.</h2>
+        <span>Membership costs R7 per month and gives access to all KZNCC community services and advantages.</span>
+        @if (error()) {
+          <strong role="alert">{{ error() }}</strong>
+        }
+        <label class="terms-check">
+          <input
+            type="checkbox"
+            [checked]="termsAccepted()"
+            (change)="termsAccepted.set($any($event.target).checked)"
+          >
+          <span>I accept the KZNCC terms and conditions.</span>
+        </label>
+        <button
+          type="button"
+          [disabled]="!termsAccepted() || subscribing()"
+          (click)="subscribe()"
+        >
+          {{ subscribing() ? 'Activating...' : 'Subscribe for R7 / month' }}
+        </button>
+      </div>
+    </section>
+  } @else {
+    <section class="member-welcome">
+      <div>
+        <p>ACTIVE KZNCC MEMBER</p>
+        <h2>Welcome, {{ user()?.firstName }}</h2>
+      </div>
+      <span>R7 monthly membership active</span>
+    </section>
+
+    <div class="dashboard-grid">
+      <app-kzncc-announcements
+        [announcements]="announcements()"
+      ></app-kzncc-announcements>
+      <app-kzncc-events [events]="events()"></app-kzncc-events>
+      <app-kzncc-communication
+        class="communication-panel"
+        [messages]="messages()"
+      ></app-kzncc-communication>
+    </div>
+  }
+</main>

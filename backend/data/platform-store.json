@@ -1,0 +1,517 @@
+{
+  "version": 3,
+  "users": [
+    {
+      "id": 1,
+      "firstName": "Jeremy",
+      "lastName": "Shabalala",
+      "telephoneNumber": "0712345678",
+      "email": "jeremy@inkoloconnect.local",
+      "roles": [
+        "Member"
+      ],
+      "status": "active"
+    },
+    {
+      "id": 2,
+      "firstName": "Nandi",
+      "lastName": "Mthembu",
+      "telephoneNumber": "0725550184",
+      "email": "nandi@inkoloconnect.local",
+      "roles": [
+        "Member",
+        "Pastor"
+      ],
+      "status": "active"
+    },
+    {
+      "id": 3,
+      "firstName": "Thabo",
+      "lastName": "Khumalo",
+      "telephoneNumber": "0736614209",
+      "email": "thabo@inkoloconnect.local",
+      "roles": [
+        "Member",
+        "Bishop"
+      ],
+      "status": "active"
+    },
+    {
+      "id": 4,
+      "firstName": "Lerato",
+      "lastName": "Sithole",
+      "telephoneNumber": "0789441132",
+      "email": "lerato@inkoloconnect.local",
+      "roles": [
+        "Member",
+        "KZNCC User"
+      ],
+      "status": "active"
+    },
+    {
+      "id": 5,
+      "firstName": "Ayanda",
+      "lastName": "Dlamini",
+      "telephoneNumber": "0741002003",
+      "email": "ayanda@inkoloconnect.local",
+      "roles": [
+        "Member",
+        "KZNCC Admin"
+      ],
+      "status": "active"
+    },
+    {
+      "id": 6,
+      "firstName": "Sipho",
+      "lastName": "Ncube",
+      "telephoneNumber": "0763004005",
+      "email": "sipho@inkoloconnect.local",
+      "roles": [
+        "Admin User"
+      ],
+      "status": "active"
+    },
+    {
+      "id": 7,
+      "firstName": "Zanele",
+      "lastName": "Mkhize",
+      "telephoneNumber": "0795006007",
+      "email": "zanele@africanbank.local",
+      "roles": [
+        "Service Provider Admin"
+      ],
+      "status": "active"
+    },
+    {
+      "id": 8,
+      "firstName": "Mandla",
+      "lastName": "Cele",
+      "telephoneNumber": "0817008009",
+      "email": "mandla@africanbank.local",
+      "roles": [
+        "Service Provider User"
+      ],
+      "status": "active"
+    }
+  ],
+  "profiles": [
+    {
+      "userId": 1,
+      "idNumber": "",
+      "telephoneNumber": "0712345678",
+      "email": "jeremy@inkoloconnect.local",
+      "address": "",
+      "city": "",
+      "postalCode": "",
+      "emergencyContactName": "",
+      "emergencyContactNumber": ""
+    },
+    {
+      "userId": 2,
+      "idNumber": "",
+      "telephoneNumber": "0725550184",
+      "email": "nandi@inkoloconnect.local",
+      "address": "",
+      "city": "",
+      "postalCode": "",
+      "emergencyContactName": "",
+      "emergencyContactNumber": ""
+    },
+    {
+      "userId": 3,
+      "idNumber": "",
+      "telephoneNumber": "0736614209",
+      "email": "thabo@inkoloconnect.local",
+      "address": "",
+      "city": "",
+      "postalCode": "",
+      "emergencyContactName": "",
+      "emergencyContactNumber": ""
+    },
+    {
+      "userId": 4,
+      "idNumber": "",
+      "telephoneNumber": "0789441132",
+      "email": "lerato@inkoloconnect.local",
+      "address": "",
+      "city": "",
+      "postalCode": "",
+      "emergencyContactName": "",
+      "emergencyContactNumber": ""
+    },
+    {
+      "userId": 5,
+      "idNumber": "",
+      "telephoneNumber": "0741002003",
+      "email": "ayanda@inkoloconnect.local",
+      "address": "",
+      "city": "",
+      "postalCode": "",
+      "emergencyContactName": "",
+      "emergencyContactNumber": ""
+    },
+    {
+      "userId": 6,
+      "idNumber": "",
+      "telephoneNumber": "0763004005",
+      "email": "sipho@inkoloconnect.local",
+      "address": "",
+      "city": "",
+      "postalCode": "",
+      "emergencyContactName": "",
+      "emergencyContactNumber": ""
+    },
+    {
+      "userId": 7,
+      "idNumber": "",
+      "telephoneNumber": "0795006007",
+      "email": "zanele@africanbank.local",
+      "address": "",
+      "city": "",
+      "postalCode": "",
+      "emergencyContactName": "",
+      "emergencyContactNumber": ""
+    },
+    {
+      "userId": 8,
+      "idNumber": "",
+      "telephoneNumber": "0817008009",
+      "email": "mandla@africanbank.local",
+      "address": "",
+      "city": "",
+      "postalCode": "",
+      "emergencyContactName": "",
+      "emergencyContactNumber": ""
+    }
+  ],
+  "churches": [
+    {
+      "id": "1",
+      "name": "Grace Community Church",
+      "denomination": "Christian Community",
+      "region": "Durban Central",
+      "province": "KwaZulu-Natal",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "2",
+      "name": "Zion Revival Church",
+      "denomination": "Zionist",
+      "region": "North Coast",
+      "province": "KwaZulu-Natal",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "3",
+      "name": "New Hope Christian Centre",
+      "denomination": "Pentecostal",
+      "region": "South Coast",
+      "province": "KwaZulu-Natal",
+      "status": "ACTIVE"
+    }
+  ],
+  "branches": [
+    {
+      "id": "branch-001",
+      "churchId": "1",
+      "branchName": "Durban Central Branch",
+      "branchCode": "GCC-DBN",
+      "pastorName": "Pastor N. Mthembu",
+      "region": "Durban Central",
+      "province": "KwaZulu-Natal",
+      "physicalAddress": "14 Gospel Road, Durban",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "branch-002",
+      "churchId": "1",
+      "branchName": "Umlazi Branch",
+      "branchCode": "GCC-UML",
+      "region": "Durban South",
+      "province": "KwaZulu-Natal",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "branch-003",
+      "churchId": "2",
+      "branchName": "KwaDukuza Central Branch",
+      "branchCode": "ZRC-KWD",
+      "pastorName": "Bishop T. Khumalo",
+      "region": "North Coast",
+      "province": "KwaZulu-Natal",
+      "status": "ACTIVE"
+    }
+  ],
+  "memberCommunities": [
+    {
+      "memberId": "1",
+      "churchId": "1",
+      "churchName": "Grace Community Church",
+      "branchId": "branch-001",
+      "branchName": "Durban Central Branch"
+    },
+    {
+      "memberId": "2",
+      "churchId": "1",
+      "churchName": "Grace Community Church",
+      "branchId": "branch-001",
+      "branchName": "Durban Central Branch"
+    },
+    {
+      "memberId": "3",
+      "churchId": "1",
+      "churchName": "Grace Community Church",
+      "branchId": "branch-001",
+      "branchName": "Durban Central Branch"
+    },
+    {
+      "memberId": "4",
+      "churchId": "1",
+      "churchName": "Grace Community Church",
+      "branchId": "branch-001",
+      "branchName": "Durban Central Branch"
+    }
+  ],
+  "contacts": [
+    {
+      "ownerUserId": "1",
+      "contactUserId": "2",
+      "createdAt": "2026-06-10T06:38:48.228Z"
+    }
+  ],
+  "directMessages": [
+    {
+      "id": "msg-2b90fd0f-2260-4f19-9635-05d0ba799843",
+      "conversationId": "1:2",
+      "senderUserId": "1",
+      "recipientUserId": "2",
+      "text": "Hello Nandi, this is a persistent direct message.",
+      "sentAt": "2026-06-10T06:38:48.245Z"
+    }
+  ],
+  "wallets": [
+    {
+      "id": "member-1",
+      "ownerType": "MEMBER",
+      "ownerId": "1",
+      "walletName": "Jeremy Shabalala Wallet",
+      "balance": 850,
+      "availableBalance": 850,
+      "pendingBalance": 0,
+      "currency": "ZAR",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "member-2",
+      "ownerType": "MEMBER",
+      "ownerId": "2",
+      "walletName": "Nandi Mthembu Wallet",
+      "balance": 250,
+      "availableBalance": 250,
+      "pendingBalance": 0,
+      "currency": "ZAR",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "member-3",
+      "ownerType": "MEMBER",
+      "ownerId": "3",
+      "walletName": "Thabo Khumalo Wallet",
+      "balance": 251,
+      "availableBalance": 251,
+      "pendingBalance": 0,
+      "currency": "ZAR",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "member-4",
+      "ownerType": "MEMBER",
+      "ownerId": "4",
+      "walletName": "Lerato Sithole Wallet",
+      "balance": 250,
+      "availableBalance": 250,
+      "pendingBalance": 0,
+      "currency": "ZAR",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "member-5",
+      "ownerType": "MEMBER",
+      "ownerId": "5",
+      "walletName": "Ayanda Dlamini Wallet",
+      "balance": 250,
+      "availableBalance": 250,
+      "pendingBalance": 0,
+      "currency": "ZAR",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "member-6",
+      "ownerType": "MEMBER",
+      "ownerId": "6",
+      "walletName": "Sipho Ncube Wallet",
+      "balance": 250,
+      "availableBalance": 250,
+      "pendingBalance": 0,
+      "currency": "ZAR",
+      "status": "ACTIVE"
+    }
+  ],
+  "walletTransactions": [
+    {
+      "id": "wallet-seed-1",
+      "walletId": "member-1",
+      "transactionType": "ADJUSTMENT",
+      "amount": 250,
+      "direction": "IN",
+      "description": "Community payment",
+      "reference": "OPENING-001",
+      "status": "SUCCESSFUL",
+      "createdAt": "2026-06-10T06:37:26.806Z"
+    },
+    {
+      "id": "tx-092ae647-0378-4612-85d5-34fe159df00e",
+      "walletId": "member-4",
+      "transactionType": "TOP_UP",
+      "amount": 1,
+      "direction": "IN",
+      "description": "Cycle card top-up",
+      "reference": "CYCLE-1781075801270",
+      "status": "SUCCESSFUL",
+      "createdAt": "2026-06-10T07:16:41.270Z"
+    },
+    {
+      "id": "tx-cc613739-458e-4b92-be80-ce2408964998",
+      "walletId": "member-4",
+      "transactionType": "TRANSFER",
+      "amount": 1,
+      "direction": "OUT",
+      "description": "Transfer to Thabo Khumalo",
+      "reference": "MEMBER-1781075801286",
+      "status": "SUCCESSFUL",
+      "createdAt": "2026-06-10T07:16:41.286Z"
+    },
+    {
+      "id": "tx-0ac1a694-cf54-450f-9087-5bb51e2a76a5",
+      "walletId": "member-3",
+      "transactionType": "TRANSFER",
+      "amount": 1,
+      "direction": "IN",
+      "description": "Member wallet transfer",
+      "reference": "MEMBER-1781075801286",
+      "status": "SUCCESSFUL",
+      "createdAt": "2026-06-10T07:16:41.286Z"
+    }
+  ],
+  "referrals": [],
+  "marketplaceListings": [
+    {
+      "id": "listing-001",
+      "title": "Family dining table",
+      "description": "Solid wooden table in good condition. Seats six people.",
+      "category": "Furniture",
+      "productType": "Dining room",
+      "condition": "SECOND_HAND",
+      "price": 1800,
+      "area": "Durban Central",
+      "images": [
+        "/marketplace-dining-table.jpg"
+      ],
+      "sellerUserId": "2",
+      "sellerName": "Nandi Mthembu",
+      "sellerChurchName": "Grace Community Church",
+      "sellerBranchName": "Durban Central Branch",
+      "sellerRating": 4.8,
+      "status": "AVAILABLE",
+      "createdAt": "2026-06-08T09:30:00"
+    },
+    {
+      "id": "listing-002",
+      "title": "School laptop",
+      "description": "Reliable laptop for online classes and everyday work.",
+      "category": "Electronics",
+      "productType": "Laptop",
+      "condition": "REFURBISHED",
+      "price": 3200,
+      "area": "KwaDukuza",
+      "images": [
+        "/marketplace-laptop.jpg"
+      ],
+      "sellerUserId": "3",
+      "sellerName": "Thabo Khumalo",
+      "sellerChurchName": "Zion Revival Church",
+      "sellerBranchName": "KwaDukuza Central Branch",
+      "sellerRating": 4.6,
+      "status": "AVAILABLE",
+      "createdAt": "2026-06-07T14:15:00"
+    },
+    {
+      "id": "listing-003",
+      "title": "Mobile phone",
+      "description": "Unlocked phone with charger. Ideal for calls and WhatsApp.",
+      "category": "Phones",
+      "productType": "Mobile phone",
+      "condition": "USED",
+      "price": 1450,
+      "area": "Tugela",
+      "images": [
+        "/marketplace-mobile-phone.jpg"
+      ],
+      "sellerUserId": "4",
+      "sellerName": "Lerato Sithole",
+      "sellerCommunityName": "New Born Church",
+      "sellerRating": 4.9,
+      "status": "AVAILABLE",
+      "createdAt": "2026-06-06T11:00:00"
+    }
+  ],
+  "jobListings": [
+    {
+      "id": "job-001",
+      "title": "Office Administrator",
+      "description": "Office Administrator opportunity available to an Inkolo Connect community member.",
+      "category": "Admin",
+      "jobType": "Admin",
+      "employmentType": "FULL_TIME",
+      "workMode": "ON_SITE",
+      "area": "Tugela",
+      "paymentAmount": 8500,
+      "paymentFrequency": "MONTHLY",
+      "requiredSkills": [
+        "Reliable",
+        "Good communication"
+      ],
+      "listedByUserId": "1",
+      "listedByUserName": "Tugela Community Centre",
+      "listedByChurchName": "New Born Church",
+      "listedByBranchName": "Durban Central Branch",
+      "listerRating": 4.7,
+      "status": "OPEN",
+      "createdAt": "2026-06-08T10:00:00"
+    },
+    {
+      "id": "job-002",
+      "title": "Shop Assistant",
+      "description": "Shop Assistant opportunity available to an Inkolo Connect community member.",
+      "category": "Sales",
+      "jobType": "Sales",
+      "employmentType": "PART_TIME",
+      "workMode": "ON_SITE",
+      "area": "KwaDukuza",
+      "paymentAmount": 35,
+      "paymentFrequency": "HOURLY",
+      "requiredSkills": [
+        "Reliable",
+        "Good communication"
+      ],
+      "listedByUserId": "2",
+      "listedByUserName": "New Born Family Store",
+      "listedByChurchName": "New Born Church",
+      "listedByBranchName": "Durban Central Branch",
+      "listerRating": 4.7,
+      "status": "OPEN",
+      "createdAt": "2026-06-08T10:00:00"
+    }
+  ],
+  "legalAcceptances": []
+}

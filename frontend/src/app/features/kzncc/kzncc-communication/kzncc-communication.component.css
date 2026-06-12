@@ -1,0 +1,104 @@
+.communication {
+  border: 1px solid var(--inkolo-border);
+  border-radius: 1.2rem;
+  background: #fff;
+  box-shadow: 0 1rem 2.7rem rgba(6, 45, 107, 0.09);
+}
+
+header {
+  padding: 1.2rem;
+  border-bottom: 1px solid #e1eaf2;
+}
+
+header p {
+  margin: 0 0 0.25rem;
+  color: var(--inkolo-green);
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+}
+
+header h2 {
+  margin: 0;
+  color: var(--inkolo-navy);
+}
+
+.filters {
+  display: flex;
+  padding: 0.75rem;
+  overflow-x: auto;
+  gap: 0.4rem;
+}
+
+.filters button {
+  flex: 0 0 auto;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #cedee9;
+  border-radius: 99rem;
+  color: #5a7488;
+  background: #f7fbff;
+  font: inherit;
+  font-size: 0.62rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.filters button.active {
+  border-color: var(--inkolo-blue);
+  color: #fff;
+  background: var(--inkolo-blue);
+}
+
+.message-list {
+  display: grid;
+  padding: 0 0.8rem 0.8rem;
+  gap: 0.65rem;
+}
+
+article {
+  padding: 0.9rem;
+  border-left: 4px solid var(--inkolo-blue);
+  border-radius: 0.75rem;
+  background: #f6faff;
+}
+
+article.alert {
+  border-left-color: #e5484d;
+  background: #fff7f7;
+}
+
+.message-heading {
+  display: flex;
+  justify-content: space-between;
+  color: #71879a;
+  font-size: 0.58rem;
+  font-weight: 800;
+}
+
+.message-heading span {
+  color: var(--inkolo-blue);
+  text-transform: uppercase;
+}
+
+.alert .message-heading span {
+  color: #c72e34;
+}
+
+article h3 {
+  margin: 0.55rem 0 0.15rem;
+  color: var(--inkolo-navy);
+  font-size: 0.92rem;
+}
+
+article small {
+  color: #72889a;
+  font-size: 0.6rem;
+  font-weight: 750;
+}
+
+article p {
+  margin: 0.55rem 0 0;
+  color: #60798c;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}

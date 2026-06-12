@@ -1,0 +1,109 @@
+<main class="login-page">
+  <section class="brand-panel" aria-label="Inkolo Connect introduction">
+    <div class="logo-frame">
+      <img class="inkolo-logo" src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+    </div>
+    <div>
+      <p class="eyebrow">INKOLO CONNECT</p>
+      <h1>Welcome back.</h1>
+      <p class="brand-copy">
+        Sign in securely to access your Inkolo Connect workspace.
+      </p>
+    </div>
+    <p class="support">Need help? Contact your platform administrator.</p>
+  </section>
+
+  <section class="form-panel">
+    <form class="login-card" (submit)="submit(); $event.preventDefault()" novalidate>
+      <div class="mobile-brand">
+        <img class="inkolo-logo mobile" src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+      </div>
+
+      <p class="eyebrow dark">ACCOUNT ACCESS</p>
+      <h2>Tell us who you are</h2>
+      <p class="form-intro">Choose a demo user, then continue to their assigned dashboard roles.</p>
+
+      <section class="demo-user-picker" aria-labelledby="demo-users-heading">
+        <div class="demo-picker-heading">
+          <strong id="demo-users-heading">Choose a demo user</strong>
+          <span>{{ demoUsers.length }} profiles</span>
+        </div>
+        <div class="demo-user-grid">
+          @for (demoUser of demoUsers; track demoUser.id) {
+            <button
+              type="button"
+              class="demo-user"
+              [class.selected]="telephoneNumber.value === demoUser.telephoneNumber"
+              (click)="chooseDemoUser(demoUser)"
+            >
+              <span class="demo-avatar">
+                {{ demoUser.firstName.charAt(0) }}{{ demoUser.lastName.charAt(0) }}
+              </span>
+              <span>
+                <strong>{{ demoUser.firstName }} {{ demoUser.lastName }}</strong>
+                <small>{{ demoUser.description }}</small>
+              </span>
+            </button>
+          }
+        </div>
+      </section>
+
+      <div class="name-fields">
+        <label>
+          <span>Name</span>
+          <input
+            type="text"
+            autocomplete="given-name"
+            [formControl]="firstName"
+            placeholder="e.g. Jeremy"
+          >
+        </label>
+        <label>
+          <span>Surname</span>
+          <input
+            type="text"
+            autocomplete="family-name"
+            [formControl]="lastName"
+            placeholder="e.g. Shabalala"
+          >
+        </label>
+      </div>
+
+      @if (
+        (firstName.touched && firstName.invalid) ||
+        (lastName.touched && lastName.invalid)
+      ) {
+        <p class="error" role="alert">Enter your name and surname.</p>
+      }
+
+      <label for="telephoneNumber">Telephone number</label>
+      <input
+        id="telephoneNumber"
+        type="tel"
+        inputmode="tel"
+        autocomplete="tel"
+        [formControl]="telephoneNumber"
+        placeholder="e.g. 0712345678"
+        aria-describedby="telephone-help"
+      >
+      <p id="telephone-help" class="field-help">
+        The selected user's registered demo number is filled automatically.
+      </p>
+
+      @if (telephoneNumber.touched && telephoneNumber.invalid) {
+        <p class="error" role="alert">Enter a valid telephone number.</p>
+      }
+      @if (errorMessage()) {
+        <p class="error" role="alert">{{ errorMessage() }}</p>
+      }
+
+      <button type="submit" [disabled]="loading()">
+        {{ loading() ? 'Signing in...' : 'Continue' }}
+      </button>
+
+      <p class="privacy">
+        Your telephone number is transmitted securely and is not stored in your browser.
+      </p>
+    </form>
+  </section>
+</main>
