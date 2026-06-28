@@ -38,9 +38,9 @@ export function getDemoUserById(id) {
     telephone_number: platformUser?.telephoneNumber ?? user.telephone_number,
     first_name: platformUser?.firstName ?? user.first_name,
     last_name: platformUser?.lastName ?? user.last_name,
-    email: platformUser?.email ?? user.email,
-    roles: platformUser?.roles ?? user.roles,
-    status: platformUser?.status ?? user.status,
+    email: platformUser?.email ?? user?.email ?? null,
+    roles: platformUser?.roles ?? user?.roles ?? ['Member'],
+    status: platformUser?.status ?? user?.status ?? 'active',
     membership_type: user?.membership_type ?? null
   };
 }
@@ -121,9 +121,4 @@ export function resetDemoUserServices(userId) {
       demoApplications.delete(key);
     }
   }
-  updatePlatformState((state) => {
-    state.serviceSubscriptions = (state.serviceSubscriptions ?? []).filter(
-      (subscription) => String(subscription.userId) !== String(userId)
-    );
-  });
 }

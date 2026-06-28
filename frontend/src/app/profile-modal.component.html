@@ -24,6 +24,35 @@
 
     @if (activeTab() === 'details') {
       <div class="profile-grid">
+        <div class="profile-photo-editor">
+          <div class="profile-photo-preview">
+            @if (profilePhoto()) {
+              <img [src]="profilePhoto()" alt="Your profile">
+            } @else {
+              <span aria-hidden="true">Add photo</span>
+            }
+          </div>
+          <div>
+            <strong>Profile photo</strong>
+            <span>This photo appears beside My Profile.</span>
+            <label class="profile-photo-upload">
+              Choose photo
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                (change)="selectProfilePhoto($event)"
+              >
+            </label>
+            @if (profilePhoto()) {
+              <button type="button" class="remove-profile-photo" (click)="removeProfilePhoto()">
+                Remove photo
+              </button>
+            }
+            @if (photoError()) {
+              <small class="profile-photo-error">{{ photoError() }}</small>
+            }
+          </div>
+        </div>
         <div class="profile-community">
           <span>My Community</span>
           <strong>{{ communityHeading() }}</strong>

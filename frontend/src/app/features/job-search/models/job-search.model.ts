@@ -29,6 +29,8 @@ export interface JobListing {
   listedByChurchName?: string;
   listedByBranchName?: string;
   listerRating?: number;
+  businessProfileId?: string;
+  businessName?: string;
   status: JobStatus;
   createdAt: string;
 }

@@ -10,11 +10,18 @@
       </a>
       <span>Powered by Duranki</span>
     </div>
-    <a
-      class="my-services"
-      href=""
-      (click)="$event.preventDefault(); openRoleDashboard()"
-    >Service Dashboard</a>
+    <nav class="service-navigation" aria-label="KZNCC navigation">
+      <a
+        class="community-return"
+        href=""
+        (click)="$event.preventDefault(); returnToCommunity()"
+      >Return to My Community</a>
+      <a
+        class="my-services"
+        href=""
+        (click)="$event.preventDefault(); openRoleDashboard()"
+      >Service Dashboard</a>
+    </nav>
     <div class="account">
       @if (user()) {
         <app-role-switcher
@@ -28,7 +35,7 @@
   <section class="kzncc-hero">
     <img src="/service-kzncc.png" alt="KZNCC Christian Council">
     <div>
-      <p>KZNCC MEMBER SERVICE</p>
+      <p>KZNCC SUBSCRIBER SERVICE</p>
       <h1>KZNCC communication centre</h1>
       <span>Announcements, council messages and events for subscribed members.</span>
     </div>
@@ -85,7 +92,7 @@
   } @else {
     <section class="member-welcome">
       <div>
-        <p>ACTIVE KZNCC MEMBER</p>
+        <p>ACTIVE KZNCC SUBSCRIBER</p>
         <h2>Welcome, {{ user()?.firstName }}</h2>
       </div>
       <div class="active-membership-actions">

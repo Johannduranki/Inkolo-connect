@@ -16,7 +16,7 @@ const serviceNames = {
   'vas-services': 'VAS Services',
   eduu: 'EduU',
   'vuma-fibre': 'Vuma Fibre',
-  'catch-a-ride': 'Catch a Ride',
+  'catch-a-ride': 'Catch a Lift',
   kzncc: 'KZNCC Membership',
   'keycha-properties': 'Keytcha Properties',
   wallet: 'My Wallet'

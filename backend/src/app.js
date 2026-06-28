@@ -3,7 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import multer from 'multer';
 import path from 'node:path';
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { rateLimit } from 'express-rate-limit';
 import { createAccessToken, requireAuth } from './auth.js';
@@ -25,6 +26,7 @@ import {
 } from './demo-store.js';
 import { hashIdNumber, isValidIdNumber, lastFour, normalizeIdNumber } from './id-number.js';
 import { readPlatformState, updatePlatformState } from './platform-store.js';
+import { resetUserServiceData } from './user-reset.js';
 
 function mapUser(user, idNumberLast4 = user.id_number_last4) {
   return {
@@ -96,7 +98,7 @@ const servicePlans = {
     free: { amountCents: 0, label: 'Vuma Fibre enquiry' }
   },
   'catch-a-ride': {
-    free: { amountCents: 0, label: 'Catch a Ride access' }
+    free: { amountCents: 0, label: 'Catch a Lift access' }
   },
   kzncc: {
     monthly: { amountCents: 700, label: 'KZNCC monthly membership' }
@@ -111,6 +113,12 @@ const servicePlans = {
 
 const uploadDirectory = path.resolve('uploads');
 mkdirSync(uploadDirectory, { recursive: true });
+
+const sourceDirectory = path.dirname(fileURLToPath(import.meta.url));
+const frontendDirectory = path.resolve(
+  sourceDirectory,
+  '../../frontend/dist/duranki-login/browser'
+);
 
 const allowedDocumentTypes = new Set([
   'application/pdf',
@@ -152,8 +160,23 @@ export function createApp({ databaseAvailable = true } = {}) {
 
   app.disable('x-powered-by');
   app.use(helmet());
-  app.use(cors({ origin: config.frontendOrigin }));
-  app.use(express.json({ limit: '10kb' }));
+  app.use(cors({
+    origin(origin, callback) {
+      if (!origin || config.frontendOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error('Origin is not allowed by Inkolo Connect.'));
+    }
+  }));
+  app.use(express.json({ limit: '2mb' }));
+  app.use(
+    '/uploads',
+    express.static(uploadDirectory, {
+      fallthrough: false,
+      maxAge: '1d'
+    })
+  );
 
   app.get('/api/health', (_req, res) => {
     res.json({
@@ -565,18 +588,10 @@ export function createApp({ databaseAvailable = true } = {}) {
 
   app.delete('/api/subscriptions', requireAuth, async (req, res, next) => {
     try {
-      if (databaseAvailable) {
-        await getPool().execute(
-          'DELETE FROM service_applications WHERE user_id = ?',
-          [req.auth.sub]
-        );
-        await getPool().execute(
-          'DELETE FROM service_subscriptions WHERE user_id = ?',
-          [req.auth.sub]
-        );
-      } else if (config.allowDemoAuth) {
+      if (!databaseAvailable && config.allowDemoAuth) {
         resetDemoUserServices(req.auth.sub);
       }
+      await resetUserServiceData(req.auth.sub, databaseAvailable);
 
       return res.status(204).send();
     } catch (error) {
@@ -639,7 +654,17 @@ export function createApp({ databaseAvailable = true } = {}) {
     }
   );
 
-  app.use('/api/platform', createPlatformRouter({ requireAuth }));
+  app.use(
+    '/api/platform',
+    createPlatformRouter({ requireAuth, databaseAvailable })
+  );
+
+  if (existsSync(frontendDirectory)) {
+    app.use(express.static(frontendDirectory, { maxAge: '1d', index: false }));
+    app.get('*path', (_req, res) => {
+      res.sendFile(path.join(frontendDirectory, 'index.html'));
+    });
+  }
 
   app.use((error, _req, res, _next) => {
     console.error(error);

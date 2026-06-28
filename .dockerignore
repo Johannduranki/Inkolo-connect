@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+**/.angular
+**/.env
+**/*.log
+.git
+backend/uploads
+backend/data
+frontend/android
+work
+outputs

@@ -1,4 +1,16 @@
-<main class="dashboard-shell">
+<main
+  class="dashboard-shell"
+  [class.community-service-entry]="communityServiceEntry()"
+>
+  @if (communityServiceEntry()) {
+    <iframe
+      class="community-service-background"
+      src="/community"
+      title="My Community dashboard background"
+      aria-hidden="true"
+      tabindex="-1"
+    ></iframe>
+  }
   <header class="topbar">
     <div class="header-brand-group">
       <a class="brand" href="/dashboard" aria-label="Inkolo Connect dashboard">
@@ -19,7 +31,11 @@
           <strong>{{ monthlySubscriptionTotal() }}</strong>
         </div>
         <span class="avatar" aria-hidden="true">
-          {{ user()!.firstName.charAt(0) }}{{ user()!.lastName.charAt(0) }}
+          @if (profiles.profile().profilePhoto) {
+            <img [src]="profiles.profile().profilePhoto" alt="">
+          } @else {
+            {{ user()!.firstName.charAt(0) }}{{ user()!.lastName.charAt(0) }}
+          }
         </span>
       }
       <button class="profile-button" type="button" (click)="profileOpen.set(true)">My Profile</button>
@@ -93,7 +109,13 @@
           <span class="wallet-card-inner">
             <span class="wallet-card-face wallet-card-front">
               <span class="bank-card-top">
-                <img src="/inkolo-connect-logo.png" alt="">
+                <span class="wallet-card-brand">
+                  @if (walletBrandLogo()) {
+                    <img class="wallet-custom-logo" [src]="walletBrandLogo()" [alt]="walletBrandTeam()">
+                  } @else {
+                    <img src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+                  }
+                </span>
                 <b>INKOLO WALLET</b>
               </span>
               <span class="bank-card-chip" aria-hidden="true"></span>
@@ -121,6 +143,9 @@
               <small class="flip-hint">← Card front</small>
             </span>
           </span>
+        </button>
+        <button class="wallet-brand-button" type="button" (click)="openWalletBranding()">
+          Change wallet logo
         </button>
       }
   </section>
@@ -150,8 +175,14 @@
       >
         <span class="wallet-card-inner">
           <span class="wallet-card-face wallet-card-front">
-            <span class="bank-card-top">
-              <img src="/inkolo-connect-logo.png" alt="">
+              <span class="bank-card-top">
+                <span class="wallet-card-brand">
+                  @if (walletBrandLogo()) {
+                    <img class="wallet-custom-logo" [src]="walletBrandLogo()" [alt]="walletBrandTeam()">
+                  } @else {
+                    <img src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+                  }
+                </span>
               <b>INKOLO WALLET</b>
             </span>
             <span class="bank-card-chip" aria-hidden="true"></span>
@@ -580,6 +611,9 @@
               <button type="button" (click)="openWalletAction('topup')">Top Up</button>
               <button type="button" (click)="openWalletAction('cashout')">Cash Out</button>
               <button type="button" (click)="openWalletAction('transfer')">Transfer</button>
+              <button type="button" class="wallet-brand-inside" (click)="openWalletBranding()">
+                Change wallet logo
+              </button>
             </div>
 
             <div class="wallet-activity-columns">
@@ -661,6 +695,238 @@
               </section>
             </div>
           </section>
+        } @else if (isActiveCatchRideView(service)) {
+          <section class="ride-workspace" aria-labelledby="ride-workspace-title">
+            <div class="ride-heading">
+              <div>
+                <p class="eyebrow">CATCH A LIFT</p>
+                <h3 id="ride-workspace-title">Travel with your community</h3>
+                <p>
+                  Catch a nearby lift or make your own vehicle available to members.
+                </p>
+              </div>
+              <div class="business-heading-actions">
+                <button type="button" class="business-tools-button" (click)="openBusinessCenter('CATCH_A_RIDE')">
+                  Register transport business
+                </button>
+                <button type="button" [disabled]="rideLocationLoading()" (click)="locateMemberForRides()">
+                  {{ rideLocationLoading() ? 'Finding location...' : 'Refresh my location' }}
+                </button>
+              </div>
+            </div>
+
+            <div class="ride-mode-selector" aria-label="Choose Catch a Lift mode">
+              <button
+                type="button"
+                [class.active]="rideMode() === 'catch'"
+                (click)="setRideMode('catch')"
+              >
+                Catch a Lift
+                <small>Find drivers within 10 km</small>
+              </button>
+              <button
+                type="button"
+                [class.active]="rideMode() === 'give'"
+                (click)="setRideMode('give')"
+              >
+                Give a Lift
+                <small>Activate your vehicle on the map</small>
+              </button>
+            </div>
+
+            @if (rideMode() === 'give') {
+              <section class="give-lift-panel">
+                <div>
+                  <p class="eyebrow">DRIVER MODE</p>
+                  <h4>Make my lift available</h4>
+                  <p>
+                    Your current location is shown to nearby members only while
+                    your lift is active.
+                  </p>
+                </div>
+                <div class="give-lift-grid">
+                  <label>
+                    <span>Vehicle</span>
+                    <input [formControl]="liftVehicle" placeholder="e.g. White Toyota Corolla">
+                  </label>
+                  <label>
+                    <span>Registration number</span>
+                    <input [formControl]="liftRegistration" placeholder="Vehicle registration">
+                  </label>
+                  <label>
+                    <span>Seats available</span>
+                    <input type="number" min="1" max="8" [formControl]="liftSeats">
+                  </label>
+                  <label>
+                    <span>Destination</span>
+                    <input [formControl]="liftDestination" placeholder="Where are you going?">
+                  </label>
+                  <label>
+                    <span>Departure</span>
+                    <input [formControl]="liftDeparture" placeholder="e.g. Leaving in 20 minutes">
+                  </label>
+                  @if (businessesFor('CATCH_A_RIDE').length) {
+                    <label>
+                      <span>Offer lift as</span>
+                      <select [formControl]="liftBusinessId">
+                        <option value="">My personal profile</option>
+                        @for (business of businessesFor('CATCH_A_RIDE'); track business.id) {
+                          <option [value]="business.id">{{ business.businessName }}</option>
+                        }
+                      </select>
+                    </label>
+                  }
+                </div>
+                <div class="give-lift-status">
+                  @if (myLiftOffer()?.available) {
+                    <strong>Live on the map</strong>
+                    <span>Nearby members can ask you for a lift.</span>
+                    <button type="button" class="ride-cancel" (click)="deactivateMyLift()">
+                      Stop offering lift
+                    </button>
+                  } @else {
+                    <strong>Not visible yet</strong>
+                    <span>Activate your location when you are ready to drive.</span>
+                    <button type="button" class="ride-request" (click)="publishMyLift()">
+                      Activate my location
+                    </button>
+                  }
+                </div>
+              </section>
+            } @else {
+              @if (rideLocationError()) {
+                <p class="ride-location-warning">{{ rideLocationError() }}</p>
+              }
+
+              <div class="ride-map-layout">
+              <div class="ride-map" aria-label="Nearby available lifts map">
+                @if (rideMapEmbedUrl(); as mapUrl) {
+                  <iframe
+                    class="ride-map-background"
+                    [src]="mapUrl"
+                    title="Map around your current location"
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                  ></iframe>
+                }
+                <span class="ride-radius ride-radius-10"><small>10 km</small></span>
+                <span class="ride-radius ride-radius-5"><small>5 km</small></span>
+                <span class="ride-member-marker" title="Your current location"><b>YOU</b></span>
+                @for (lift of availableLifts(); track lift.id) {
+                  <button
+                    class="ride-driver-marker"
+                    type="button"
+                    [class.selected]="selectedLift()?.id === lift.id"
+                    [ngStyle]="rideMarkerStyle(lift)"
+                    [attr.aria-label]="'View ' + lift.driverName + ', ' + lift.distanceKm + ' kilometres away'"
+                    (click)="selectLift(lift)"
+                  >
+                    <span>{{ lift.driverName.charAt(0) }}</span>
+                    <small>{{ lift.distanceKm }} km</small>
+                  </button>
+                }
+                <div class="ride-map-road road-one"></div>
+                <div class="ride-map-road road-two"></div>
+                <div class="ride-map-label label-one">Community Road</div>
+                <div class="ride-map-label label-two">Church Street</div>
+              </div>
+
+              <aside class="ride-nearby-list">
+                <h4>Closest drivers</h4>
+                @for (lift of availableLifts(); track lift.id) {
+                  <button
+                    type="button"
+                    [class.selected]="selectedLift()?.id === lift.id"
+                    (click)="selectLift(lift)"
+                  >
+                    <span class="ride-driver-avatar">{{ lift.driverName.charAt(0) }}</span>
+                    <span>
+                      <strong>{{ lift.driverName }}</strong>
+                      <small>{{ lift.vehicle }} · {{ lift.distanceKm }} km away</small>
+                    </span>
+                    <b>{{ lift.rating }} ★</b>
+                  </button>
+                } @empty {
+                  <p>No available lifts were found within 10 km.</p>
+                }
+              </aside>
+              </div>
+
+              @if (selectedLift(); as lift) {
+                <section class="ride-driver-detail">
+                <div class="ride-driver-profile">
+                  <span>{{ lift.driverName.charAt(0) }}</span>
+                  <div>
+                    <p class="eyebrow">SELECTED DRIVER</p>
+                    <h4>{{ lift.driverName }}</h4>
+                    <small>{{ lift.rating }} ★ · {{ lift.distanceKm }} km away</small>
+                  </div>
+                </div>
+                <dl>
+                  <div><dt>Vehicle</dt><dd>{{ lift.vehicle }}</dd></div>
+                  <div><dt>Registration</dt><dd>{{ lift.registrationNumber }}</dd></div>
+                  <div><dt>Seats available</dt><dd>{{ lift.seatsAvailable }}</dd></div>
+                  <div><dt>Going to</dt><dd>{{ lift.destination }}</dd></div>
+                  <div><dt>Departure</dt><dd>{{ lift.departureTime }}</dd></div>
+                </dl>
+                <div class="ride-detail-actions">
+                  <button type="button" class="ride-cancel" (click)="cancelLiftSelection()">Cancel</button>
+                  <button type="button" class="ride-request" (click)="requestSelectedLift()">Ask for lift</button>
+                </div>
+                </section>
+              }
+            }
+
+            @if (rideNotice()) {
+              <p class="ride-notice" role="status">{{ rideNotice() }}</p>
+            }
+
+            <div class="ride-request-columns">
+              <section>
+                <h4>My lift requests</h4>
+                @for (request of outgoingRideRequests(); track request.id) {
+                  <article>
+                    <div>
+                      <strong>{{ request.driverName }}</strong>
+                      <small>{{ request.vehicle }} · {{ request.pickupLabel }}</small>
+                    </div>
+                    <span [class.accepted]="request.status === 'ACCEPTED'">
+                      {{ request.driverMessage || request.status }}
+                    </span>
+                    @if (request.status === 'PENDING') {
+                      <button type="button" (click)="cancelRideRequest(request)">Cancel</button>
+                    }
+                  </article>
+                } @empty {
+                  <p>You have not requested a lift yet.</p>
+                }
+              </section>
+
+              <section>
+                <h4>Requests for my lift</h4>
+                @for (request of incomingRideRequests(); track request.id) {
+                  <article>
+                    <div>
+                      <strong>{{ request.passengerName }}</strong>
+                      <small>{{ request.passengerTelephone }} · Shared pickup location</small>
+                    </div>
+                    @if (request.status === 'PENDING') {
+                      <div>
+                        <button type="button" (click)="respondToRideRequest(request, false)">Decline</button>
+                        <button type="button" (click)="respondToRideRequest(request, true)">Accept</button>
+                      </div>
+                    } @else {
+                      <span [class.accepted]="request.status === 'ACCEPTED'">
+                        {{ request.driverMessage || request.status }}
+                      </span>
+                    }
+                  </article>
+                } @empty {
+                  <p>No members have requested your lift.</p>
+                }
+              </section>
+            </div>
+          </section>
         } @else if (isActiveEduUView(service)) {
           <section class="eduu-coming-soon" aria-labelledby="eduu-coming-soon-title">
             <img src="/service-education.png" alt="" aria-hidden="true">
@@ -707,6 +973,7 @@
           isActiveFuneralView(service) ||
           isActiveReferralView(service) ||
           isActiveWalletView(service) ||
+          isActiveCatchRideView(service) ||
           isActiveEduUView(service)
         ) {
         } @else if (service.application) {
@@ -966,6 +1233,7 @@
           !isActiveFuneralView(service) &&
           !isActiveReferralView(service) &&
           !isActiveWalletView(service) &&
+          !isActiveCatchRideView(service) &&
           !isActiveEduUView(service) &&
           !service.application &&
           !vasPurchaseEnabled(service)
@@ -999,6 +1267,7 @@
           isActiveFuneralView(service) ||
           isActiveReferralView(service) ||
           isActiveWalletView(service) ||
+          isActiveCatchRideView(service) ||
           isActiveEduUView(service)
         ) {
           <button
@@ -1080,9 +1349,14 @@
             <h2 id="marketplace-title">Buy and Sell</h2>
             <p>Discover items offered by trusted Inkolo Connect members.</p>
           </div>
-          <button type="button" (click)="listingFormOpen.set(!listingFormOpen())">
-            {{ listingFormOpen() ? 'Close form' : '+ List an item' }}
-          </button>
+          <div class="business-heading-actions">
+            <button type="button" class="business-tools-button" (click)="openBusinessCenter('BUY_SELL')">
+              Business tools
+            </button>
+            <button type="button" (click)="listingFormOpen.set(!listingFormOpen())">
+              {{ listingFormOpen() ? 'Close form' : '+ List an item' }}
+            </button>
+          </div>
         </header>
 
         @if (listingFormOpen()) {
@@ -1147,6 +1421,17 @@
               <p class="listing-owner">
                 Seller: <strong>{{ user()?.firstName }} {{ user()?.lastName }}</strong>
               </p>
+              @if (businessesFor('BUY_SELL').length) {
+                <label>
+                  <span>Publish as</span>
+                  <select [formControl]="listingBusinessId">
+                    <option value="">My personal profile</option>
+                    @for (business of businessesFor('BUY_SELL'); track business.id) {
+                      <option [value]="business.id">{{ business.businessName }}</option>
+                    }
+                  </select>
+                </label>
+              }
               <button class="publish-listing" type="button" (click)="addMarketplaceListing()">
                 Publish item
               </button>
@@ -1319,6 +1604,317 @@
     </div>
   }
 
+  @if (propertyMarketplaceOpen()) {
+    <div class="modal-backdrop" (click)="closePropertyMarketplace()">
+      <section
+        class="marketplace-modal property-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="property-marketplace-title"
+        (click)="$event.stopPropagation()"
+      >
+        <button
+          class="modal-close"
+          type="button"
+          aria-label="Close Keytcha Properties"
+          (click)="closePropertyMarketplace()"
+        >
+          &times;
+        </button>
+
+        <header class="marketplace-heading">
+          <div>
+            <p class="eyebrow">PROPERTY MARKETPLACE</p>
+            <h2 id="property-marketplace-title">Keytcha Properties</h2>
+            <p>Find property rentals and sales listed by Inkolo Connect members.</p>
+          </div>
+          <div class="business-heading-actions">
+            <button type="button" class="business-tools-button" (click)="openBusinessCenter('KEYTCHA_PROPERTIES')">
+              Business tools
+            </button>
+            <button type="button" (click)="propertyFormOpen.set(!propertyFormOpen())">
+              {{ propertyFormOpen() ? 'Close form' : '+ List a property' }}
+            </button>
+          </div>
+        </header>
+
+        @if (propertyFormOpen()) {
+          <section class="listing-form" aria-labelledby="property-form-title">
+            <div class="listing-image-upload">
+              <label>
+                @if (propertyImage()) {
+                  <img [src]="propertyImage()" alt="Property preview">
+                } @else {
+                  <span>Upload property picture</span>
+                  <small>PNG or JPG</small>
+                }
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  (change)="selectPropertyImage($event)"
+                >
+              </label>
+            </div>
+            <div class="listing-fields">
+              <h3 id="property-form-title">List a rental or property for sale</h3>
+              <div class="listing-row property-primary-row">
+                <label>
+                  <span>Listing type</span>
+                  <select [formControl]="propertyListingType">
+                    <option value="RENT">For rent</option>
+                    <option value="SALE">For sale</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Property type</span>
+                  <select [formControl]="propertyType">
+                    @for (type of propertyTypes; track type.value) {
+                      <option [value]="type.value">{{ type.label }}</option>
+                    }
+                  </select>
+                </label>
+              </div>
+              @if (businessesFor('KEYTCHA_PROPERTIES').length) {
+                <label>
+                  <span>Publish as</span>
+                  <select [formControl]="propertyBusinessId">
+                    <option value="">My personal profile</option>
+                    @for (business of businessesFor('KEYTCHA_PROPERTIES'); track business.id) {
+                      <option [value]="business.id">{{ business.businessName }}</option>
+                    }
+                  </select>
+                </label>
+              }
+              <div class="listing-row">
+                <label>
+                  <span>Property title</span>
+                  <input
+                    type="text"
+                    [formControl]="propertyTitle"
+                    placeholder="e.g. Two-bedroom apartment"
+                  >
+                </label>
+                <label>
+                  <span>
+                    {{ propertyListingType.value === 'RENT' ? 'Monthly rent' : 'Sale price' }}
+                  </span>
+                  <div class="amount-input">
+                    <b>R</b>
+                    <input type="number" min="1" [formControl]="propertyPrice" placeholder="0.00">
+                  </div>
+                </label>
+              </div>
+              <div class="property-number-row">
+                <label>
+                  <span>Bedrooms</span>
+                  <input type="number" min="0" [formControl]="propertyBedrooms">
+                </label>
+                <label>
+                  <span>Bathrooms</span>
+                  <input type="number" min="0" [formControl]="propertyBathrooms">
+                </label>
+                <label>
+                  <span>Parking spaces</span>
+                  <input type="number" min="0" [formControl]="propertyParking">
+                </label>
+              </div>
+              <div class="listing-row property-primary-row">
+                <label>
+                  <span>Area / town</span>
+                  <input type="text" [formControl]="propertyArea" placeholder="Town or suburb">
+                </label>
+                <label>
+                  <span>Address (optional)</span>
+                  <input
+                    type="text"
+                    [formControl]="propertyAddress"
+                    placeholder="Property address"
+                  >
+                </label>
+              </div>
+              <label>
+                <span>Description</span>
+                <textarea
+                  rows="3"
+                  [formControl]="propertyDescription"
+                  placeholder="Describe the property, included services and important details"
+                ></textarea>
+              </label>
+              <p class="listing-owner">
+                Property owner: <strong>{{ user()?.firstName }} {{ user()?.lastName }}</strong>
+              </p>
+              <button class="publish-listing" type="button" (click)="addPropertyListing()">
+                Publish property
+              </button>
+            </div>
+          </section>
+        }
+
+        @if (propertyConversations().length) {
+          <section class="marketplace-filters property-conversations" aria-label="Property enquiries">
+            <strong>My property enquiries</strong>
+            @for (conversation of propertyConversations(); track conversation.id) {
+              <button type="button" (click)="openPropertyConversation(conversation)">
+                {{ conversation.listingTitle }} &middot;
+                {{
+                  conversation.ownerUserId === currentUserId()
+                    ? conversation.interestedUserName
+                    : conversation.ownerName
+                }}
+              </button>
+            }
+          </section>
+        }
+
+        <section class="marketplace-filters property-filters" aria-label="Search properties">
+          <input [formControl]="propertySearch" placeholder="Search properties">
+          <select [formControl]="propertyFilterListingType">
+            <option value="">Rent or sale</option>
+            <option value="RENT">For rent</option>
+            <option value="SALE">For sale</option>
+          </select>
+          <select [formControl]="propertyFilterType">
+            <option value="">All property types</option>
+            @for (type of propertyTypes; track type.value) {
+              <option [value]="type.value">{{ type.label }}</option>
+            }
+          </select>
+          <input [formControl]="propertyFilterArea" placeholder="Area / town">
+          <input
+            type="number"
+            min="0"
+            [formControl]="propertyFilterMinPrice"
+            placeholder="Min price"
+          >
+          <input
+            type="number"
+            min="0"
+            [formControl]="propertyFilterMaxPrice"
+            placeholder="Max price"
+          >
+          <input
+            type="number"
+            min="0"
+            [formControl]="propertyFilterBedrooms"
+            placeholder="Min bedrooms"
+          >
+          <select [formControl]="propertyFilterStatus">
+            <option value="">Any status</option>
+            <option value="AVAILABLE">Available</option>
+            <option value="UNDER_OFFER">Under offer</option>
+            <option value="RENTED">Rented</option>
+            <option value="SOLD">Sold</option>
+          </select>
+          <button type="button" (click)="applyPropertyFilters()">Search</button>
+          <button type="button" (click)="clearPropertyFilters()">Clear</button>
+        </section>
+
+        <div class="marketplace-grid property-grid">
+          @for (listing of propertyListings(); track listing.id) {
+            <article class="marketplace-item property-card">
+              <div class="marketplace-image">
+                <img
+                  [src]="listing.images?.[0] || '/service-keycha-properties.png'"
+                  [alt]="listing.title"
+                >
+                <span class="property-type-badge">
+                  {{ listing.listingType === 'RENT' ? 'FOR RENT' : 'FOR SALE' }}
+                </span>
+              </div>
+              <div class="marketplace-copy">
+                <span>{{ listing.propertyType.replace('_', ' ') }}</span>
+                <h3>{{ listing.title }}</h3>
+                <p>{{ listing.description }}</p>
+                <small>
+                  {{ listing.bedrooms }} bed &middot; {{ listing.bathrooms }} bath &middot;
+                  {{ listing.parkingSpaces }} parking &middot; {{ listing.area }}
+                </small>
+                <div>
+                  <strong>{{ propertyPriceLabel(listing) }}</strong>
+                  <span class="marketplace-card-actions">
+                    <button type="button" (click)="viewProperty(listing)">View</button>
+                    <button type="button" (click)="startPropertyConversation(listing)">
+                      Enquire
+                    </button>
+                  </span>
+                </div>
+              </div>
+            </article>
+          } @empty {
+            <p class="property-empty">No properties match your search.</p>
+          }
+        </div>
+
+        @if (selectedProperty(); as listing) {
+          <section class="marketplace-detail property-detail">
+            <div>
+              <p class="eyebrow">
+                {{ listing.listingType === 'RENT' ? 'PROPERTY TO RENT' : 'PROPERTY FOR SALE' }}
+              </p>
+              <h3>{{ listing.title }}</h3>
+              <p>{{ listing.description }}</p>
+              <dl>
+                <div><dt>Property</dt><dd>{{ listing.propertyType.replace('_', ' ') }}</dd></div>
+                <div><dt>Price</dt><dd>{{ propertyPriceLabel(listing) }}</dd></div>
+                <div><dt>Bedrooms</dt><dd>{{ listing.bedrooms }}</dd></div>
+                <div><dt>Bathrooms</dt><dd>{{ listing.bathrooms }}</dd></div>
+                <div><dt>Parking</dt><dd>{{ listing.parkingSpaces }}</dd></div>
+                <div><dt>Area</dt><dd>{{ listing.area }}</dd></div>
+                <div><dt>Status</dt><dd>{{ listing.status.replace('_', ' ') }}</dd></div>
+                <div><dt>Listed</dt><dd>{{ listing.createdAt | date:'mediumDate' }}</dd></div>
+              </dl>
+            </div>
+            <aside>
+              <small>PROPERTY OWNER</small>
+              <strong>{{ listing.ownerName }}</strong>
+              @if (listing.ownerCommunityName) {
+                <span>{{ listing.ownerCommunityName }}</span>
+              }
+              <span>{{ listing.area }}</span>
+              <button type="button" (click)="startPropertyConversation(listing)">
+                Message property owner
+              </button>
+            </aside>
+          </section>
+        }
+
+        @if (propertyConversation(); as conversation) {
+          <section class="marketplace-chat">
+            <header>
+              <div>
+                <p class="eyebrow">PROPERTY ENQUIRY</p>
+                <h3>{{ selectedProperty()?.title || conversation.listingTitle }}</h3>
+              </div>
+              <span>Private member conversation</span>
+            </header>
+            <div class="marketplace-chat-messages">
+              @for (message of propertyMessages(); track message.id) {
+                <p [class.mine]="message.senderUserId === currentUserId()">
+                  {{ message.messageText }}
+                </p>
+              } @empty {
+                <p>Ask the owner about availability, viewing arrangements or property details.</p>
+              }
+            </div>
+            <form (submit)="sendPropertyMessage(); $event.preventDefault()">
+              <input
+                [formControl]="propertyChatText"
+                placeholder="Write a message to the property owner"
+              >
+              <button type="submit">Send</button>
+            </form>
+          </section>
+        }
+
+        @if (propertyNotice()) {
+          <strong class="marketplace-notice property-notice" role="status">
+            {{ propertyNotice() }}
+          </strong>
+        }
+      </section>
+    </div>
+  }
+
   @if (jobsOpen()) {
     <div class="modal-backdrop" (click)="closeJobs()">
       <section
@@ -1336,9 +1932,14 @@
             <h2 id="jobs-title">Job Search</h2>
             <p>Find available work or share a vacancy with Inkolo Connect members.</p>
           </div>
-          <button type="button" (click)="jobFormOpen.set(!jobFormOpen())">
-            {{ jobFormOpen() ? 'Close form' : '+ Post a job' }}
-          </button>
+          <div class="business-heading-actions">
+            <button type="button" class="business-tools-button" (click)="openBusinessCenter('JOB_SEARCH')">
+              Business tools
+            </button>
+            <button type="button" (click)="jobFormOpen.set(!jobFormOpen())">
+              {{ jobFormOpen() ? 'Close form' : '+ Post a job' }}
+            </button>
+          </div>
         </header>
 
         @if (jobFormOpen()) {
@@ -1410,6 +2011,17 @@
             <p class="listing-owner">
               Posted by: <strong>{{ user()?.firstName }} {{ user()?.lastName }}</strong>
             </p>
+            @if (businessesFor('JOB_SEARCH').length) {
+              <label>
+                <span>Publish as</span>
+                <select [formControl]="jobBusinessId">
+                  <option value="">My personal profile</option>
+                  @for (business of businessesFor('JOB_SEARCH'); track business.id) {
+                    <option [value]="business.id">{{ business.businessName }}</option>
+                  }
+                </select>
+              </label>
+            }
             <button class="publish-listing" type="button" (click)="addJobListing()">Publish job</button>
           </section>
         }
@@ -1773,6 +2385,206 @@
             Cash Out
           }
         </button>
+      </section>
+    </div>
+  }
+
+  @if (businessCenterOpen()) {
+    <div class="modal-backdrop" (click)="businessCenterOpen.set(false)">
+      <section
+        class="subscription-modal business-center-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="business-center-title"
+        (click)="$event.stopPropagation()"
+      >
+        <button
+          class="modal-close"
+          type="button"
+          aria-label="Close business tools"
+          (click)="businessCenterOpen.set(false)"
+        >&times;</button>
+        <p class="eyebrow">SMALL BUSINESS & JOB CREATION</p>
+        <h2 id="business-center-title">Business tools</h2>
+        <p>
+          Register a shop, agency, employer or transport operator and publish under
+          its business name instead of your personal name.
+        </p>
+
+        <div class="business-center-grid">
+          <section class="business-registration">
+            <h3>Register my business</h3>
+            <label>
+              <span>Business or shop name</span>
+              <input [formControl]="businessName" placeholder="e.g. Jeremy Trading">
+            </label>
+            <div class="business-form-row">
+              <label>
+                <span>Registration number (optional)</span>
+                <input [formControl]="businessRegistration" placeholder="Company or co-op number">
+              </label>
+              <label>
+                <span>Telephone</span>
+                <input type="tel" [formControl]="businessTelephone" placeholder="10-digit number">
+              </label>
+            </div>
+            <div class="business-form-row">
+              <label>
+                <span>Email (optional)</span>
+                <input type="email" [formControl]="businessEmail" placeholder="Business email">
+              </label>
+              <label>
+                <span>Area</span>
+                <input [formControl]="businessArea" placeholder="Town or operating area">
+              </label>
+            </div>
+            <label>
+              <span>About the business</span>
+              <textarea rows="3" [formControl]="businessDescription" placeholder="Products, jobs or services offered"></textarea>
+            </label>
+            <div class="business-service-selector">
+              <span>Where will this business operate?</span>
+              @for (option of [
+                { code: 'BUY_SELL', label: 'Buy and Sell' },
+                { code: 'JOB_SEARCH', label: 'Job Search' },
+                { code: 'KEYTCHA_PROPERTIES', label: 'Keytcha' },
+                { code: 'CATCH_A_RIDE', label: 'Catch a Lift' }
+              ]; track option.code) {
+                <button
+                  type="button"
+                  [class.selected]="businessServiceSelected($any(option.code))"
+                  (click)="toggleBusinessService($any(option.code))"
+                >
+                  {{ option.label }}
+                </button>
+              }
+            </div>
+            <button type="button" class="business-primary" (click)="registerBusiness()">
+              Register business
+            </button>
+          </section>
+
+          <section class="business-bulk-publish">
+            <h3>Bulk publish</h3>
+            @if (businessProfiles().length) {
+              <label>
+                <span>Business</span>
+                <select [formControl]="bulkBusinessId">
+                  <option value="">Choose a business</option>
+                  @for (business of businessesFor(bulkBusinessService.value); track business.id) {
+                    <option [value]="business.id">{{ business.businessName }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                <span>Service</span>
+                <select [formControl]="bulkBusinessService">
+                  <option value="BUY_SELL">Buy and Sell products</option>
+                  <option value="JOB_SEARCH">Job vacancies</option>
+                  <option value="KEYTCHA_PROPERTIES">Properties</option>
+                  <option value="CATCH_A_RIDE">Fleet vehicles / lifts</option>
+                </select>
+              </label>
+              <label>
+                <span>One record per line</span>
+                <small>{{ businessRowHelp() }}</small>
+                <textarea
+                  rows="9"
+                  [formControl]="bulkBusinessRows"
+                  [placeholder]="businessRowHelp()"
+                ></textarea>
+              </label>
+              <button type="button" class="business-primary" (click)="publishBusinessRows()">
+                Publish all rows
+              </button>
+            } @else {
+              <p class="business-empty">
+                Register your first business to unlock bulk products, vacancies,
+                properties and transport listings.
+              </p>
+            }
+          </section>
+        </div>
+        @if (businessNotice()) {
+          <p class="business-notice" role="status">{{ businessNotice() }}</p>
+        }
+      </section>
+    </div>
+  }
+
+  @if (walletBrandingOpen()) {
+    <div class="modal-backdrop" (click)="closeWalletBranding()">
+      <section
+        class="subscription-modal wallet-branding-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="wallet-branding-title"
+        (click)="$event.stopPropagation()"
+      >
+        <button
+          class="modal-close"
+          type="button"
+          aria-label="Close wallet branding"
+          (click)="closeWalletBranding()"
+        >×</button>
+        <p class="eyebrow">PERSONALISE YOUR WALLET</p>
+        <h2 id="wallet-branding-title">Change your wallet card logo</h2>
+        <p>
+          Upload your own logo or choose an optional football-team style.
+          Your selection will replace the Inkolo Connect logo on your wallet card.
+        </p>
+
+        <div class="football-team-options">
+          @for (team of footballTeamPresets; track team.name) {
+            <button
+              type="button"
+              [class.selected]="walletBrandTeam() === team.name"
+              (click)="chooseFootballTeam(team)"
+            >
+              <img [src]="createTeamBadge(team.badge, team.color)" alt="">
+              <span>{{ team.name }}</span>
+            </button>
+          }
+        </div>
+
+        <label class="team-logo-upload">
+          <span>Upload wallet logo</span>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            (change)="uploadWalletLogo($event)"
+          >
+          <small>PNG, JPEG or WebP. Maximum source size 8 MB.</small>
+        </label>
+
+        @if (walletBrandNotice()) {
+          <p class="wallet-brand-notice" role="status">{{ walletBrandNotice() }}</p>
+        }
+
+        @if (walletBrandLogo()) {
+          <div class="wallet-brand-preview" [style.--team-color]="walletBrandColor()">
+            <img [src]="walletBrandLogo()" [alt]="walletBrandTeam()">
+            <div>
+              <small>INKOLO WALLET</small>
+              <strong>{{ walletBrandTeam() }}</strong>
+              <span>{{ user()?.firstName }} {{ user()?.lastName }}</span>
+            </div>
+          </div>
+        }
+
+        <div class="wallet-brand-actions">
+          <button type="button" class="secondary-action" (click)="clearWalletBranding()">
+            Restore Inkolo logo
+          </button>
+          <button
+            type="button"
+            class="primary-action"
+            [disabled]="!walletBrandLogo()"
+            (click)="saveWalletBranding()"
+          >
+            Save wallet logo
+          </button>
+        </div>
       </section>
     </div>
   }

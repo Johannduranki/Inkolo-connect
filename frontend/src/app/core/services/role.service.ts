@@ -26,6 +26,38 @@ export interface CommunityMemberRoleAssignment {
   roles: UserRole[];
 }
 
+export interface UserServiceResetSummary {
+  subscriptionsDeleted: number;
+  applicationsDeleted: number;
+  agreementsDeleted: number;
+  documentsDeleted: number;
+}
+
+export interface AdminMemberProfile {
+  id: number;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  telephoneNumber: string;
+  email: string;
+  roles: UserRole[];
+  profile: {
+    profilePhoto?: string;
+    idNumber?: string;
+    telephoneNumber?: string;
+    email?: string;
+    address?: string;
+    city?: string;
+    postalCode?: string;
+    emergencyContactName?: string;
+    emergencyContactNumber?: string;
+  } | null;
+  community: {
+    churchName?: string;
+    branchName?: string;
+  } | null;
+}
+
 const ROLE_ROUTES: Record<UserRole, string> = {
   Member: '/dashboard/member',
   Pastor: '/dashboard/pastor',
@@ -59,14 +91,14 @@ const ROLE_MENUS: Record<UserRole, RoleMenuItem[]> = {
     { label: 'Platform reports', description: 'View operational summaries.' }
   ],
   'KZNCC User': [
-    { label: 'KZNCC communication', description: 'Open announcements, messages and events.', route: '/kzncc' },
-    { label: 'Council events', description: 'View upcoming KZNCC events.', route: '/kzncc' },
-    { label: 'Member information', description: 'Read KZNCC member updates.', route: '/kzncc' }
+    { label: 'Announcements', description: 'Publish and update official subscriber announcements.', route: '/dashboard/kzncc-user' },
+    { label: 'Council communication', description: 'Post messages for KZNCC subscribers.', route: '/dashboard/kzncc-user' },
+    { label: 'Events', description: 'Create and update subscriber events.', route: '/dashboard/kzncc-user' }
   ],
   'KZNCC Admin': [
-    { label: 'Publish announcements', description: 'Create official KZNCC announcements.' },
-    { label: 'Manage events', description: 'Create and update council events.' },
-    { label: 'Member communication', description: 'Send messages to KZNCC members.' }
+    { label: 'KZNCC staff access', description: 'Add or remove KZNCC Users and KZNCC Admins.' },
+    { label: 'Paid-service revenue', description: 'Review KZNCC revenue share from paid services.' },
+    { label: 'Council administration', description: 'Manage churches, settlements and revenue reporting.' }
   ],
   'Service Provider Admin': [
     { label: 'Paid members', description: 'View members linked to your paid services.' },
@@ -226,6 +258,20 @@ export class RoleService {
           )
         )
       );
+  }
+
+  resetUserServiceData(
+    userId: number
+  ): Observable<UserServiceResetSummary> {
+    return this.http.delete<UserServiceResetSummary>(
+      `${this.apiUrl}/admin/users/${userId}/service-data`
+    );
+  }
+
+  getAdminMemberProfile(userId: number): Observable<AdminMemberProfile> {
+    return this.http.get<AdminMemberProfile>(
+      `${this.apiUrl}/admin/users/${userId}/profile`
+    );
   }
 
   getActiveRole(): UserRole {

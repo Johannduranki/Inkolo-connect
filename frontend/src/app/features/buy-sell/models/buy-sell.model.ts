@@ -17,6 +17,8 @@ export interface BuySellListing {
   sellerChurchName?: string;
   sellerBranchName?: string;
   sellerRating?: number;
+  businessProfileId?: string;
+  businessName?: string;
   status: BuySellListingStatus;
   createdAt: string;
 }

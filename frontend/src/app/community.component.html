@@ -1,4 +1,10 @@
-<main class="community-page">
+<main
+  class="community-page"
+  [style.--community-primary]="communityBranding().primaryColor"
+  [style.--community-secondary]="communityBranding().secondaryColor"
+  [style.--community-accent]="communityBranding().accentColor"
+  [style.--community-background]="communityBranding().backgroundColor"
+>
   <header class="topbar">
     <button class="back-button" type="button" (click)="backToDashboard()">
       <span aria-hidden="true">←</span>
@@ -8,6 +14,14 @@
       <a class="brand" href="/dashboard" aria-label="Inkolo Connect dashboard">
         <img class="brand-logo" src="/inkolo-connect-logo.png" alt="Inkolo Connect">
       </a>
+      @if (selectedKznccChurch()?.branding?.logoUrl; as communityLogo) {
+        <span class="community-brand-divider" aria-hidden="true"></span>
+        <img
+          class="community-brand-logo"
+          [src]="communityLogo"
+          [alt]="selectedKznccChurch()!.name + ' logo'"
+        >
+      }
       <span class="top-powered-by">Powered by Duranki</span>
     </div>
     <div class="account">
@@ -16,14 +30,65 @@
           [userFullName]="user()!.firstName + ' ' + user()!.lastName"
         ></app-role-switcher>
       }
+      <span class="community-profile-photo" aria-hidden="true">
+        @if (profiles.profile().profilePhoto) {
+          <img [src]="profiles.profile().profilePhoto" alt="">
+        } @else if (user()) {
+          {{ user()!.firstName.charAt(0) }}{{ user()!.lastName.charAt(0) }}
+        }
+      </span>
       <button class="profile-button" type="button" (click)="profileOpen.set(true)">My Profile</button>
       <button type="button" (click)="logout()">Sign out</button>
     </div>
   </header>
 
   <section class="community-workspace-banner" aria-labelledby="community-active-heading">
-    <div class="community-workspace-switcher" aria-label="Workspace navigation">
-      <a href="/dashboard">My Services</a>
+    <div class="community-workspace-top">
+      <div class="community-workspace-switcher" aria-label="Workspace navigation">
+        <a class="more-services-button" href="/dashboard/member?from=community">
+          More Services
+          <span aria-hidden="true">→</span>
+        </a>
+        @for (service of communityShortcutServices(); track service.serviceCode) {
+          <a
+            class="active-service-shortcut"
+            [href]="'/dashboard/member?from=community&service=' + service.serviceCode"
+            (click)="$event.preventDefault(); openServiceFromCommunity(service)"
+          >
+            {{ service.name }}
+          </a>
+        }
+      </div>
+
+      @if (hasWallet()) {
+        <button
+          class="community-wallet-card community-wallet-card-visible"
+          [class.flipped]="walletOpen()"
+          type="button"
+          aria-label="Show community wallet balance"
+          (click)="walletOpen.set(!walletOpen())"
+        >
+          <span class="community-wallet-inner">
+            <span class="community-wallet-face community-wallet-front">
+              <span class="community-wallet-brand">
+                @if (walletBrandLogo()) {
+                  <img [src]="walletBrandLogo()" [alt]="walletBrandName()">
+                } @else {
+                  <img src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+                }
+                <b>INKOLO WALLET</b>
+              </span>
+              <strong>•••• 2086</strong>
+              <small>{{ user()?.firstName }} {{ user()?.lastName }}</small>
+            </span>
+            <span class="community-wallet-face community-wallet-back">
+              <small>AVAILABLE BALANCE</small>
+              <strong>850.00 Izaka</strong>
+              <span>Recent: Community payment +250.00 Izaka</span>
+            </span>
+          </span>
+        </button>
+      }
     </div>
 
     <div class="community-active-row">
@@ -41,7 +106,8 @@
               <a
                 class="community-active-service"
                 [style.--accent]="service.accent"
-                [href]="service.serviceCode === 'community' ? '/community' : '/dashboard'"
+                [href]="service.serviceCode === 'community' ? '/community' : '/dashboard/member?from=community&service=' + service.serviceCode"
+                (click)="handleActiveServiceClick($event, service)"
               >
                 <img [src]="service.image" [alt]="service.name">
                 <span>
@@ -57,37 +123,37 @@
         }
       </div>
 
-      @if (hasWallet()) {
-        <button
-          class="community-wallet-card"
-          [class.flipped]="walletOpen()"
-          type="button"
-          (click)="walletOpen.set(!walletOpen())"
-        >
-          <span class="community-wallet-inner">
-            <span class="community-wallet-face community-wallet-front">
-              <span>INKOLO WALLET</span>
-              <strong>•••• 2086</strong>
-              <small>{{ user()?.firstName }} {{ user()?.lastName }}</small>
-            </span>
-            <span class="community-wallet-face community-wallet-back">
-              <small>AVAILABLE BALANCE</small>
-              <strong>850.00 Izaka</strong>
-              <span>Recent: Community payment +250.00 Izaka</span>
-            </span>
-          </span>
-        </button>
-      }
     </div>
   </section>
+
+  @if (openingService(); as service) {
+    <div class="community-service-launch" role="status" aria-live="polite">
+      <div>
+        <img [src]="service.image" [alt]="service.name">
+        <span class="service-launch-loader" aria-hidden="true"></span>
+        <strong>Opening {{ service.name }}</strong>
+        <small>Keeping you connected to your community.</small>
+      </div>
+    </div>
+  }
 
   <section class="church-selector">
     <div>
       <p>KZNCC CHURCH DIRECTORY</p>
       <h2>{{ communityHeading() === 'My Community' ? 'Choose your primary church' : communityHeading() }}</h2>
-      <span>Link one primary KZNCC church to receive its messages and events.</span>
+      @if (memberCommunity()) {
+        <span>This is your confirmed community. A member cannot change it from this dashboard.</span>
+      } @else {
+        <span>Choose carefully. After confirmation, only Duranki Admin can change your church or branch.</span>
+      }
     </div>
-    <div class="church-selector-controls">
+    @if (memberCommunity()) {
+      <div class="confirmed-community">
+        <span>Community confirmed</span>
+        <a [href]="communityChangeEmailLink()">Email Duranki Admin to request a change</a>
+      </div>
+    } @else {
+      <div class="church-selector-controls">
       <select
         [formControl]="churchSelection"
         aria-label="Choose KZNCC church"
@@ -106,8 +172,9 @@
           }
         </select>
       }
-      <button type="button" (click)="confirmPrimaryChurch()">This is my church</button>
-    </div>
+        <button type="button" (click)="confirmPrimaryChurch()">Confirm my community</button>
+      </div>
+    }
     @if (churchLinkedMessage()) {
       <strong>{{ churchLinkedMessage() }}</strong>
     }

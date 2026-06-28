@@ -17,8 +17,6 @@
     <button [class.active]="activeTab() === 'users'" (click)="showTab('users')">Users</button>
     <button [class.active]="activeTab() === 'churches'" (click)="showTab('churches')">Churches</button>
     <button [class.active]="activeTab() === 'revenue'" (click)="showTab('revenue')">Paid revenue</button>
-    <button [class.active]="activeTab() === 'communication'" (click)="showTab('communication')">Communication</button>
-    <button [class.active]="activeTab() === 'events'" (click)="showTab('events')">Events</button>
   </nav>
 
   @if (notice()) {

@@ -46,14 +46,31 @@
   white-space: nowrap;
 }
 
-.my-services {
+.service-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+}
+
+.my-services,
+.community-return {
   padding: 0.6rem 0.85rem;
   border-radius: 0.65rem;
-  color: #fff;
-  background: linear-gradient(145deg, var(--inkolo-bright), var(--inkolo-navy));
   font-size: 0.72rem;
   font-weight: 850;
   text-decoration: none;
+}
+
+.my-services {
+  color: #fff;
+  background: linear-gradient(145deg, var(--inkolo-bright), var(--inkolo-navy));
+}
+
+.community-return {
+  border: 1px solid rgba(8, 124, 232, 0.22);
+  color: var(--inkolo-navy);
+  background: #fff;
 }
 
 .account {
@@ -295,10 +312,23 @@
 @media (max-width: 760px) {
   .topbar {
     grid-template-columns: 1fr auto;
+    padding-block: 0.45rem;
   }
 
   .my-services {
     display: none;
+  }
+
+  .service-navigation {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    padding-bottom: 0.35rem;
+  }
+
+  .community-return {
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
   }
 
   .account span {

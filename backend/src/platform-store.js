@@ -68,6 +68,234 @@ function marketplaceSeed() {
   ];
 }
 
+function propertySeed() {
+  return [
+    {
+      id: 'property-001',
+      title: 'Two-bedroom apartment to rent',
+      description:
+        'Secure apartment close to shops and public transport. Water is included.',
+      listingType: 'RENT',
+      propertyType: 'APARTMENT',
+      price: 6800,
+      bedrooms: 2,
+      bathrooms: 1,
+      parkingSpaces: 1,
+      area: 'Durban Central',
+      address: 'Durban Central, KwaZulu-Natal',
+      images: ['/service-keycha-properties.png'],
+      ownerUserId: '2',
+      ownerName: 'Nandi Mthembu',
+      ownerTelephone: '0725550184',
+      ownerCommunityName: 'Grace Community Church - Durban Central Branch',
+      status: 'AVAILABLE',
+      createdAt: '2026-06-11T08:30:00'
+    },
+    {
+      id: 'property-002',
+      title: 'Family home for sale',
+      description:
+        'Three-bedroom family home with a fitted kitchen, garden and secure parking.',
+      listingType: 'SALE',
+      propertyType: 'HOUSE',
+      price: 895000,
+      bedrooms: 3,
+      bathrooms: 2,
+      parkingSpaces: 2,
+      area: 'KwaDukuza',
+      address: 'KwaDukuza, KwaZulu-Natal',
+      images: ['/service-keycha-properties.png'],
+      ownerUserId: '3',
+      ownerName: 'Thabo Khumalo',
+      ownerTelephone: '0736614209',
+      ownerCommunityName: 'Zion Revival Church - KwaDukuza Central Branch',
+      status: 'AVAILABLE',
+      createdAt: '2026-06-10T12:15:00'
+    },
+    {
+      id: 'property-003',
+      title: 'Student room available',
+      description:
+        'Private room in a shared home. Electricity, water and Wi-Fi are included.',
+      listingType: 'RENT',
+      propertyType: 'ROOM',
+      price: 2600,
+      bedrooms: 1,
+      bathrooms: 1,
+      parkingSpaces: 0,
+      area: 'Umlazi',
+      address: 'Umlazi, KwaZulu-Natal',
+      images: ['/service-keycha-properties.png'],
+      ownerUserId: '4',
+      ownerName: 'Lerato Sithole',
+      ownerTelephone: '0789441132',
+      ownerCommunityName: 'New Born Church',
+      status: 'AVAILABLE',
+      createdAt: '2026-06-09T15:00:00'
+    },
+    {
+      id: 'property-004',
+      title: 'Furnished room near transport',
+      description: 'Neat furnished room with shared kitchen and bathroom. Water and Wi-Fi included.',
+      listingType: 'RENT',
+      propertyType: 'ROOM',
+      price: 2300,
+      bedrooms: 1,
+      bathrooms: 1,
+      parkingSpaces: 0,
+      area: 'KwaMashu',
+      address: 'KwaMashu, KwaZulu-Natal',
+      images: ['/service-keycha-properties.png'],
+      ownerUserId: '9',
+      ownerName: 'Bongani Zulu',
+      ownerTelephone: '0714101001',
+      ownerCommunityName: 'Grace Community Church - Durban Central Branch',
+      status: 'AVAILABLE',
+      createdAt: '2026-06-12T09:20:00'
+    },
+    {
+      id: 'property-005',
+      title: 'Private room for a working professional',
+      description: 'Private outside room in a quiet family property with secure access and prepaid electricity.',
+      listingType: 'RENT',
+      propertyType: 'ROOM',
+      price: 2800,
+      bedrooms: 1,
+      bathrooms: 1,
+      parkingSpaces: 1,
+      area: 'Pinetown',
+      address: 'Pinetown, KwaZulu-Natal',
+      images: ['/service-keycha-properties.png'],
+      ownerUserId: '10',
+      ownerName: 'Nomusa Khumalo',
+      ownerTelephone: '0714101002',
+      ownerCommunityName: 'Zion Revival Church - Pinetown Branch',
+      status: 'AVAILABLE',
+      createdAt: '2026-06-12T08:45:00'
+    },
+    {
+      id: 'property-006',
+      title: 'Affordable room close to college',
+      description: 'Clean room with a private entrance, shared bathroom and easy access to local taxis.',
+      listingType: 'RENT',
+      propertyType: 'ROOM',
+      price: 1950,
+      bedrooms: 1,
+      bathrooms: 1,
+      parkingSpaces: 0,
+      area: 'Umlazi',
+      address: 'Umlazi V Section, KwaZulu-Natal',
+      images: ['/service-keycha-properties.png'],
+      ownerUserId: '11',
+      ownerName: 'Sibusiso Dlamini',
+      ownerTelephone: '0714101003',
+      ownerCommunityName: 'New Born Church',
+      status: 'AVAILABLE',
+      createdAt: '2026-06-11T17:30:00'
+    },
+    {
+      id: 'property-007',
+      title: 'Two-bedroom starter house',
+      description: 'Secure two-bedroom house with a fitted kitchen, fenced yard and prepaid utilities.',
+      listingType: 'RENT',
+      propertyType: 'HOUSE',
+      price: 5200,
+      bedrooms: 2,
+      bathrooms: 1,
+      parkingSpaces: 1,
+      area: 'Phoenix',
+      address: 'Phoenix, KwaZulu-Natal',
+      images: ['/service-keycha-properties.png'],
+      ownerUserId: '12',
+      ownerName: 'Thandeka Mthembu',
+      ownerTelephone: '0714101004',
+      ownerCommunityName: 'Grace Community Church - Durban Central Branch',
+      status: 'AVAILABLE',
+      createdAt: '2026-06-12T10:10:00'
+    },
+    {
+      id: 'property-008',
+      title: 'Three-bedroom family house',
+      description: 'Spacious family house with two bathrooms, a garden and secure off-street parking.',
+      listingType: 'RENT',
+      propertyType: 'HOUSE',
+      price: 8500,
+      bedrooms: 3,
+      bathrooms: 2,
+      parkingSpaces: 2,
+      area: 'Newlands West',
+      address: 'Newlands West, KwaZulu-Natal',
+      images: ['/service-keycha-properties.png'],
+      ownerUserId: '13',
+      ownerName: 'Mandla Ngcobo',
+      ownerTelephone: '0714101005',
+      ownerCommunityName: 'Zion Revival Church - Durban North Branch',
+      status: 'AVAILABLE',
+      createdAt: '2026-06-11T14:00:00'
+    },
+    {
+      id: 'property-009',
+      title: 'Modern two-bedroom home',
+      description: 'Recently renovated home with an open-plan living area, fitted kitchen and covered parking.',
+      listingType: 'RENT',
+      propertyType: 'HOUSE',
+      price: 7200,
+      bedrooms: 2,
+      bathrooms: 1,
+      parkingSpaces: 1,
+      area: 'Richards Bay',
+      address: 'Richards Bay, KwaZulu-Natal',
+      images: ['/service-keycha-properties.png'],
+      ownerUserId: '14',
+      ownerName: 'Zanele Buthelezi',
+      ownerTelephone: '0714101006',
+      ownerCommunityName: 'New Born Church',
+      status: 'AVAILABLE',
+      createdAt: '2026-06-10T16:20:00'
+    },
+    {
+      id: 'property-010',
+      title: 'Four-bedroom house with garden',
+      description: 'Large home suited to a family, with a private garden, two bathrooms and double parking.',
+      listingType: 'RENT',
+      propertyType: 'HOUSE',
+      price: 10500,
+      bedrooms: 4,
+      bathrooms: 2,
+      parkingSpaces: 2,
+      area: 'Ballito',
+      address: 'Ballito, KwaZulu-Natal',
+      images: ['/service-keycha-properties.png'],
+      ownerUserId: '15',
+      ownerName: 'Nhlanhla Cele',
+      ownerTelephone: '0714101007',
+      ownerCommunityName: 'Zion Revival Church - KwaDukuza Central Branch',
+      status: 'AVAILABLE',
+      createdAt: '2026-06-10T11:15:00'
+    },
+    {
+      id: 'property-011',
+      title: 'Compact house near town centre',
+      description: 'Well-maintained two-bedroom home near schools, shops and public transport.',
+      listingType: 'RENT',
+      propertyType: 'HOUSE',
+      price: 5900,
+      bedrooms: 2,
+      bathrooms: 1,
+      parkingSpaces: 1,
+      area: 'Pietermaritzburg',
+      address: 'Pietermaritzburg Central, KwaZulu-Natal',
+      images: ['/service-keycha-properties.png'],
+      ownerUserId: '16',
+      ownerName: 'Lindiwe Nxumalo',
+      ownerTelephone: '0714101008',
+      ownerCommunityName: 'Grace Community Church - Pietermaritzburg Branch',
+      status: 'AVAILABLE',
+      createdAt: '2026-06-09T13:40:00'
+    }
+  ];
+}
+
 function jobSeed() {
   return [
     {
@@ -113,6 +341,71 @@ function jobSeed() {
   ];
 }
 
+function availableLiftSeed() {
+  return [
+    {
+      id: 'lift-001',
+      driverUserId: '2',
+      driverName: 'Nandi Mthembu',
+      driverTelephone: '0725550184',
+      vehicle: 'White Toyota Corolla',
+      registrationNumber: 'ND 428-771',
+      seatsAvailable: 3,
+      rating: 4.9,
+      distanceKm: 1.4,
+      directionDegrees: 35,
+      destination: 'Durban Central',
+      departureTime: 'Leaving in 10 minutes',
+      available: true
+    },
+    {
+      id: 'lift-002',
+      driverUserId: '3',
+      driverName: 'Thabo Khumalo',
+      driverTelephone: '0736614209',
+      vehicle: 'Blue VW Polo',
+      registrationNumber: 'NU 712-804',
+      seatsAvailable: 2,
+      rating: 4.8,
+      distanceKm: 3.2,
+      directionDegrees: 120,
+      destination: 'Umlazi',
+      departureTime: 'Leaving in 20 minutes',
+      available: true
+    },
+    {
+      id: 'lift-003',
+      driverUserId: '4',
+      driverName: 'Lerato Sithole',
+      driverTelephone: '0789441132',
+      vehicle: 'Silver Hyundai i20',
+      registrationNumber: 'ND 993-215',
+      seatsAvailable: 1,
+      rating: 4.7,
+      distanceKm: 5.6,
+      directionDegrees: 225,
+      destination: 'Pinetown',
+      departureTime: 'Leaving in 30 minutes',
+      available: true
+    },
+    {
+      id: 'lift-004',
+      driverUserId: '5',
+      driverName: 'Ayanda Dlamini',
+      driverTelephone: '0741002003',
+      vehicle: 'Grey Suzuki Swift',
+      registrationNumber: 'NU 184-550',
+      seatsAvailable: 3,
+      rating: 4.6,
+      distanceKm: 8.3,
+      directionDegrees: 300,
+      destination: 'KwaMashu',
+      departureTime: 'Leaving in 45 minutes',
+      available: true
+    }
+  ];
+}
+
 function initialState() {
   const users = [
     [1, 'Jeremy', 'Shabalala', '0712345678', 'jeremy@inkoloconnect.local', ['Member']],
@@ -144,7 +437,7 @@ function initialState() {
   }));
 
   return {
-    version: 4,
+    version: 11,
     users,
     profiles: users.map((user) => ({
       userId: user.id,
@@ -164,7 +457,14 @@ function initialState() {
         denomination: 'Christian Community',
         region: 'Durban Central',
         province: 'KwaZulu-Natal',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        branding: {
+          logoUrl: '',
+          primaryColor: '#12385f',
+          secondaryColor: '#1876b7',
+          accentColor: '#d4a62a',
+          backgroundColor: '#f5f1e7'
+        }
       },
       {
         id: '2',
@@ -172,7 +472,14 @@ function initialState() {
         denomination: 'Zionist',
         region: 'North Coast',
         province: 'KwaZulu-Natal',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        branding: {
+          logoUrl: '',
+          primaryColor: '#3d145f',
+          secondaryColor: '#7c35a5',
+          accentColor: '#e1b943',
+          backgroundColor: '#f8f1fb'
+        }
       },
       {
         id: '3',
@@ -180,7 +487,14 @@ function initialState() {
         denomination: 'Pentecostal',
         region: 'South Coast',
         province: 'KwaZulu-Natal',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        branding: {
+          logoUrl: '',
+          primaryColor: '#174f3f',
+          secondaryColor: '#2f8d6c',
+          accentColor: '#f0b73e',
+          backgroundColor: '#f1f8f4'
+        }
       }
     ],
     branches: [
@@ -276,8 +590,30 @@ function initialState() {
     marketplaceListings: marketplaceSeed(),
     marketplaceConversations: [],
     marketplaceMessages: [],
+    propertyListings: propertySeed(),
+    propertyConversations: [],
+    propertyMessages: [],
     jobListings: jobSeed(),
-    legalAcceptances: []
+    availableLifts: availableLiftSeed(),
+    rideRequests: [],
+    businessProfiles: [],
+    legalAcceptances: [],
+    memberDocuments: [
+      {
+        id: 'doc-001',
+        memberId: '1',
+        serviceProviderId: 'sp-001',
+        serviceId: 'funeral-cover-001',
+        policyNumber: 'POL-DEMO-0001',
+        documentType: 'FUNERAL_COVER_POLICY',
+        fileName: 'african-bank-funeral-policy.pdf',
+        fileUrl: '',
+        uploadedAt: '2026-06-09T00:00:00.000Z',
+        uploadedBy: 'African Bank Funeral Cover',
+        status: 'ACTIVE',
+        expiryDate: '2027-06-09'
+      }
+    ]
   };
 }
 
@@ -299,7 +635,64 @@ function loadState() {
       loaded.marketplaceConversations ??= [];
       loaded.marketplaceMessages ??= [];
     }
-    loaded.version = 4;
+    if ((loaded.version ?? 1) < 5) {
+      loaded.propertyListings = loaded.propertyListings?.length
+        ? loaded.propertyListings
+        : propertySeed();
+      loaded.propertyConversations ??= [];
+      loaded.propertyMessages ??= [];
+    }
+    if ((loaded.version ?? 1) < 6) {
+      const existingPropertyIds = new Set(
+        (loaded.propertyListings ?? []).map((listing) => listing.id)
+      );
+      loaded.propertyListings = [
+        ...(loaded.propertyListings ?? []),
+        ...propertySeed().filter((listing) => !existingPropertyIds.has(listing.id))
+      ];
+    }
+    if ((loaded.version ?? 1) < 7) {
+      const normalMember = (loaded.users ?? []).find((user) => Number(user.id) === 1);
+      if (normalMember) {
+        normalMember.roles = (normalMember.roles ?? ['Member']).filter(
+          (role) => role !== 'KZNCC User' && role !== 'KZNCC Admin'
+        );
+        if (!normalMember.roles.includes('Member')) {
+          normalMember.roles.unshift('Member');
+        }
+      }
+    }
+    if ((loaded.version ?? 1) < 8) {
+      loaded.availableLifts = loaded.availableLifts?.length
+        ? loaded.availableLifts
+        : availableLiftSeed();
+      loaded.rideRequests ??= [];
+    }
+    if ((loaded.version ?? 1) < 9) {
+      loaded.businessProfiles ??= [];
+    }
+    if ((loaded.version ?? 1) < 10) {
+      const themes = [
+        ['#12385f', '#1876b7', '#d4a62a', '#f5f1e7'],
+        ['#3d145f', '#7c35a5', '#e1b943', '#f8f1fb'],
+        ['#174f3f', '#2f8d6c', '#f0b73e', '#f1f8f4']
+      ];
+      (loaded.churches ?? []).forEach((church, index) => {
+        const [primaryColor, secondaryColor, accentColor, backgroundColor] =
+          themes[index % themes.length];
+        church.branding ??= {
+          logoUrl: '',
+          primaryColor,
+          secondaryColor,
+          accentColor,
+          backgroundColor
+        };
+      });
+    }
+    if ((loaded.version ?? 1) < 11) {
+      loaded.memberDocuments ??= [];
+    }
+    loaded.version = 11;
     writeFileSync(storePath, JSON.stringify(loaded, null, 2));
     return loaded;
   } catch {

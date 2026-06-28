@@ -1,78 +1,49 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, of } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { MemberDocument } from '../models/member-document.model';
 
 @Injectable({ providedIn: 'root' })
 export class ServiceProviderDocumentService {
-  private readonly documents = new BehaviorSubject<MemberDocument[]>([
-    {
-      id: 'doc-001',
-      memberId: '1',
-      serviceProviderId: 'sp-001',
-      serviceId: 'funeral-cover-001',
-      policyNumber: 'POL-DEMO-0001',
-      documentType: 'FUNERAL_COVER_POLICY',
-      fileName: 'african-bank-funeral-policy.pdf',
-      fileUrl: '#',
-      uploadedAt: '2026-06-09',
-      uploadedBy: 'African Bank Funeral Cover',
-      status: 'ACTIVE',
-      expiryDate: '2027-06-09'
-    }
-  ]);
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = '/api/platform';
 
   uploadMemberPolicyDocument(
     memberId: string,
     serviceId: string,
     file: File
   ): Observable<MemberDocument> {
-    const document: MemberDocument = {
-      id: `doc-${Date.now()}`,
-      memberId,
-      serviceProviderId: 'sp-001',
-      serviceId,
-      policyNumber: `POL-${Date.now()}`,
-      documentType: 'FUNERAL_COVER_POLICY',
-      fileName: file.name,
-      fileUrl: '#',
-      uploadedAt: new Date().toISOString(),
-      uploadedBy: 'African Bank Funeral Cover',
-      status: 'ACTIVE'
-    };
-    this.documents.next([document, ...this.documents.value]);
-    return of(document);
-  }
-
-  replaceMemberPolicyDocument(documentId: string, file: File): Observable<MemberDocument | undefined> {
-    let updated: MemberDocument | undefined;
-    this.documents.next(this.documents.value.map((document) => {
-      if (document.id !== documentId) {
-        return document;
-      }
-      updated = { ...document, fileName: file.name, uploadedAt: new Date().toISOString() };
-      return updated;
-    }));
-    return of(updated);
+    const formData = new FormData();
+    formData.append('memberId', memberId);
+    formData.append('serviceId', serviceId);
+    formData.append('serviceProviderId', 'sp-001');
+    formData.append('documentType', 'FUNERAL_COVER_POLICY');
+    formData.append('file', file);
+    return this.http.post<MemberDocument>(
+      `${this.apiUrl}/service-provider/documents`,
+      formData
+    );
   }
 
   getMemberDocuments(memberId: string): Observable<MemberDocument[]> {
-    return new Observable((subscriber) => {
-      const subscription = this.documents.subscribe((documents) =>
-        subscriber.next(documents.filter((document) => document.memberId === memberId))
-      );
-      return () => subscription.unsubscribe();
-    });
+    return this.http.get<MemberDocument[]>(
+      `${this.apiUrl}/member-documents/me`
+    );
+  }
+
+  getMemberDocumentsForAdmin(
+    memberId: string
+  ): Observable<MemberDocument[]> {
+    return this.http.get<MemberDocument[]>(
+      `${this.apiUrl}/admin/users/${memberId}/documents`
+    );
   }
 
   getDocumentsByServiceProvider(serviceProviderId: string): Observable<MemberDocument[]> {
-    return new Observable((subscriber) => {
-      const subscription = this.documents.subscribe((documents) =>
-        subscriber.next(
-          documents.filter((document) => document.serviceProviderId === serviceProviderId)
-        )
-      );
-      return () => subscription.unsubscribe();
-    });
+    return this.http.get<MemberDocument[]>(
+      `${this.apiUrl}/service-provider/documents`,
+      { params: { serviceProviderId } }
+    );
   }
 
   canServiceProviderUploadDocument(

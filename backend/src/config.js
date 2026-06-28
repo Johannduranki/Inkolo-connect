@@ -9,9 +9,20 @@ export function getConfig() {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
 
+  const frontendOrigin = process.env.FRONTEND_ORIGIN || 'http://localhost:4200';
+  const frontendOrigins = [
+    ...String(process.env.FRONTEND_ORIGINS || frontendOrigin)
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+    'https://localhost',
+    'capacitor://localhost'
+  ];
+
   return {
     port: Number(process.env.PORT || 3000),
-    frontendOrigin: process.env.FRONTEND_ORIGIN || 'http://localhost:4200',
+    frontendOrigin,
+    frontendOrigins: [...new Set(frontendOrigins)],
     database: {
       host: process.env.DB_HOST,
       port: Number(process.env.DB_PORT || 3306),

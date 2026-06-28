@@ -4,58 +4,108 @@
       <p>PRIVATE TO YOU</p>
       <h2>My Documents</h2>
     </div>
-    <span>{{ documents().length }} document{{ documents().length === 1 ? '' : 's' }}</span>
+    <span>{{ documents().length + agreements().length }} files</span>
   </div>
-  @if (documents().length) {
-    <div class="document-list">
-      @for (document of documents(); track document.id) {
-        <article>
-          <span class="document-icon">PDF</span>
-          <div>
-            <strong>{{ document.fileName }}</strong>
-            <span>{{ document.documentType }} · {{ document.uploadedBy }}</span>
-            <small>Uploaded {{ document.uploadedAt | date:'mediumDate' }} · {{ document.status }}</small>
-          </div>
-          <button type="button">View</button>
-          <button type="button">Download</button>
-        </article>
-      }
-    </div>
-  } @else {
-    <p class="empty">Documents uploaded for your paid services will appear here.</p>
-  }
-</section>
 
-<section class="documents-card agreement-card">
-  <div class="heading">
-    <div>
-      <p>ACCEPTANCE HISTORY</p>
-      <h2>Accepted contracts and terms</h2>
-    </div>
-    <span>{{ agreements().length }} record{{ agreements().length === 1 ? '' : 's' }}</span>
-  </div>
-  @if (agreements().length) {
-    <div class="document-list">
-      @for (agreement of agreements(); track agreement.id) {
-        <article>
-          <span class="document-icon agreement-icon">OK</span>
-          <div>
-            <strong>{{ agreement.serviceName }}</strong>
-            <span>
-              Accepted by {{ agreement.memberName }} ·
-              {{ agreement.acceptedAt | date:'medium' }}
-            </span>
-            <small>
-              Version {{ agreement.documentVersion }} · Plan {{ agreement.planCode }}
-            </small>
-            <code>SHA-256: {{ agreement.documentSha256 }}</code>
-          </div>
-          <button type="button" (click)="viewAgreement(agreement)">View terms</button>
-          <button type="button" (click)="downloadEvidence(agreement)">Evidence</button>
-        </article>
+  <nav class="folder-grid" aria-label="Document folders">
+    <button
+      type="button"
+      class="folder"
+      [class.active]="activeFolder() === 'terms'"
+      (click)="activeFolder.set('terms')"
+    >
+      <span class="folder-icon">T&amp;C</span>
+      <span>
+        <strong>Terms &amp; Conditions</strong>
+        <small>Accepted agreements and legal evidence</small>
+      </span>
+      <em>{{ agreements().length }}</em>
+    </button>
+    <button
+      type="button"
+      class="folder"
+      [class.active]="activeFolder() === 'policies'"
+      (click)="activeFolder.set('policies')"
+    >
+      <span class="folder-icon policy-folder-icon">POL</span>
+      <span>
+        <strong>Policies</strong>
+        <small>Funeral cover, insurance and provider policies</small>
+      </span>
+      <em>{{ documents().length }}</em>
+    </button>
+  </nav>
+
+  @if (activeFolder() === 'terms') {
+    <section class="folder-content" aria-labelledby="terms-folder-title">
+      <div class="folder-heading">
+        <div>
+          <p>TERMS &amp; CONDITIONS FOLDER</p>
+          <h3 id="terms-folder-title">Accepted contracts and terms</h3>
+        </div>
+        <span>{{ agreements().length }} records</span>
+      </div>
+      @if (agreements().length) {
+        <div class="document-list">
+          @for (agreement of agreements(); track agreement.id) {
+            <article>
+              <span class="document-icon agreement-icon">T&amp;C</span>
+              <div>
+                <strong>{{ agreement.serviceName }}</strong>
+                <span>
+                  Accepted by {{ agreement.memberName }} ·
+                  {{ agreement.acceptedAt | date:'medium' }}
+                </span>
+                <small>Version {{ agreement.documentVersion }} · Plan {{ agreement.planCode }}</small>
+                <code>SHA-256: {{ agreement.documentSha256 }}</code>
+              </div>
+              <button type="button" (click)="viewAgreement(agreement)">View terms</button>
+              <button type="button" (click)="downloadEvidence(agreement)">Evidence</button>
+            </article>
+          }
+        </div>
+      } @else {
+        <p class="empty">Accepted service contracts and Terms and Conditions will appear here.</p>
       }
-    </div>
+    </section>
   } @else {
-    <p class="empty">Accepted service contracts and terms will appear here.</p>
+    <section class="folder-content" aria-labelledby="policies-folder-title">
+      <div class="folder-heading">
+        <div>
+          <p>POLICY FOLDER</p>
+          <h3 id="policies-folder-title">My service policies</h3>
+        </div>
+        <span>{{ documents().length }} documents</span>
+      </div>
+      @if (documents().length) {
+        <div class="document-list">
+          @for (document of documents(); track document.id) {
+            <article>
+              <span class="document-icon">PDF</span>
+              <div>
+                <strong>{{ document.fileName }}</strong>
+                <span>{{ policyTypeLabel(document) }} · {{ document.uploadedBy }}</span>
+                <small>
+                  Issued {{ document.uploadedAt | date:'mediumDate' }} · {{ document.status }}
+                  @if (document.policyNumber) {
+                    · Policy {{ document.policyNumber }}
+                  }
+                </small>
+              </div>
+              @if (document.fileUrl) {
+                <a [href]="document.fileUrl" target="_blank" rel="noopener">View</a>
+                <a [href]="document.fileUrl" [attr.download]="document.fileName">Download</a>
+              } @else {
+                <span class="file-pending">File pending</span>
+              }
+            </article>
+          }
+        </div>
+      } @else {
+        <p class="empty">
+          Your funeral cover or insurance policy will appear here after the provider issues it.
+        </p>
+      }
+    </section>
   }
 </section>

@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-# Inkolo-connect
-Webapp
-=======
-# Inkolo Connect ID Login Module
+# Inkolo Connect
 
 A standalone authentication prototype using:
 
@@ -126,4 +122,3 @@ Authenticated members can:
 - send persistent direct messages.
 
 The Angular My Community screen uses these API endpoints directly.
->>>>>>> 97ac217 (webapp)

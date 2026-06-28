@@ -1,7 +1,7 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe, NgStyle } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { switchMap } from 'rxjs';
 import {
@@ -23,6 +23,14 @@ import {
 import { BuySellService } from './features/buy-sell/services/buy-sell.service';
 import { BuySellChatService } from './features/buy-sell/services/buy-sell-chat.service';
 import { BuySellPaymentService } from './features/buy-sell/services/buy-sell-payment.service';
+import {
+  PropertyConversation,
+  PropertyListing,
+  PropertyListingType,
+  PropertyMessage,
+  PropertyType
+} from './features/keytcha-properties/models/property-listing.model';
+import { KeytchaPropertiesService } from './features/keytcha-properties/services/keytcha-properties.service';
 import {
   EmploymentType,
   JobApplication,
@@ -49,6 +57,16 @@ import {
   MemberReferral,
   ReferralService
 } from './core/services/referral.service';
+import {
+  AvailableLift,
+  RideRequest
+} from './features/catch-a-ride/models/catch-a-ride.model';
+import { CatchARideService } from './features/catch-a-ride/services/catch-a-ride.service';
+import {
+  BusinessProfile,
+  BusinessService
+} from './core/models/business-profile.model';
+import { BusinessProfileService } from './core/services/business-profile.service';
 
 interface Service {
   code: string;
@@ -112,6 +130,7 @@ interface UpcomingWalletSpending {
   imports: [
     DatePipe,
     DecimalPipe,
+    NgStyle,
     ReactiveFormsModule,
     ProfileModalComponent,
     RoleSwitcherComponent
@@ -121,24 +140,31 @@ interface UpcomingWalletSpending {
 })
 export class DashboardComponent implements OnInit {
   private readonly auth = inject(AuthService);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly communities = inject(MemberCommunityService);
   private readonly buySell = inject(BuySellService);
   private readonly buySellChats = inject(BuySellChatService);
   private readonly buySellPayments = inject(BuySellPaymentService);
+  private readonly keytchaProperties = inject(KeytchaPropertiesService);
   private readonly jobListingService = inject(JobListingService);
   private readonly jobApplications = inject(JobApplicationService);
   private readonly jobChats = inject(JobChatService);
   private readonly jobPayments = inject(JobPaymentService);
-  private readonly profiles = inject(ProfileService);
+  readonly profiles = inject(ProfileService);
   private readonly airtimeData = inject(AirtimeDataService);
   private readonly electricity = inject(ElectricityService);
   private readonly beneficiaries = inject(BeneficiaryService);
   private readonly walletService = inject(WalletService);
   private readonly referrals = inject(ReferralService);
+  private readonly catchARide = inject(CatchARideService);
+  private readonly businesses = inject(BusinessProfileService);
   private readonly sanitizer = inject(DomSanitizer);
+  private requestedServiceCode = '';
+  private returnToCommunityOnClose = false;
 
   readonly user = signal<User | null>(null);
+  readonly communityServiceEntry = signal(false);
   readonly profileOpen = signal(false);
   readonly subscriptions = signal<ServiceSubscription[]>([]);
   readonly selectedService = signal<Service | null>(null);
@@ -161,7 +187,57 @@ export class DashboardComponent implements OnInit {
   readonly referralOutgoing = signal<MemberReferral[]>([]);
   readonly referralIncoming = signal<MemberReferral[]>([]);
   readonly referralNotice = signal('');
+  readonly rideLocationLoading = signal(false);
+  readonly rideLocationReady = signal(false);
+  readonly rideLocationError = signal('');
+  readonly rideLatitude = signal(0);
+  readonly rideLongitude = signal(0);
+  readonly rideMapEmbedUrl = signal<SafeResourceUrl | null>(null);
+  readonly availableLifts = signal<AvailableLift[]>([]);
+  readonly selectedLift = signal<AvailableLift | null>(null);
+  readonly outgoingRideRequests = signal<RideRequest[]>([]);
+  readonly incomingRideRequests = signal<RideRequest[]>([]);
+  readonly rideNotice = signal('');
+  readonly rideMode = signal<'catch' | 'give'>('catch');
+  readonly myLiftOffer = signal<AvailableLift | null>(null);
+  readonly liftVehicle = new FormControl('', { nonNullable: true });
+  readonly liftRegistration = new FormControl('', { nonNullable: true });
+  readonly liftSeats = new FormControl('1', { nonNullable: true });
+  readonly liftDestination = new FormControl('', { nonNullable: true });
+  readonly liftDeparture = new FormControl('', { nonNullable: true });
+  readonly liftBusinessId = new FormControl('', { nonNullable: true });
+  readonly businessCenterOpen = signal(false);
+  readonly businessProfiles = signal<BusinessProfile[]>([]);
+  readonly businessServicesSelected = signal<BusinessService[]>([]);
+  readonly businessNotice = signal('');
+  readonly businessName = new FormControl('', { nonNullable: true });
+  readonly businessRegistration = new FormControl('', { nonNullable: true });
+  readonly businessTelephone = new FormControl('', { nonNullable: true });
+  readonly businessEmail = new FormControl('', { nonNullable: true });
+  readonly businessArea = new FormControl('', { nonNullable: true });
+  readonly businessDescription = new FormControl('', { nonNullable: true });
+  readonly bulkBusinessId = new FormControl('', { nonNullable: true });
+  readonly bulkBusinessService = new FormControl<BusinessService>('BUY_SELL', {
+    nonNullable: true
+  });
+  readonly bulkBusinessRows = new FormControl('', { nonNullable: true });
+  readonly listingBusinessId = new FormControl('', { nonNullable: true });
+  readonly propertyBusinessId = new FormControl('', { nonNullable: true });
+  readonly jobBusinessId = new FormControl('', { nonNullable: true });
   readonly walletOpen = signal(false);
+  readonly walletBrandingOpen = signal(false);
+  readonly walletBrandTeam = signal('');
+  readonly walletBrandLogo = signal('');
+  readonly walletBrandColor = signal('#087ce8');
+  readonly walletBrandNotice = signal('');
+  readonly footballTeamPresets = [
+    { name: 'Kaizer Chiefs', badge: 'KC', color: '#dca900' },
+    { name: 'Orlando Pirates', badge: 'OP', color: '#111827' },
+    { name: 'Mamelodi Sundowns', badge: 'MS', color: '#e1c800' },
+    { name: 'AmaZulu FC', badge: 'AFC', color: '#087a3e' },
+    { name: 'SuperSport United', badge: 'SSU', color: '#1753a6' },
+    { name: 'Stellenbosch FC', badge: 'SFC', color: '#9c1c2b' }
+  ];
   readonly walletAction = signal<'topup' | 'cashout' | 'transfer' | null>(null);
   readonly walletActionLoading = signal(false);
   readonly walletActionNotice = signal('');
@@ -244,6 +320,46 @@ export class DashboardComponent implements OnInit {
     'Books',
     'Food items',
     'Other'
+  ];
+  readonly propertyMarketplaceOpen = signal(false);
+  readonly propertyFormOpen = signal(false);
+  readonly propertyImage = signal('');
+  readonly propertyTitle = new FormControl('', { nonNullable: true });
+  readonly propertyDescription = new FormControl('', { nonNullable: true });
+  readonly propertyListingType = new FormControl<PropertyListingType>('RENT', {
+    nonNullable: true
+  });
+  readonly propertyType = new FormControl<PropertyType>('HOUSE', {
+    nonNullable: true
+  });
+  readonly propertyPrice = new FormControl('', { nonNullable: true });
+  readonly propertyBedrooms = new FormControl('1', { nonNullable: true });
+  readonly propertyBathrooms = new FormControl('1', { nonNullable: true });
+  readonly propertyParking = new FormControl('0', { nonNullable: true });
+  readonly propertyArea = new FormControl('', { nonNullable: true });
+  readonly propertyAddress = new FormControl('', { nonNullable: true });
+  readonly propertyListings = signal<PropertyListing[]>([]);
+  readonly propertySearch = new FormControl('', { nonNullable: true });
+  readonly propertyFilterListingType = new FormControl('', { nonNullable: true });
+  readonly propertyFilterType = new FormControl('', { nonNullable: true });
+  readonly propertyFilterArea = new FormControl('', { nonNullable: true });
+  readonly propertyFilterMinPrice = new FormControl('', { nonNullable: true });
+  readonly propertyFilterMaxPrice = new FormControl('', { nonNullable: true });
+  readonly propertyFilterBedrooms = new FormControl('', { nonNullable: true });
+  readonly propertyFilterStatus = new FormControl('AVAILABLE', { nonNullable: true });
+  readonly selectedProperty = signal<PropertyListing | null>(null);
+  readonly propertyConversation = signal<PropertyConversation | null>(null);
+  readonly propertyConversations = signal<PropertyConversation[]>([]);
+  readonly propertyMessages = signal<PropertyMessage[]>([]);
+  readonly propertyChatText = new FormControl('', { nonNullable: true });
+  readonly propertyNotice = signal('');
+  readonly propertyTypes: { value: PropertyType; label: string }[] = [
+    { value: 'HOUSE', label: 'House' },
+    { value: 'APARTMENT', label: 'Apartment' },
+    { value: 'ROOM', label: 'Room' },
+    { value: 'TOWNHOUSE', label: 'Townhouse' },
+    { value: 'LAND', label: 'Land' },
+    { value: 'COMMERCIAL', label: 'Commercial property' }
   ];
   readonly jobsOpen = signal(false);
   readonly jobFormOpen = signal(false);
@@ -513,19 +629,19 @@ export class DashboardComponent implements OnInit {
     },
     {
       code: 'catch-a-ride',
-      name: 'Catch a Ride',
-      description: 'Find and share trusted local rides with community members.',
+      name: 'Catch a Lift',
+      description: 'Find and share trusted local lifts with community members.',
       image: '/service-catch-a-lift.png',
       accent: '#58c91a',
       tag: 'Transport',
       availability: 'available',
-      billingNote: 'Activate access to local community ride opportunities.',
+      billingNote: 'Activate access to local community lift opportunities.',
       plans: [
         {
           code: 'free',
-          name: 'Catch a Ride access',
+          name: 'Catch a Lift access',
           price: 'Free',
-          description: 'Find or offer a ride in your community.'
+          description: 'Find or offer a lift in your community.'
         }
       ]
     },
@@ -586,9 +702,16 @@ export class DashboardComponent implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.requestedServiceCode = this.route.snapshot.queryParamMap.get('service') ?? '';
+    this.returnToCommunityOnClose =
+      this.route.snapshot.queryParamMap.get('from') === 'community';
+    this.communityServiceEntry.set(
+      this.returnToCommunityOnClose && Boolean(this.requestedServiceCode)
+    );
     this.auth.getProfile().subscribe({
       next: (user) => {
         this.user.set(user);
+        this.loadWalletBranding(user.id);
         this.profiles.load().subscribe();
         this.refreshWallet();
         this.communities.getMemberCommunity(String(user.id)).subscribe((community) => {
@@ -602,12 +725,17 @@ export class DashboardComponent implements OnInit {
       error: () => this.logout()
     });
     this.auth.getSubscriptions().subscribe({
-      next: (subscriptions) => this.subscriptions.set(subscriptions)
+      next: (subscriptions) => {
+        this.subscriptions.set(subscriptions);
+        this.openRequestedService();
+      }
     });
     this.communities.getActiveChurches().subscribe((churches) =>
       this.communityChurches.set(churches)
     );
     this.loadMarketplaceListings();
+    this.loadBusinessProfiles();
+    this.loadPropertyListings();
     this.loadJobListings();
     this.airtimeData.getNetworks().subscribe((networks) => this.vasNetworks.set(networks));
     this.electricity.getElectricityProviders().subscribe((providers) =>
@@ -615,10 +743,187 @@ export class DashboardComponent implements OnInit {
     );
   }
 
+  openBusinessCenter(service: BusinessService): void {
+    this.bulkBusinessService.setValue(service);
+    const available = this.businessesFor(service);
+    this.bulkBusinessId.setValue(available[0]?.id ?? '');
+    this.businessNotice.set('');
+    this.businessCenterOpen.set(true);
+  }
+
+  toggleBusinessService(service: BusinessService): void {
+    this.businessServicesSelected.update((services) =>
+      services.includes(service)
+        ? services.filter((item) => item !== service)
+        : [...services, service]
+    );
+  }
+
+  businessServiceSelected(service: BusinessService): boolean {
+    return this.businessServicesSelected().includes(service);
+  }
+
+  businessesFor(service: BusinessService): BusinessProfile[] {
+    return this.businessProfiles().filter(
+      (business) => business.status === 'ACTIVE' && business.services.includes(service)
+    );
+  }
+
+  registerBusiness(): void {
+    this.businessNotice.set('');
+    this.businesses.registerBusiness({
+      businessName: this.businessName.value.trim(),
+      registrationNumber: this.businessRegistration.value.trim() || undefined,
+      telephone: this.businessTelephone.value.trim(),
+      email: this.businessEmail.value.trim() || undefined,
+      area: this.businessArea.value.trim(),
+      description: this.businessDescription.value.trim(),
+      services: this.businessServicesSelected()
+    }).subscribe({
+      next: (business) => {
+        this.businessProfiles.update((items) => [business, ...items]);
+        this.bulkBusinessId.setValue(business.id);
+        this.businessName.setValue('');
+        this.businessRegistration.setValue('');
+        this.businessTelephone.setValue('');
+        this.businessEmail.setValue('');
+        this.businessArea.setValue('');
+        this.businessDescription.setValue('');
+        this.businessServicesSelected.set([]);
+        this.businessNotice.set(`${business.businessName} is ready to trade.`);
+      },
+      error: ({ error }) =>
+        this.businessNotice.set(error?.message ?? 'The business could not be registered.')
+    });
+  }
+
+  publishBusinessRows(): void {
+    const businessId = this.bulkBusinessId.value;
+    const service = this.bulkBusinessService.value;
+    const lines = this.bulkBusinessRows.value
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (!businessId || !lines.length) {
+      this.businessNotice.set('Choose a business and add at least one row.');
+      return;
+    }
+    const records = lines.map((line) => this.parseBusinessRow(service, line));
+    this.businesses.bulkPublish(businessId, service, records).subscribe({
+      next: ({ created }) => {
+        this.businessNotice.set(`${created} business record${created === 1 ? '' : 's'} published.`);
+        this.bulkBusinessRows.setValue('');
+        this.refreshBusinessService(service);
+      },
+      error: ({ error }) =>
+        this.businessNotice.set(error?.message ?? 'The bulk records could not be published.')
+    });
+  }
+
+  businessRowHelp(): string {
+    const help: Record<BusinessService, string> = {
+      BUY_SELL: 'Title | Description | Category | Condition | Price | Area',
+      JOB_SEARCH: 'Job title | Description | Category | Employment type | Pay | Area',
+      KEYTCHA_PROPERTIES:
+        'Title | Description | RENT or SALE | Property type | Price | Area',
+      CATCH_A_RIDE:
+        'Vehicle | Registration | Seats | Destination | Departure time | Distance km'
+    };
+    return help[this.bulkBusinessService.value];
+  }
+
+  private parseBusinessRow(
+    service: BusinessService,
+    line: string
+  ): Record<string, unknown> {
+    const values = line.split('|').map((value) => value.trim());
+    if (service === 'BUY_SELL') {
+      return {
+        title: values[0],
+        description: values[1],
+        category: values[2] || 'Other',
+        condition: values[3] || 'NEW',
+        price: Number(values[4]),
+        area: values[5]
+      };
+    }
+    if (service === 'JOB_SEARCH') {
+      return {
+        title: values[0],
+        description: values[1],
+        category: values[2] || 'Other',
+        employmentType: values[3] || 'FULL_TIME',
+        jobType: 'Business vacancy',
+        paymentAmount: Number(values[4]) || undefined,
+        paymentFrequency: 'MONTHLY',
+        workMode: 'ON_SITE',
+        area: values[5]
+      };
+    }
+    if (service === 'KEYTCHA_PROPERTIES') {
+      return {
+        title: values[0],
+        description: values[1],
+        listingType: values[2] || 'RENT',
+        propertyType: values[3] || 'HOUSE',
+        price: Number(values[4]),
+        area: values[5],
+        bedrooms: 0,
+        bathrooms: 0,
+        parkingSpaces: 0
+      };
+    }
+    return {
+      vehicle: values[0],
+      registrationNumber: values[1],
+      seatsAvailable: Number(values[2]) || 1,
+      destination: values[3],
+      departureTime: values[4] || 'Available now',
+      distanceKm: Number(values[5]) || 4
+    };
+  }
+
+  private refreshBusinessService(service: BusinessService): void {
+    if (service === 'BUY_SELL') this.applyMarketplaceFilters();
+    if (service === 'JOB_SEARCH') this.applyJobFilters();
+    if (service === 'KEYTCHA_PROPERTIES') this.applyPropertyFilters();
+    if (service === 'CATCH_A_RIDE') this.loadAvailableLifts();
+  }
+
+  private loadBusinessProfiles(): void {
+    this.businesses.getMyBusinesses().subscribe({
+      next: (profiles) => this.businessProfiles.set(profiles),
+      error: () => this.businessProfiles.set([])
+    });
+  }
+
+  private openRequestedService(): void {
+    if (!this.requestedServiceCode) {
+      return;
+    }
+
+    const service = this.services.find(
+      (candidate) => candidate.code === this.requestedServiceCode
+    );
+    this.requestedServiceCode = '';
+
+    if (service) {
+      this.openService(service);
+    } else {
+      this.communityServiceEntry.set(false);
+    }
+  }
+
   openService(service: Service): void {
     if (service.code === 'build-up-balance' && this.isServiceActive(service)) {
       this.marketplaceOpen.set(true);
       this.loadMarketplaceConversations();
+      return;
+    }
+
+    if (service.code === 'keycha-properties' && this.isServiceActive(service)) {
+      this.propertyMarketplaceOpen.set(true);
+      this.loadPropertyConversations();
       return;
     }
 
@@ -635,6 +940,16 @@ export class DashboardComponent implements OnInit {
     if (service.code === 'kzncc' && this.isServiceActive(service)) {
       void this.router.navigate(['/kzncc']);
       return;
+    }
+
+    if (service.code === 'catch-a-ride' && this.isServiceActive(service)) {
+      this.loadRideRequests();
+      this.loadMyLiftOffer();
+      if (!this.rideLocationReady()) {
+        this.locateMemberForRides();
+      } else {
+        this.loadAvailableLifts();
+      }
     }
 
     if (service.code === 'wallet' && this.isServiceActive(service)) {
@@ -705,6 +1020,7 @@ export class DashboardComponent implements OnInit {
     this.vasConfirmAccount.setValue('');
     this.bankConfirmationFile.set(null);
     this.idDocumentFile.set(null);
+    this.returnToCommunity();
   }
 
   confirmSubscription(): void {
@@ -865,14 +1181,15 @@ export class DashboardComponent implements OnInit {
       'referral',
       'job-search',
       'eduu',
-      'wallet'
+      'wallet',
+      'kzncc'
     ].includes(service.code);
   }
 
   serviceTermsTitle(service: Service): string {
     const titles: Record<string, string> = {
       'build-up-balance': 'Buy & Sell',
-      'catch-a-ride': 'Catch a Ride',
+      'catch-a-ride': 'Catch a Lift',
       funeral: 'Funeral Services',
       community: 'My Community Church',
       'vas-services': 'VAS Services',
@@ -880,7 +1197,8 @@ export class DashboardComponent implements OnInit {
       referral: 'Referral Service',
       'job-search': 'Job Search',
       eduu: 'EduU Service',
-      wallet: 'Wallet'
+      wallet: 'Wallet',
+      kzncc: 'KZNCC Service'
     };
     return titles[service.code] ?? service.name;
   }
@@ -896,7 +1214,8 @@ export class DashboardComponent implements OnInit {
       referral: 'referral-service-terms',
       'job-search': 'job-search-terms',
       eduu: 'eduu-service-terms',
-      wallet: 'wallet-terms'
+      wallet: 'wallet-terms',
+      kzncc: 'kzncc-service-terms'
     };
     return slugs[service.code] ?? '';
   }
@@ -1157,7 +1476,231 @@ export class DashboardComponent implements OnInit {
   }
 
   subscribedServices(): Service[] {
-    return this.services.filter((service) => this.isServiceActive(service));
+    return this.services
+      .filter((service) => this.isServiceActive(service))
+      .sort((first, second) => {
+        if (first.code === 'wallet') return -1;
+        if (second.code === 'wallet') return 1;
+        return 0;
+      });
+  }
+
+  isActiveCatchRideView(service: Service): boolean {
+    return (
+      service.code === 'catch-a-ride' &&
+      Boolean(this.subscriptionFor('catch-a-ride'))
+    );
+  }
+
+  setRideMode(mode: 'catch' | 'give'): void {
+    this.rideMode.set(mode);
+    this.rideNotice.set('');
+    if (!this.rideLocationReady()) this.locateMemberForRides();
+    if (mode === 'give') this.loadMyLiftOffer();
+  }
+
+  publishMyLift(): void {
+    if (!this.rideLocationReady()) {
+      this.rideNotice.set('Allow location access before making your lift visible.');
+      this.locateMemberForRides();
+      return;
+    }
+    this.catchARide.publishLiftOffer({
+      latitude: this.rideLatitude(),
+      longitude: this.rideLongitude(),
+      vehicle: this.liftVehicle.value.trim(),
+      registrationNumber: this.liftRegistration.value.trim(),
+      seatsAvailable: Number(this.liftSeats.value),
+      destination: this.liftDestination.value.trim(),
+      departureTime: this.liftDeparture.value.trim(),
+      businessProfileId: this.liftBusinessId.value || undefined
+    }).subscribe({
+      next: (offer) => {
+        this.myLiftOffer.set(offer);
+        this.rideNotice.set('Your location is active. Members nearby can now ask for a lift.');
+        this.loadAvailableLifts();
+      },
+      error: ({ error }) =>
+        this.rideNotice.set(error?.message ?? 'Your lift could not be activated.')
+    });
+  }
+
+  deactivateMyLift(): void {
+    this.catchARide.updateLiftAvailability(false).subscribe({
+      next: (offer) => {
+        this.myLiftOffer.set(offer);
+        this.rideNotice.set('Your lift is no longer visible on the map.');
+        this.loadAvailableLifts();
+      },
+      error: ({ error }) =>
+        this.rideNotice.set(error?.message ?? 'Your lift could not be switched off.')
+    });
+  }
+
+  locateMemberForRides(): void {
+    this.rideLocationLoading.set(true);
+    this.rideLocationError.set('');
+    this.rideNotice.set('');
+
+    if (!navigator.geolocation) {
+      this.useRideLocationFallback();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        this.rideLatitude.set(coords.latitude);
+        this.rideLongitude.set(coords.longitude);
+        this.updateRideMap(coords.latitude, coords.longitude);
+        this.rideLocationReady.set(true);
+        this.rideLocationLoading.set(false);
+        this.loadAvailableLifts();
+      },
+      () => {
+        this.rideLocationError.set(
+          'Location permission was not granted. A general community location is shown until you enable precise location.'
+        );
+        this.useRideLocationFallback();
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000
+      }
+    );
+  }
+
+  selectLift(lift: AvailableLift): void {
+    this.selectedLift.set(lift);
+    this.rideNotice.set('');
+  }
+
+  cancelLiftSelection(): void {
+    this.selectedLift.set(null);
+    this.rideNotice.set('');
+  }
+
+  requestSelectedLift(): void {
+    const lift = this.selectedLift();
+    if (!lift || !this.rideLocationReady()) {
+      this.rideNotice.set('Share your location and choose a driver first.');
+      return;
+    }
+
+    this.catchARide
+      .requestLift(lift.id, {
+        latitude: this.rideLatitude(),
+        longitude: this.rideLongitude(),
+        pickupLabel: 'Current location shared through Catch a Lift'
+      })
+      .subscribe({
+        next: (request) => {
+          this.outgoingRideRequests.update((requests) => [request, ...requests]);
+          this.selectedLift.set(null);
+          this.rideNotice.set(
+            `${lift.driverName} has been notified with your details and pickup location.`
+          );
+        },
+        error: ({ error }) =>
+          this.rideNotice.set(error?.message ?? 'The lift request could not be sent.')
+      });
+  }
+
+  cancelRideRequest(request: RideRequest): void {
+    this.catchARide.updateRequest(request.id, 'CANCELLED').subscribe({
+      next: (updated) => this.replaceRideRequest(updated),
+      error: ({ error }) =>
+        this.rideNotice.set(error?.message ?? 'The request could not be cancelled.')
+    });
+  }
+
+  respondToRideRequest(
+    request: RideRequest,
+    accepted: boolean
+  ): void {
+    this.catchARide
+      .updateRequest(request.id, accepted ? 'ACCEPTED' : 'DECLINED')
+      .subscribe({
+        next: (updated) => {
+          this.replaceRideRequest(updated);
+          this.rideNotice.set(
+            accepted
+              ? `${request.passengerName} has received your “On my way” message.`
+              : 'The passenger has been notified that the request was declined.'
+          );
+        },
+        error: ({ error }) =>
+          this.rideNotice.set(error?.message ?? 'The request could not be updated.')
+      });
+  }
+
+  rideMarkerStyle(lift: AvailableLift): Record<string, string> {
+    const radiusPercent = Math.min(lift.distanceKm / 10, 1) * 42;
+    const radians = (lift.directionDegrees * Math.PI) / 180;
+    return {
+      left: `${50 + Math.sin(radians) * radiusPercent}%`,
+      top: `${50 - Math.cos(radians) * radiusPercent}%`
+    };
+  }
+
+  private useRideLocationFallback(): void {
+    this.rideLatitude.set(-29.8587);
+    this.rideLongitude.set(31.0218);
+    this.updateRideMap(-29.8587, 31.0218);
+    this.rideLocationReady.set(true);
+    this.rideLocationLoading.set(false);
+    this.loadAvailableLifts();
+  }
+
+  private loadAvailableLifts(): void {
+    this.catchARide
+      .getAvailableLifts()
+      .subscribe((lifts) => this.availableLifts.set(lifts));
+  }
+
+  private loadRideRequests(): void {
+    this.catchARide.getMyRequests().subscribe(({ outgoing, incoming }) => {
+      this.outgoingRideRequests.set(outgoing);
+      this.incomingRideRequests.set(incoming);
+    });
+  }
+
+  private loadMyLiftOffer(): void {
+    this.catchARide.getMyLiftOffer().subscribe((offer) => {
+      this.myLiftOffer.set(offer);
+      if (!offer) return;
+      this.liftVehicle.setValue(offer.vehicle);
+      this.liftRegistration.setValue(offer.registrationNumber);
+      this.liftSeats.setValue(String(offer.seatsAvailable));
+      this.liftDestination.setValue(offer.destination);
+      this.liftDeparture.setValue(offer.departureTime);
+      this.liftBusinessId.setValue(offer.businessProfileId ?? '');
+    });
+  }
+
+  private replaceRideRequest(updated: RideRequest): void {
+    const replace = (requests: RideRequest[]) =>
+      requests.map((request) => (request.id === updated.id ? updated : request));
+    this.outgoingRideRequests.update(replace);
+    this.incomingRideRequests.update(replace);
+  }
+
+  private updateRideMap(latitude: number, longitude: number): void {
+    const latitudeRadius = 0.09;
+    const longitudeRadius = 0.105;
+    const bbox = [
+      longitude - longitudeRadius,
+      latitude - latitudeRadius,
+      longitude + longitudeRadius,
+      latitude + latitudeRadius
+    ].join(',');
+    const mapUrl =
+      `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}` +
+      `&layer=mapnik&marker=${encodeURIComponent(`${latitude},${longitude}`)}`;
+
+    this.rideMapEmbedUrl.set(
+      this.sanitizer.bypassSecurityTrustResourceUrl(mapUrl)
+    );
   }
 
   availableServices(): Service[] {
@@ -1166,6 +1709,135 @@ export class DashboardComponent implements OnInit {
 
   toggleWalletCard(): void {
     this.walletOpen.update((open) => !open);
+  }
+
+  openWalletBranding(): void {
+    this.walletBrandNotice.set('');
+    this.walletBrandingOpen.set(true);
+  }
+
+  closeWalletBranding(): void {
+    this.walletBrandingOpen.set(false);
+  }
+
+  chooseFootballTeam(team: {
+    name: string;
+    badge: string;
+    color: string;
+  }): void {
+    this.walletBrandTeam.set(team.name);
+    this.walletBrandColor.set(team.color);
+    this.walletBrandLogo.set(this.createTeamBadge(team.badge, team.color));
+  }
+
+  uploadWalletLogo(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    this.walletBrandNotice.set('');
+    if (!file || !file.type.startsWith('image/')) {
+      this.walletBrandNotice.set('Please choose a PNG, JPEG or WebP image.');
+      return;
+    }
+    if (file.size > 8_000_000) {
+      this.walletBrandNotice.set('Please choose a wallet logo smaller than 8 MB.');
+      input.value = '';
+      return;
+    }
+
+    this.resizeWalletLogo(file)
+      .then((logo) => {
+        this.walletBrandLogo.set(logo);
+        this.walletBrandTeam.set(file.name.replace(/\.[^.]+$/, '') || 'My wallet logo');
+        this.walletOpen.set(false);
+        this.walletBrandNotice.set('Logo ready. Select Save wallet logo to keep it.');
+      })
+      .catch(() => {
+        this.walletBrandNotice.set('This image could not be loaded. Please try another image.');
+      });
+  }
+
+  saveWalletBranding(): void {
+    const userId = this.user()?.id;
+    if (!userId || !this.walletBrandLogo()) return;
+
+    try {
+      localStorage.setItem(
+        `inkolo_wallet_brand_${userId}`,
+        JSON.stringify({
+          team: this.walletBrandTeam(),
+          logo: this.walletBrandLogo(),
+          color: this.walletBrandColor()
+        })
+      );
+      this.walletOpen.set(false);
+      this.walletBrandNotice.set('');
+      this.walletBrandingOpen.set(false);
+    } catch {
+      this.walletBrandNotice.set(
+        'The logo could not be saved in this browser. Please choose a smaller image.'
+      );
+    }
+  }
+
+  clearWalletBranding(): void {
+    const userId = this.user()?.id;
+    this.walletBrandTeam.set('');
+    this.walletBrandLogo.set('');
+    this.walletBrandColor.set('#087ce8');
+    if (userId) {
+      localStorage.removeItem(`inkolo_wallet_brand_${userId}`);
+    }
+    this.walletBrandNotice.set('The Inkolo Connect logo has been restored.');
+  }
+
+  createTeamBadge(badge: string, color: string): string {
+    const safeBadge = badge.replace(/[^A-Za-z0-9]/g, '').slice(0, 4);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><path fill="${color}" stroke="white" stroke-width="7" d="M60 5 108 24v34c0 28-19 49-48 57C31 107 12 86 12 58V24Z"/><circle cx="60" cy="55" r="30" fill="white" fill-opacity=".16"/><text x="60" y="65" text-anchor="middle" font-family="Arial,sans-serif" font-size="29" font-weight="800" fill="white">${safeBadge}</text></svg>`;
+    return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+  }
+
+  private resizeWalletLogo(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error);
+      reader.onload = () => {
+        const image = new Image();
+        image.onerror = () => reject(new Error('Invalid wallet logo'));
+        image.onload = () => {
+          const maximumSize = 360;
+          const scale = Math.min(1, maximumSize / Math.max(image.width, image.height));
+          const width = Math.max(1, Math.round(image.width * scale));
+          const height = Math.max(1, Math.round(image.height * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const context = canvas.getContext('2d');
+          if (!context) {
+            reject(new Error('Canvas is unavailable'));
+            return;
+          }
+          context.clearRect(0, 0, width, height);
+          context.drawImage(image, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/webp', 0.88));
+        };
+        image.src = String(reader.result ?? '');
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  private loadWalletBranding(userId: number): void {
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem(`inkolo_wallet_brand_${userId}`) ?? 'null'
+      );
+      if (!saved) return;
+      this.walletBrandTeam.set(String(saved.team ?? ''));
+      this.walletBrandLogo.set(String(saved.logo ?? ''));
+      this.walletBrandColor.set(String(saved.color ?? '#087ce8'));
+    } catch {
+      localStorage.removeItem(`inkolo_wallet_brand_${userId}`);
+    }
   }
 
   private refreshWallet(): void {
@@ -1337,6 +2009,7 @@ export class DashboardComponent implements OnInit {
     this.marketplaceMessages.set([]);
     this.marketplacePaymentRequests.set([]);
     this.marketplaceNotice.set('');
+    this.returnToCommunity();
   }
 
   selectListingImage(event: Event): void {
@@ -1379,6 +2052,10 @@ export class DashboardComponent implements OnInit {
       sellerCommunityName:
         this.communityHeading() === 'My Community' ? undefined : this.communityHeading(),
       sellerRating: 5,
+      businessProfileId: this.listingBusinessId.value || undefined,
+      businessName: this.businessProfiles().find(
+        ({ id }) => id === this.listingBusinessId.value
+      )?.businessName,
       status: 'AVAILABLE'
     }).subscribe(() => this.applyMarketplaceFilters());
     this.listingTitle.setValue('');
@@ -1595,6 +2272,221 @@ export class DashboardComponent implements OnInit {
       .subscribe((requests) => this.marketplacePaymentRequests.set(requests));
   }
 
+  closePropertyMarketplace(): void {
+    this.propertyMarketplaceOpen.set(false);
+    this.propertyFormOpen.set(false);
+    this.selectedProperty.set(null);
+    this.propertyConversation.set(null);
+    this.propertyMessages.set([]);
+    this.propertyNotice.set('');
+    this.returnToCommunity();
+  }
+
+  selectPropertyImage(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+
+    const reader = new FileReader();
+    reader.addEventListener('load', () =>
+      this.propertyImage.set(String(reader.result ?? ''))
+    );
+    reader.readAsDataURL(file);
+  }
+
+  addPropertyListing(): void {
+    const user = this.user();
+    const title = this.propertyTitle.value.trim();
+    const description = this.propertyDescription.value.trim();
+    const price = Number(this.propertyPrice.value);
+    const bedrooms = Number(this.propertyBedrooms.value);
+    const bathrooms = Number(this.propertyBathrooms.value);
+    const parkingSpaces = Number(this.propertyParking.value);
+    const image = this.propertyImage();
+
+    if (
+      !user ||
+      !title ||
+      !description ||
+      !image ||
+      !Number.isFinite(price) ||
+      price <= 0
+    ) {
+      this.propertyNotice.set(
+        'Add a property picture, title, description and valid price.'
+      );
+      return;
+    }
+
+    this.keytchaProperties
+      .createListing({
+        title,
+        description,
+        listingType: this.propertyListingType.value,
+        propertyType: this.propertyType.value,
+        price,
+        bedrooms: Number.isFinite(bedrooms) && bedrooms >= 0 ? bedrooms : 0,
+        bathrooms: Number.isFinite(bathrooms) && bathrooms >= 0 ? bathrooms : 0,
+        parkingSpaces:
+          Number.isFinite(parkingSpaces) && parkingSpaces >= 0 ? parkingSpaces : 0,
+        area: this.propertyArea.value.trim() || 'Community area',
+        address: this.propertyAddress.value.trim() || undefined,
+        images: [image],
+        ownerUserId: String(user.id),
+        ownerName: `${user.firstName} ${user.lastName}`,
+        ownerTelephone: this.profiles.profile().telephoneNumber,
+        ownerCommunityName:
+          this.communityHeading() === 'My Community'
+            ? undefined
+            : this.communityHeading(),
+        businessProfileId: this.propertyBusinessId.value || undefined,
+        businessName: this.businessProfiles().find(
+          ({ id }) => id === this.propertyBusinessId.value
+        )?.businessName,
+        status: 'AVAILABLE'
+      })
+      .subscribe({
+        next: () => {
+          this.propertyNotice.set('Property listing published.');
+          this.resetPropertyForm();
+          this.propertyFormOpen.set(false);
+          this.applyPropertyFilters();
+        },
+        error: (error) =>
+          this.propertyNotice.set(
+            error.error?.message ?? 'The property listing could not be published.'
+          )
+      });
+  }
+
+  applyPropertyFilters(): void {
+    this.keytchaProperties
+      .searchListings({
+        query: this.propertySearch.value,
+        listingType: this.propertyFilterListingType.value as
+          | PropertyListingType
+          | '',
+        propertyType: this.propertyFilterType.value as PropertyType | '',
+        area: this.propertyFilterArea.value,
+        minPrice: Number(this.propertyFilterMinPrice.value) || undefined,
+        maxPrice: Number(this.propertyFilterMaxPrice.value) || undefined,
+        minimumBedrooms: Number(this.propertyFilterBedrooms.value) || undefined,
+        status: this.propertyFilterStatus.value as
+          | PropertyListing['status']
+          | ''
+      })
+      .subscribe((listings) => this.propertyListings.set(listings));
+  }
+
+  clearPropertyFilters(): void {
+    [
+      this.propertySearch,
+      this.propertyFilterListingType,
+      this.propertyFilterType,
+      this.propertyFilterArea,
+      this.propertyFilterMinPrice,
+      this.propertyFilterMaxPrice,
+      this.propertyFilterBedrooms
+    ].forEach((control) => control.setValue(''));
+    this.propertyFilterStatus.setValue('AVAILABLE');
+    this.applyPropertyFilters();
+  }
+
+  viewProperty(listing: PropertyListing): void {
+    this.selectedProperty.set(listing);
+    this.propertyConversation.set(null);
+    this.propertyMessages.set([]);
+    this.propertyNotice.set('');
+  }
+
+  startPropertyConversation(listing: PropertyListing): void {
+    this.keytchaProperties.startConversation(listing.id).subscribe({
+      next: (conversation) => {
+        this.selectedProperty.set(listing);
+        this.propertyConversation.set(conversation);
+        this.propertyNotice.set(`Enquiry with ${listing.ownerName} is ready.`);
+        this.loadPropertyConversations();
+        this.refreshPropertyMessages();
+      },
+      error: (error) =>
+        this.propertyNotice.set(
+          error.error?.message ?? 'The property enquiry could not be opened.'
+        )
+    });
+  }
+
+  openPropertyConversation(conversation: PropertyConversation): void {
+    const listing = this.propertyListings().find(
+      ({ id }) => id === conversation.listingId
+    );
+    if (listing) this.selectedProperty.set(listing);
+    this.propertyConversation.set(conversation);
+    this.propertyNotice.set('');
+    this.refreshPropertyMessages();
+  }
+
+  sendPropertyMessage(): void {
+    const conversation = this.propertyConversation();
+    const messageText = this.propertyChatText.value.trim();
+    if (!conversation || !messageText) return;
+
+    this.keytchaProperties.sendMessage(conversation.id, messageText).subscribe({
+      next: () => {
+        this.propertyChatText.setValue('');
+        this.propertyNotice.set('Message sent.');
+        this.refreshPropertyMessages();
+      },
+      error: (error) =>
+        this.propertyNotice.set(
+          error.error?.message ?? 'Your property message could not be sent.'
+        )
+    });
+  }
+
+  propertyPriceLabel(listing: PropertyListing): string {
+    const price = new Intl.NumberFormat('en-ZA', {
+      style: 'currency',
+      currency: 'ZAR',
+      maximumFractionDigits: 0
+    }).format(listing.price);
+    return listing.listingType === 'RENT' ? `${price} / month` : price;
+  }
+
+  private resetPropertyForm(): void {
+    this.propertyTitle.setValue('');
+    this.propertyDescription.setValue('');
+    this.propertyListingType.setValue('RENT');
+    this.propertyType.setValue('HOUSE');
+    this.propertyPrice.setValue('');
+    this.propertyBedrooms.setValue('1');
+    this.propertyBathrooms.setValue('1');
+    this.propertyParking.setValue('0');
+    this.propertyArea.setValue('');
+    this.propertyAddress.setValue('');
+    this.propertyImage.set('');
+  }
+
+  private loadPropertyListings(): void {
+    this.keytchaProperties
+      .getListings()
+      .subscribe((listings) => this.propertyListings.set(listings));
+  }
+
+  private loadPropertyConversations(): void {
+    this.keytchaProperties.getConversations().subscribe({
+      next: (conversations) => this.propertyConversations.set(conversations),
+      error: () => this.propertyConversations.set([])
+    });
+  }
+
+  private refreshPropertyMessages(): void {
+    const conversation = this.propertyConversation();
+    if (!conversation) return;
+    this.keytchaProperties
+      .getMessages(conversation.id)
+      .subscribe((messages) => this.propertyMessages.set(messages));
+  }
+
   closeJobs(): void {
     this.jobsOpen.set(false);
     this.jobFormOpen.set(false);
@@ -1603,6 +2495,13 @@ export class DashboardComponent implements OnInit {
     this.jobMessages.set([]);
     this.jobPaymentRequests.set([]);
     this.jobNotice.set('');
+    this.returnToCommunity();
+  }
+
+  private returnToCommunity(): void {
+    if (this.returnToCommunityOnClose) {
+      void this.router.navigate(['/community']);
+    }
   }
 
   addJobListing(): void {
@@ -1633,6 +2532,10 @@ export class DashboardComponent implements OnInit {
       listedByCommunityName:
         this.communityHeading() === 'My Community' ? undefined : this.communityHeading(),
       listerRating: 5,
+      businessProfileId: this.jobBusinessId.value || undefined,
+      businessName: this.businessProfiles().find(
+        ({ id }) => id === this.jobBusinessId.value
+      )?.businessName,
       status: 'OPEN'
     }).subscribe(() => this.applyJobFilters());
     this.jobTitle.setValue('');
@@ -2031,7 +2934,7 @@ export class DashboardComponent implements OnInit {
     if (
       this.resetLoading() ||
       !window.confirm(
-        'Reset all subscribed services and applications so you can start again?'
+        'Start again? This permanently deletes all subscriptions, applications, accepted Terms and Conditions evidence, and documents created or uploaded for you. Your account, profile, roles and community will remain.'
       )
     ) {
       return;
@@ -2137,7 +3040,7 @@ export class DashboardComponent implements OnInit {
     }
 
     if (normalized.includes('ride') || normalized.includes('lift') || normalized.includes('transport')) {
-      return 'Catch a Ride is free to activate and helps community members find or offer local rides.';
+      return 'Catch a Lift is free to activate and helps community members find or offer local lifts.';
     }
 
     if (normalized.includes('kzncc') || normalized.includes('christian council')) {
@@ -2152,7 +3055,7 @@ export class DashboardComponent implements OnInit {
       return 'Choose a service card and select Subscribe. Free services activate immediately, while paid services show their available plan and price.';
     }
 
-    return 'I can help with Funeral Services, Job Search, Wallet, Referral, My Community, VAS Services, EduU, Vuma Fibre, Catch a Ride and Buy and Sell.';
+    return 'I can help with Funeral Services, Job Search, Wallet, Referral, My Community, VAS Services, EduU, Vuma Fibre, Catch a Lift and Buy and Sell.';
   }
 
   logout(): void {

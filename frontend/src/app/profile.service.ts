@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 
 export interface MemberProfile {
+  profilePhoto: string;
   idNumber: string;
   telephoneNumber: string;
   email: string;
@@ -14,6 +15,7 @@ export interface MemberProfile {
 }
 
 const emptyProfile: MemberProfile = {
+  profilePhoto: '',
   idNumber: '',
   telephoneNumber: '',
   email: '',

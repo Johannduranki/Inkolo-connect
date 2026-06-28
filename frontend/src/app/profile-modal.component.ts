@@ -19,8 +19,10 @@ export class ProfileModalComponent implements OnInit {
   @Output() readonly closed = new EventEmitter<void>();
   readonly activeTab = signal<'details' | 'documents'>('details');
   readonly memberCommunity = signal<MemberCommunity | null>(null);
+  readonly photoError = signal('');
 
   private readonly current = this.profiles.profile();
+  readonly profilePhoto = signal(this.current.profilePhoto);
   readonly idNumber = new FormControl(this.current.idNumber, { nonNullable: true });
   readonly telephoneNumber = new FormControl(this.current.telephoneNumber, { nonNullable: true });
   readonly email = new FormControl(this.current.email, { nonNullable: true });
@@ -43,6 +45,7 @@ export class ProfileModalComponent implements OnInit {
 
   save(): void {
     this.profiles.save({
+      profilePhoto: this.profilePhoto(),
       idNumber: this.idNumber.value.trim(),
       telephoneNumber: this.telephoneNumber.value.trim(),
       email: this.email.value.trim(),
@@ -55,8 +58,31 @@ export class ProfileModalComponent implements OnInit {
     this.closed.emit();
   }
 
+  selectProfilePhoto(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    this.photoError.set('');
+    if (!file || !file.type.startsWith('image/')) return;
+    if (file.size > 1_500_000) {
+      this.photoError.set('Please choose a profile photo smaller than 1.5 MB.');
+      input.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.addEventListener('load', () =>
+      this.profilePhoto.set(String(reader.result ?? ''))
+    );
+    reader.readAsDataURL(file);
+  }
+
+  removeProfilePhoto(): void {
+    this.profilePhoto.set('');
+    this.photoError.set('');
+  }
+
   private populateControls(): void {
     const current = this.profiles.profile();
+    this.profilePhoto.set(current.profilePhoto);
     this.idNumber.setValue(current.idNumber);
     this.telephoneNumber.setValue(current.telephoneNumber);
     this.email.setValue(current.email);

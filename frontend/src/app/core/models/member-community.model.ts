@@ -5,6 +5,15 @@ export interface Church {
   region?: string;
   province?: string;
   status: 'ACTIVE' | 'PENDING' | 'SUSPENDED';
+  branding?: CommunityBranding;
+}
+
+export interface CommunityBranding {
+  logoUrl?: string;
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
 }
 
 export interface ChurchBranch {

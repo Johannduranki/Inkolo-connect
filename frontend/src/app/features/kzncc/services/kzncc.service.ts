@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, map, of } from 'rxjs';
+import { BehaviorSubject, Observable, map } from 'rxjs';
 import { AuthService, ServiceSubscription } from '../../../auth.service';
 import { KznccAnnouncement } from '../models/kzncc-announcement.model';
 import { KznccEvent } from '../models/kzncc-event.model';
@@ -120,23 +120,80 @@ const messages: KznccMessage[] = [
 @Injectable({ providedIn: 'root' })
 export class KznccService {
   private readonly auth = inject(AuthService);
+  private readonly announcementsSubject = new BehaviorSubject<KznccAnnouncement[]>([
+    ...announcements
+  ]);
+  private readonly eventsSubject = new BehaviorSubject<KznccEvent[]>([...events]);
+  private readonly messagesSubject = new BehaviorSubject<KznccMessage[]>([...messages]);
 
   getKznccAnnouncements(): Observable<KznccAnnouncement[]> {
-    return of([...announcements].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    ));
+    return this.announcementsSubject.pipe(
+      map((items) =>
+        [...items].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        )
+      )
+    );
   }
 
   getKznccEvents(): Observable<KznccEvent[]> {
-    return of([...events].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    ));
+    return this.eventsSubject.pipe(
+      map((items) =>
+        [...items].sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        )
+      )
+    );
   }
 
   getKznccMessages(): Observable<KznccMessage[]> {
-    return of([...messages].sort(
-      (a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()
-    ));
+    return this.messagesSubject.pipe(
+      map((items) =>
+        [...items].sort(
+          (a, b) =>
+            new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()
+        )
+      )
+    );
+  }
+
+  saveAnnouncement(
+    announcement: Omit<KznccAnnouncement, 'id'>,
+    announcementId?: number
+  ): KznccAnnouncement {
+    const saved = { ...announcement, id: announcementId ?? Date.now() };
+    this.announcementsSubject.next(
+      announcementId
+        ? this.announcementsSubject.value.map((item) =>
+            item.id === announcementId ? saved : item
+          )
+        : [saved, ...this.announcementsSubject.value]
+    );
+    return saved;
+  }
+
+  saveMessage(message: Omit<KznccMessage, 'id'>, messageId?: number): KznccMessage {
+    const saved = { ...message, id: messageId ?? Date.now() };
+    this.messagesSubject.next(
+      messageId
+        ? this.messagesSubject.value.map((item) =>
+            item.id === messageId ? saved : item
+          )
+        : [saved, ...this.messagesSubject.value]
+    );
+    return saved;
+  }
+
+  saveEvent(event: Omit<KznccEvent, 'id'>, eventId?: number): KznccEvent {
+    const saved = { ...event, id: eventId ?? Date.now() };
+    this.eventsSubject.next(
+      eventId
+        ? this.eventsSubject.value.map((item) =>
+            item.id === eventId ? saved : item
+          )
+        : [saved, ...this.eventsSubject.value]
+    );
+    return saved;
   }
 
   checkKznccSubscription(_userId: number): Observable<boolean> {

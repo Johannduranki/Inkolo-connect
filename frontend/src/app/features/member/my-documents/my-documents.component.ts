@@ -19,13 +19,12 @@ export class MyDocumentsComponent implements OnChanges {
   private readonly agreementsService = inject(LegalAgreementService);
 
   @Input({ required: true }) memberId!: number;
+  readonly activeFolder = signal<'terms' | 'policies'>('terms');
   readonly documents = signal<MemberDocument[]>([]);
   readonly agreements = signal<LegalAgreementEvidence[]>([]);
 
   ngOnChanges(): void {
-    if (!this.memberId) {
-      return;
-    }
+    if (!this.memberId) return;
     this.documentsService
       .getMemberDocuments(String(this.memberId))
       .subscribe((documents) => this.documents.set(documents));
@@ -35,13 +34,11 @@ export class MyDocumentsComponent implements OnChanges {
   }
 
   viewAgreement(agreement: LegalAgreementEvidence): void {
-    this.agreementsService
-      .getAgreementDocument(agreement.id)
-      .subscribe((blob) => {
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank', 'noopener');
-        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-      });
+    this.agreementsService.getAgreementDocument(agreement.id).subscribe((blob) => {
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener');
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    });
   }
 
   downloadEvidence(agreement: LegalAgreementEvidence): void {
@@ -55,5 +52,17 @@ export class MyDocumentsComponent implements OnChanges {
         link.click();
         URL.revokeObjectURL(url);
       });
+  }
+
+  policyTypeLabel(document: MemberDocument): string {
+    const labels: Record<MemberDocument['documentType'], string> = {
+      FUNERAL_COVER_POLICY: 'Funeral cover policy',
+      INSURANCE_DOCUMENT: 'Insurance policy',
+      SERVICE_AGREEMENT: 'Service policy document',
+      INVOICE: 'Policy invoice',
+      RECEIPT: 'Policy receipt',
+      OTHER: 'Service document'
+    };
+    return labels[document.documentType];
   }
 }

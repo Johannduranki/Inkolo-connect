@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { combineLatest } from 'rxjs';
 import { AuthService, User } from '../../../auth.service';
 import { KznccAnnouncement } from '../models/kzncc-announcement.model';
 import { KznccEvent } from '../models/kzncc-event.model';
@@ -88,8 +88,12 @@ export class KznccDashboardComponent implements OnInit {
     ]);
   }
 
+  returnToCommunity(): void {
+    void this.router.navigate(['/community']);
+  }
+
   private loadDashboard(userId: number): void {
-    forkJoin({
+    combineLatest({
       subscribed: this.kzncc.checkKznccSubscription(userId),
       announcements: this.kzncc.getKznccAnnouncements(),
       events: this.kzncc.getKznccEvents(),

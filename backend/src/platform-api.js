@@ -1,5 +1,11 @@
 import express from 'express';
+import multer from 'multer';
+import path from 'node:path';
+import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { createPlatformId, readPlatformState, updatePlatformState } from './platform-store.js';
+import { resetUserServiceData } from './user-reset.js';
+import { getPool } from './database.js';
 
 const cleanPhone = (value) => {
   const digits = String(value ?? '').replace(/\D/g, '');
@@ -8,6 +14,68 @@ const cleanPhone = (value) => {
 
 const currentUserId = (req) => String(req.auth.sub);
 const conversationKey = (first, second) => [String(first), String(second)].sort().join(':');
+const reportServiceNames = {
+  'build-up-balance': 'Buy and Sell',
+  funeral: 'Funeral Services',
+  community: 'My Community',
+  referral: 'Referral',
+  'job-search': 'Job Search',
+  'vas-services': 'VAS Services',
+  eduu: 'EduU',
+  'vuma-fibre': 'Vuma Fibre',
+  'catch-a-ride': 'Catch a Lift',
+  kzncc: 'KZNCC',
+  'keycha-properties': 'Keytcha Properties',
+  wallet: 'Wallet'
+};
+const communityLogoDirectory = path.resolve('uploads/community-logos');
+mkdirSync(communityLogoDirectory, { recursive: true });
+const memberDocumentDirectory = path.resolve('uploads/member-documents');
+mkdirSync(memberDocumentDirectory, { recursive: true });
+
+const communityLogoUpload = multer({
+  storage: multer.diskStorage({
+    destination: communityLogoDirectory,
+    filename: (_req, file, callback) => {
+      const extension = path.extname(file.originalname).toLowerCase();
+      callback(null, `${randomUUID()}${extension}`);
+    }
+  }),
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    files: 1
+  },
+  fileFilter: (_req, file, callback) => {
+    callback(
+      null,
+      ['image/png', 'image/jpeg', 'image/webp'].includes(file.mimetype)
+    );
+  }
+});
+
+const memberDocumentUpload = multer({
+  storage: multer.diskStorage({
+    destination: memberDocumentDirectory,
+    filename: (_req, file, callback) => {
+      callback(
+        null,
+        `${randomUUID()}${path.extname(file.originalname).toLowerCase()}`
+      );
+    }
+  }),
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+    files: 1
+  },
+  fileFilter: (_req, file, callback) => {
+    callback(
+      null,
+      ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'].includes(
+        file.mimetype
+      )
+    );
+  }
+});
 
 function publicUser(user) {
   return {
@@ -21,7 +89,7 @@ function publicUser(user) {
   };
 }
 
-export function createPlatformRouter({ requireAuth }) {
+export function createPlatformRouter({ requireAuth, databaseAvailable = false }) {
   const router = express.Router();
   router.use(requireAuth);
   const requireAdminUser = (req, res, next) => {
@@ -39,6 +107,21 @@ export function createPlatformRouter({ requireAuth }) {
     );
     if (!user?.roles.includes('KZNCC Admin')) {
       return res.status(403).json({ message: 'KZNCC Admin access is required.' });
+    }
+    return next();
+  };
+  const requireServiceProvider = (req, res, next) => {
+    const user = readPlatformState().users.find(
+      ({ id }) => String(id) === currentUserId(req)
+    );
+    if (
+      !user?.roles.some((role) =>
+        ['Service Provider Admin', 'Service Provider User'].includes(role)
+      )
+    ) {
+      return res.status(403).json({
+        message: 'Service Provider access is required.'
+      });
     }
     return next();
   };
@@ -96,6 +179,182 @@ export function createPlatformRouter({ requireAuth }) {
       );
       return removed;
     });
+  const businessServices = new Set([
+    'BUY_SELL',
+    'JOB_SEARCH',
+    'KEYTCHA_PROPERTIES',
+    'CATCH_A_RIDE'
+  ]);
+  const ownedBusiness = (state, req, businessId, service) => {
+    if (!businessId) return null;
+    return (state.businessProfiles ?? []).find(
+      (business) =>
+        business.id === String(businessId) &&
+        business.ownerUserId === currentUserId(req) &&
+        business.status === 'ACTIVE' &&
+        business.services.includes(service)
+    );
+  };
+
+  router.get('/businesses/mine', (req, res) => {
+    res.json(
+      (readPlatformState().businessProfiles ?? [])
+        .filter(({ ownerUserId }) => ownerUserId === currentUserId(req))
+        .sort((first, second) => second.createdAt.localeCompare(first.createdAt))
+    );
+  });
+
+  router.post('/businesses', (req, res) => {
+    const businessName = String(req.body?.businessName ?? '').trim();
+    const telephone = cleanPhone(req.body?.telephone);
+    const area = String(req.body?.area ?? '').trim();
+    const description = String(req.body?.description ?? '').trim();
+    const services = [...new Set(req.body?.services ?? [])].filter((service) =>
+      businessServices.has(service)
+    );
+    if (
+      businessName.length < 2 ||
+      !/^\d{10}$/.test(telephone) ||
+      !area ||
+      !description ||
+      !services.length
+    ) {
+      return res.status(400).json({
+        message:
+          'Enter the business name, 10-digit telephone number, area, description and at least one service.'
+      });
+    }
+    const business = updatePlatformState((state) => {
+      state.businessProfiles ??= [];
+      const created = {
+        id: createPlatformId('business'),
+        ownerUserId: currentUserId(req),
+        businessName,
+        registrationNumber: String(req.body?.registrationNumber ?? '').trim(),
+        telephone,
+        email: String(req.body?.email ?? '').trim(),
+        area,
+        description,
+        services,
+        status: 'ACTIVE',
+        createdAt: new Date().toISOString()
+      };
+      state.businessProfiles.unshift(created);
+      return created;
+    });
+    return res.status(201).json(business);
+  });
+
+  router.post('/businesses/:businessId/bulk', (req, res) => {
+    const service = String(req.body?.service ?? '');
+    const records = Array.isArray(req.body?.records) ? req.body.records.slice(0, 100) : [];
+    const state = readPlatformState();
+    const business = ownedBusiness(state, req, req.params.businessId, service);
+    const owner = state.users.find(({ id }) => String(id) === currentUserId(req));
+    if (!business) {
+      return res.status(403).json({
+        message: 'This business is not registered for the selected service.'
+      });
+    }
+    if (!records.length) {
+      return res.status(400).json({ message: 'Add at least one bulk record.' });
+    }
+
+    const createdRecords = updatePlatformState((platformState) => {
+      const created = [];
+      for (const record of records) {
+        if (service === 'BUY_SELL') {
+          const title = String(record.title ?? '').trim();
+          const price = Number(record.price);
+          if (!title || !Number.isFinite(price) || price < 0) continue;
+          const item = {
+            ...record,
+            id: createPlatformId('listing'),
+            title,
+            price,
+            images: Array.isArray(record.images) ? record.images : [],
+            sellerUserId: currentUserId(req),
+            sellerName: business.businessName,
+            businessProfileId: business.id,
+            businessName: business.businessName,
+            area: String(record.area ?? business.area),
+            status: 'AVAILABLE',
+            createdAt: new Date().toISOString()
+          };
+          platformState.marketplaceListings.unshift(item);
+          created.push(item);
+        } else if (service === 'JOB_SEARCH') {
+          const title = String(record.title ?? '').trim();
+          if (!title) continue;
+          const item = {
+            ...record,
+            id: createPlatformId('job'),
+            title,
+            listedByUserId: currentUserId(req),
+            listedByUserName: business.businessName,
+            businessProfileId: business.id,
+            businessName: business.businessName,
+            area: String(record.area ?? business.area),
+            status: 'OPEN',
+            createdAt: new Date().toISOString()
+          };
+          platformState.jobListings.unshift(item);
+          created.push(item);
+        } else if (service === 'KEYTCHA_PROPERTIES') {
+          const title = String(record.title ?? '').trim();
+          const price = Number(record.price);
+          if (!title || !Number.isFinite(price) || price <= 0) continue;
+          const item = {
+            ...record,
+            id: createPlatformId('property'),
+            title,
+            price,
+            images: Array.isArray(record.images) ? record.images : [],
+            ownerUserId: currentUserId(req),
+            ownerName: business.businessName,
+            ownerTelephone: business.telephone,
+            businessProfileId: business.id,
+            businessName: business.businessName,
+            area: String(record.area ?? business.area),
+            status: 'AVAILABLE',
+            createdAt: new Date().toISOString()
+          };
+          platformState.propertyListings ??= [];
+          platformState.propertyListings.unshift(item);
+          created.push(item);
+        } else if (service === 'CATCH_A_RIDE') {
+          const vehicle = String(record.vehicle ?? '').trim();
+          const registrationNumber = String(record.registrationNumber ?? '').trim();
+          if (!vehicle || !registrationNumber) continue;
+          const item = {
+            id: createPlatformId('lift'),
+            driverUserId: currentUserId(req),
+            driverName: business.businessName,
+            driverTelephone: business.telephone || owner?.telephoneNumber,
+            vehicle,
+            registrationNumber,
+            seatsAvailable: Math.max(1, Number(record.seatsAvailable) || 1),
+            rating: 5,
+            distanceKm: Math.min(10, Math.max(0.5, Number(record.distanceKm) || 4)),
+            directionDegrees: Number(record.directionDegrees) || 90,
+            destination: String(record.destination ?? business.area),
+            departureTime: String(record.departureTime ?? 'Available now'),
+            businessProfileId: business.id,
+            businessName: business.businessName,
+            available: true
+          };
+          platformState.availableLifts ??= [];
+          platformState.availableLifts.unshift(item);
+          created.push(item);
+        }
+      }
+      return created;
+    });
+    return res.status(201).json({
+      created: createdRecords.length,
+      records: createdRecords
+    });
+  });
 
   router.get('/profile', (req, res) => {
     const profile = readPlatformState().profiles.find(
@@ -107,6 +366,7 @@ export function createPlatformRouter({ requireAuth }) {
   router.put('/profile', (req, res) => {
     const userId = Number(req.auth.sub);
     const allowedFields = [
+      'profilePhoto',
       'idNumber',
       'telephoneNumber',
       'email',
@@ -139,6 +399,27 @@ export function createPlatformRouter({ requireAuth }) {
 
   router.get('/admin/users', requireAdminUser, (req, res) => {
     res.json(readPlatformState().users.map(publicUser));
+  });
+
+  router.get('/admin/users/:userId/profile', requireAdminUser, (req, res) => {
+    const state = readPlatformState();
+    const user = state.users.find(
+      ({ id }) => String(id) === req.params.userId
+    );
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+    const profile = state.profiles.find(
+      ({ userId }) => String(userId) === req.params.userId
+    );
+    const community = (state.memberCommunities ?? []).find(
+      ({ memberId }) => String(memberId) === req.params.userId
+    );
+    return res.json({
+      ...publicUser(user),
+      profile: profile ?? null,
+      community: community ?? null
+    });
   });
 
   router.get('/admin/analytics', requireAdminUser, (_req, res) => {
@@ -176,6 +457,126 @@ export function createPlatformRouter({ requireAuth }) {
     });
   });
 
+  router.get(
+    '/admin/reports/paid-members',
+    requireAdminUser,
+    async (req, res, next) => {
+      try {
+        const state = readPlatformState();
+        const reportType = String(req.query.reportType ?? 'BY_CHURCH');
+        const month = String(req.query.month ?? '');
+        const churchId = String(req.query.churchId ?? '');
+        const serviceCode = String(req.query.serviceCode ?? '');
+        const usersById = new Map(
+          state.users.map((user) => [String(user.id), user])
+        );
+        const communitiesByMemberId = new Map(
+          (state.memberCommunities ?? []).map((community) => [
+            String(community.memberId),
+            community
+          ])
+        );
+        let subscriptions = state.serviceSubscriptions ?? [];
+
+        if (databaseAvailable) {
+          const [databaseSubscriptions] = await getPool().execute(
+            `SELECT ss.user_id AS userId, ss.service_code AS serviceCode,
+                    ss.plan_code AS planCode, ss.amount_cents AS amountCents,
+                    ss.status, ss.created_at AS subscribedAt,
+                    u.first_name AS firstName, u.last_name AS lastName
+               FROM service_subscriptions ss
+               JOIN users u ON u.id = ss.user_id
+              WHERE ss.status = 'active' AND ss.amount_cents > 0`
+          );
+          subscriptions = databaseSubscriptions.map((subscription) => ({
+            ...subscription,
+            subscribedAt:
+              subscription.subscribedAt instanceof Date
+                ? subscription.subscribedAt.toISOString()
+                : String(subscription.subscribedAt ?? ''),
+            databaseUser: {
+              firstName: subscription.firstName,
+              lastName: subscription.lastName
+            }
+          }));
+        }
+
+        let rows = subscriptions
+          .filter(
+            (subscription) =>
+              subscription.status === 'active' &&
+              Number(subscription.amountCents) > 0
+          )
+          .map((subscription) => {
+            const user =
+              usersById.get(String(subscription.userId)) ??
+              subscription.databaseUser;
+            const community = communitiesByMemberId.get(
+              String(subscription.userId)
+            );
+            const subscribedAt = String(subscription.subscribedAt ?? '');
+            return {
+              userId: String(subscription.userId),
+              memberName: user
+                ? `${user.firstName} ${user.lastName}`
+                : `Member ${subscription.userId}`,
+              telephoneNumber: user?.telephoneNumber ?? '',
+              churchId: String(community?.churchId ?? ''),
+              churchName: community?.churchName ?? 'No church selected',
+              branchName: community?.branchName ?? '',
+              serviceCode: subscription.serviceCode,
+              serviceName:
+                reportServiceNames[subscription.serviceCode] ??
+                subscription.planLabel ??
+                subscription.serviceCode,
+              planLabel: subscription.planLabel ?? subscription.planCode,
+              amountCents: Number(subscription.amountCents),
+              paidAt: subscribedAt,
+              paidMonth: subscribedAt.slice(0, 7),
+              paymentStatus: 'PAID'
+            };
+          });
+
+        if (month) rows = rows.filter((row) => row.paidMonth === month);
+        if (churchId) rows = rows.filter((row) => row.churchId === churchId);
+        if (serviceCode) {
+          rows = rows.filter((row) => row.serviceCode === serviceCode);
+        }
+
+        rows.sort((first, second) => {
+          if (reportType === 'BY_CHURCH') {
+            return (
+              first.churchName.localeCompare(second.churchName) ||
+              first.memberName.localeCompare(second.memberName)
+            );
+          }
+          if (reportType === 'BY_SERVICE') {
+            return (
+              first.serviceName.localeCompare(second.serviceName) ||
+              first.memberName.localeCompare(second.memberName)
+            );
+          }
+          return second.paidAt.localeCompare(first.paidAt);
+        });
+
+        return res.json({
+          reportType,
+          generatedAt: new Date().toISOString(),
+          filters: { month, churchId, serviceCode },
+          totalMembers: new Set(rows.map((row) => row.userId)).size,
+          totalPayments: rows.length,
+          totalAmountCents: rows.reduce(
+            (total, row) => total + row.amountCents,
+            0
+          ),
+          rows
+        });
+      } catch (error) {
+        return next(error);
+      }
+    }
+  );
+
   router.post('/admin/users', requireAdminUser, (req, res) => {
     const roles = Array.isArray(req.body?.roles) && req.body.roles.length
       ? req.body.roles.map(String)
@@ -193,6 +594,28 @@ export function createPlatformRouter({ requireAuth }) {
     if (!removed) return res.status(404).json({ message: 'User not found.' });
     return res.status(204).end();
   });
+
+  router.delete(
+    '/admin/users/:userId/service-data',
+    requireAdminUser,
+    async (req, res, next) => {
+      try {
+        const user = readPlatformState().users.find(
+          ({ id }) => String(id) === req.params.userId
+        );
+        if (!user) {
+          return res.status(404).json({ message: 'User not found.' });
+        }
+        const summary = await resetUserServiceData(
+          req.params.userId,
+          databaseAvailable
+        );
+        return res.json(summary);
+      } catch (error) {
+        return next(error);
+      }
+    }
+  );
 
   router.put('/admin/users/:userId/roles', requireAdminUser, (req, res) => {
     const roles = Array.isArray(req.body?.roles)
@@ -259,6 +682,169 @@ export function createPlatformRouter({ requireAuth }) {
       .map(({ documentSnapshot, ...agreement }) => agreement);
     res.json(agreements);
   });
+
+  router.get('/member-documents/me', (req, res) => {
+    const documents = (readPlatformState().memberDocuments ?? [])
+      .filter(({ memberId }) => String(memberId) === currentUserId(req))
+      .sort((first, second) =>
+        String(second.uploadedAt).localeCompare(String(first.uploadedAt))
+      );
+    res.json(documents);
+  });
+
+  router.get(
+    '/admin/users/:userId/documents',
+    requireAdminUser,
+    (req, res) => {
+      const documents = (readPlatformState().memberDocuments ?? [])
+        .filter(
+          ({ memberId }) => String(memberId) === req.params.userId
+        )
+        .sort((first, second) =>
+          String(second.uploadedAt).localeCompare(String(first.uploadedAt))
+        );
+      res.json(documents);
+    }
+  );
+
+  router.get(
+    '/service-provider/documents',
+    requireServiceProvider,
+    (req, res) => {
+      const serviceProviderId = String(req.query.serviceProviderId ?? 'sp-001');
+      const documents = (readPlatformState().memberDocuments ?? [])
+        .filter((document) => document.serviceProviderId === serviceProviderId)
+        .sort((first, second) =>
+          String(second.uploadedAt).localeCompare(String(first.uploadedAt))
+        );
+      res.json(documents);
+    }
+  );
+
+  router.post(
+    '/service-provider/documents',
+    requireServiceProvider,
+    memberDocumentUpload.single('file'),
+    (req, res) => {
+      const memberId = String(req.body?.memberId ?? '').trim();
+      const serviceId = String(req.body?.serviceId ?? '').trim();
+      if (!req.file || !memberId || !serviceId) {
+        if (req.file?.path && existsSync(req.file.path)) unlinkSync(req.file.path);
+        return res.status(400).json({
+          message: 'Choose a member, service and document file.'
+        });
+      }
+      const state = readPlatformState();
+      const member = state.users.find(({ id }) => String(id) === memberId);
+      const uploader = state.users.find(
+        ({ id }) => String(id) === currentUserId(req)
+      );
+      if (!member) {
+        if (existsSync(req.file.path)) unlinkSync(req.file.path);
+        return res.status(404).json({ message: 'Member not found.' });
+      }
+      const document = updatePlatformState((platformState) => {
+        platformState.memberDocuments ??= [];
+        const created = {
+          id: createPlatformId('document'),
+          memberId,
+          serviceProviderId: String(req.body?.serviceProviderId ?? 'sp-001'),
+          serviceId,
+          policyNumber: String(
+            req.body?.policyNumber ?? `POL-${Date.now()}`
+          ),
+          documentType: String(
+            req.body?.documentType ?? 'FUNERAL_COVER_POLICY'
+          ),
+          fileName: req.file.originalname,
+          fileUrl: `/uploads/member-documents/${req.file.filename}`,
+          uploadedAt: new Date().toISOString(),
+          uploadedBy: uploader
+            ? `${uploader.firstName} ${uploader.lastName}`
+            : 'Service Provider',
+          status: 'ACTIVE'
+        };
+        platformState.memberDocuments.unshift(created);
+        return created;
+      });
+      return res.status(201).json(document);
+    }
+  );
+
+  router.get('/admin/churches', requireAdminUser, (_req, res) => {
+    res.json(readPlatformState().churches);
+  });
+
+  router.put(
+    '/admin/churches/:churchId/branding',
+    requireAdminUser,
+    (req, res) => {
+      const colorPattern = /^#[0-9a-f]{6}$/i;
+      const branding = {
+        logoUrl: String(req.body?.logoUrl ?? ''),
+        primaryColor: String(req.body?.primaryColor ?? ''),
+        secondaryColor: String(req.body?.secondaryColor ?? ''),
+        accentColor: String(req.body?.accentColor ?? ''),
+        backgroundColor: String(req.body?.backgroundColor ?? '')
+      };
+      if (
+        branding.logoUrl.length > 900_000 ||
+        !colorPattern.test(branding.primaryColor) ||
+        !colorPattern.test(branding.secondaryColor) ||
+        !colorPattern.test(branding.accentColor) ||
+        !colorPattern.test(branding.backgroundColor)
+      ) {
+        return res.status(400).json({
+          message: 'Choose a valid community logo and colour scheme.'
+        });
+      }
+      const church = updatePlatformState((state) => {
+        const selected = state.churches.find(
+          ({ id }) => String(id) === req.params.churchId
+        );
+        if (!selected) return null;
+        selected.branding = branding;
+        return selected;
+      });
+      if (!church) {
+        return res.status(404).json({ message: 'Community was not found.' });
+      }
+      return res.json(church);
+    }
+  );
+
+  router.post(
+    '/admin/churches/:churchId/logo',
+    requireAdminUser,
+    communityLogoUpload.single('logo'),
+    (req, res) => {
+      if (!req.file) {
+        return res.status(400).json({
+          message: 'Choose a PNG, JPG or WEBP community logo up to 5 MB.'
+        });
+      }
+      const logoUrl = `/uploads/community-logos/${req.file.filename}`;
+      const church = updatePlatformState((state) => {
+        const selected = state.churches.find(
+          ({ id }) => String(id) === req.params.churchId
+        );
+        if (!selected) return null;
+        selected.branding ??= {
+          logoUrl: '',
+          primaryColor: '#062d6b',
+          secondaryColor: '#087ce8',
+          accentColor: '#58c91a',
+          backgroundColor: '#f2f8ff'
+        };
+        selected.branding.logoUrl = logoUrl;
+        return selected;
+      });
+      if (!church) {
+        return res.status(404).json({ message: 'Community was not found.' });
+      }
+      return res.status(201).json(church);
+    }
+  );
 
   router.get('/agreements/:agreementId/document', (req, res) => {
     const state = readPlatformState();
@@ -333,6 +919,21 @@ export function createPlatformRouter({ requireAuth }) {
   router.put('/community/me', (req, res) => {
     const { churchId, branchId } = req.body ?? {};
     const state = readPlatformState();
+    const existingMembership = state.memberCommunities.find(
+      ({ memberId }) => memberId === currentUserId(req)
+    );
+    if (existingMembership) {
+      const sameSelection =
+        existingMembership.churchId === String(churchId) &&
+        String(existingMembership.branchId ?? '') === String(branchId ?? '');
+      if (sameSelection) {
+        return res.json(existingMembership);
+      }
+      return res.status(409).json({
+        message:
+          'Your community is already confirmed. Email Duranki Admin to request a church or branch change.'
+      });
+    }
     const church = state.churches.find(
       (item) => item.id === String(churchId) && item.status === 'ACTIVE'
     );
@@ -356,11 +957,7 @@ export function createPlatformRouter({ requireAuth }) {
         branchId: branch?.id,
         branchName: branch?.branchName
       };
-      const index = draft.memberCommunities.findIndex(
-        ({ memberId }) => memberId === currentUserId(req)
-      );
-      if (index >= 0) draft.memberCommunities[index] = saved;
-      else draft.memberCommunities.push(saved);
+      draft.memberCommunities.push(saved);
       return saved;
     });
     return res.json(membership);
@@ -674,8 +1271,15 @@ export function createPlatformRouter({ requireAuth }) {
   });
 
   router.post('/marketplace/listings', (req, res) => {
-    const current = readPlatformState().users.find(
+    const platformState = readPlatformState();
+    const current = platformState.users.find(
       ({ id }) => String(id) === currentUserId(req)
+    );
+    const business = ownedBusiness(
+      platformState,
+      req,
+      req.body?.businessProfileId,
+      'BUY_SELL'
     );
     const title = String(req.body?.title ?? '').trim();
     const price = Number(req.body?.price);
@@ -689,7 +1293,11 @@ export function createPlatformRouter({ requireAuth }) {
         title,
         price,
         sellerUserId: currentUserId(req),
-        sellerName: current ? `${current.firstName} ${current.lastName}` : 'Member',
+        sellerName:
+          business?.businessName ??
+          (current ? `${current.firstName} ${current.lastName}` : 'Member'),
+        businessProfileId: business?.id,
+        businessName: business?.businessName,
         status: 'AVAILABLE',
         createdAt: new Date().toISOString()
       };
@@ -836,13 +1444,436 @@ export function createPlatformRouter({ requireAuth }) {
     return res.status(201).json(message);
   });
 
+  router.get('/rides/available', (_req, res) => {
+    res.json(
+      (readPlatformState().availableLifts ?? [])
+        .filter((lift) => lift.available && Number(lift.distanceKm) <= 10)
+        .sort((first, second) => first.distanceKm - second.distanceKm)
+    );
+  });
+
+  router.get('/rides/offers/mine', (req, res) => {
+    const offer = (readPlatformState().availableLifts ?? []).find(
+      ({ driverUserId }) => String(driverUserId) === currentUserId(req)
+    );
+    return res.json(offer ?? null);
+  });
+
+  router.post('/rides/offers', (req, res) => {
+    const state = readPlatformState();
+    const driver = state.users.find(({ id }) => String(id) === currentUserId(req));
+    const latitude = Number(req.body?.latitude);
+    const longitude = Number(req.body?.longitude);
+    const vehicle = String(req.body?.vehicle ?? '').trim();
+    const registrationNumber = String(req.body?.registrationNumber ?? '').trim();
+    const destination = String(req.body?.destination ?? '').trim();
+    const departureTime = String(req.body?.departureTime ?? '').trim();
+    const seatsAvailable = Math.max(1, Math.min(8, Number(req.body?.seatsAvailable) || 1));
+    const business = ownedBusiness(
+      state,
+      req,
+      req.body?.businessProfileId,
+      'CATCH_A_RIDE'
+    );
+    if (
+      !driver ||
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      !vehicle ||
+      !registrationNumber ||
+      !destination ||
+      !departureTime
+    ) {
+      return res.status(400).json({
+        message: 'Share your location and complete the vehicle and trip details.'
+      });
+    }
+    const offer = updatePlatformState((platformState) => {
+      platformState.availableLifts ??= [];
+      const existing = platformState.availableLifts.find(
+        ({ driverUserId }) => String(driverUserId) === currentUserId(req)
+      );
+      const details = {
+        driverUserId: currentUserId(req),
+        driverName:
+          business?.businessName ?? `${driver.firstName} ${driver.lastName}`,
+        driverTelephone: business?.telephone ?? driver.telephoneNumber,
+        vehicle,
+        registrationNumber,
+        seatsAvailable,
+        rating: existing?.rating ?? 5,
+        distanceKm: existing?.distanceKm ?? 2,
+        directionDegrees: existing?.directionDegrees ?? 90,
+        destination,
+        departureTime,
+        latitude,
+        longitude,
+        businessProfileId: business?.id,
+        businessName: business?.businessName,
+        available: true,
+        updatedAt: new Date().toISOString()
+      };
+      if (existing) {
+        Object.assign(existing, details);
+        return existing;
+      }
+      const created = { id: createPlatformId('lift'), ...details };
+      platformState.availableLifts.unshift(created);
+      return created;
+    });
+    return res.status(201).json(offer);
+  });
+
+  router.patch('/rides/offers/mine', (req, res) => {
+    const offer = updatePlatformState((state) => {
+      const existing = (state.availableLifts ?? []).find(
+        ({ driverUserId }) => String(driverUserId) === currentUserId(req)
+      );
+      if (!existing) return null;
+      existing.available = Boolean(req.body?.available);
+      existing.updatedAt = new Date().toISOString();
+      return existing;
+    });
+    return offer
+      ? res.json(offer)
+      : res.status(404).json({ message: 'No lift offer was found.' });
+  });
+
+  router.get('/rides/requests', (req, res) => {
+    const userId = currentUserId(req);
+    const requests = readPlatformState().rideRequests ?? [];
+    res.json({
+      outgoing: requests
+        .filter(({ passengerUserId }) => String(passengerUserId) === userId)
+        .sort((first, second) => second.requestedAt.localeCompare(first.requestedAt)),
+      incoming: requests
+        .filter(({ driverUserId }) => String(driverUserId) === userId)
+        .sort((first, second) => second.requestedAt.localeCompare(first.requestedAt))
+    });
+  });
+
+  router.post('/rides/requests', (req, res) => {
+    const state = readPlatformState();
+    const lift = (state.availableLifts ?? []).find(
+      ({ id, available }) => id === String(req.body?.liftId) && available
+    );
+    const passenger = state.users.find(
+      ({ id }) => String(id) === currentUserId(req)
+    );
+    const latitude = Number(req.body?.latitude);
+    const longitude = Number(req.body?.longitude);
+    if (!lift || !passenger || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return res.status(400).json({
+        message: 'Choose an available lift and share a valid pickup location.'
+      });
+    }
+    if (String(lift.driverUserId) === currentUserId(req)) {
+      return res.status(400).json({ message: 'You cannot request your own lift.' });
+    }
+
+    const created = updatePlatformState((platformState) => {
+      platformState.rideRequests ??= [];
+      const request = {
+        id: createPlatformId('ride-request'),
+        liftId: lift.id,
+        passengerUserId: currentUserId(req),
+        passengerName: `${passenger.firstName} ${passenger.lastName}`,
+        passengerTelephone: passenger.telephoneNumber,
+        driverUserId: lift.driverUserId,
+        driverName: lift.driverName,
+        vehicle: lift.vehicle,
+        pickupLatitude: latitude,
+        pickupLongitude: longitude,
+        pickupLabel: String(req.body?.pickupLabel ?? 'Shared current location').slice(0, 120),
+        requestedAt: new Date().toISOString(),
+        status: 'PENDING'
+      };
+      platformState.rideRequests.unshift(request);
+      return request;
+    });
+    return res.status(201).json(created);
+  });
+
+  router.patch('/rides/requests/:requestId', (req, res) => {
+    const requestedStatus = String(req.body?.status ?? '');
+    if (!['ACCEPTED', 'DECLINED', 'CANCELLED'].includes(requestedStatus)) {
+      return res.status(400).json({ message: 'Choose a valid ride request action.' });
+    }
+
+    const updated = updatePlatformState((state) => {
+      const request = (state.rideRequests ?? []).find(
+        ({ id }) => id === req.params.requestId
+      );
+      if (!request || request.status !== 'PENDING') return null;
+      const userId = currentUserId(req);
+      const isPassenger = String(request.passengerUserId) === userId;
+      const isDriver = String(request.driverUserId) === userId;
+      if (
+        (requestedStatus === 'CANCELLED' && !isPassenger) ||
+        (requestedStatus !== 'CANCELLED' && !isDriver)
+      ) {
+        return null;
+      }
+      request.status = requestedStatus;
+      request.driverMessage =
+        requestedStatus === 'ACCEPTED' ? 'On my way' : undefined;
+      request.updatedAt = new Date().toISOString();
+      return request;
+    });
+
+    return updated
+      ? res.json(updated)
+      : res.status(403).json({ message: 'This ride request cannot be updated.' });
+  });
+
+  router.get('/properties/listings', (_req, res) => {
+    res.json(readPlatformState().propertyListings ?? []);
+  });
+
+  router.post('/properties/listings', (req, res) => {
+    const state = readPlatformState();
+    const current = state.users.find(({ id }) => String(id) === currentUserId(req));
+    const business = ownedBusiness(
+      state,
+      req,
+      req.body?.businessProfileId,
+      'KEYTCHA_PROPERTIES'
+    );
+    const title = String(req.body?.title ?? '').trim();
+    const description = String(req.body?.description ?? '').trim();
+    const listingType = String(req.body?.listingType ?? '');
+    const propertyType = String(req.body?.propertyType ?? '');
+    const price = Number(req.body?.price);
+    const bedrooms = Number(req.body?.bedrooms ?? 0);
+    const bathrooms = Number(req.body?.bathrooms ?? 0);
+    const parkingSpaces = Number(req.body?.parkingSpaces ?? 0);
+    const allowedListingTypes = new Set(['RENT', 'SALE']);
+    const allowedPropertyTypes = new Set([
+      'HOUSE',
+      'APARTMENT',
+      'ROOM',
+      'TOWNHOUSE',
+      'LAND',
+      'COMMERCIAL'
+    ]);
+
+    if (
+      !title ||
+      !description ||
+      !allowedListingTypes.has(listingType) ||
+      !allowedPropertyTypes.has(propertyType) ||
+      !Number.isFinite(price) ||
+      price <= 0
+    ) {
+      return res.status(400).json({
+        message: 'Enter the property details, listing type and a valid price.'
+      });
+    }
+
+    const listing = updatePlatformState((platformState) => {
+      const created = {
+        ...req.body,
+        id: createPlatformId('property'),
+        title,
+        description,
+        listingType,
+        propertyType,
+        price,
+        bedrooms: Number.isFinite(bedrooms) && bedrooms >= 0 ? bedrooms : 0,
+        bathrooms: Number.isFinite(bathrooms) && bathrooms >= 0 ? bathrooms : 0,
+        parkingSpaces:
+          Number.isFinite(parkingSpaces) && parkingSpaces >= 0 ? parkingSpaces : 0,
+        ownerUserId: currentUserId(req),
+        ownerName:
+          business?.businessName ??
+          (current ? `${current.firstName} ${current.lastName}` : 'Member'),
+        ownerTelephone: business?.telephone ?? current?.telephoneNumber,
+        businessProfileId: business?.id,
+        businessName: business?.businessName,
+        status: 'AVAILABLE',
+        createdAt: new Date().toISOString()
+      };
+      platformState.propertyListings ??= [];
+      platformState.propertyListings.unshift(created);
+      return created;
+    });
+    return res.status(201).json(listing);
+  });
+
+  router.patch('/properties/listings/:id', (req, res) => {
+    const allowedStatuses = new Set([
+      'AVAILABLE',
+      'UNDER_OFFER',
+      'RENTED',
+      'SOLD',
+      'WITHDRAWN'
+    ]);
+    const listing = updatePlatformState((state) => {
+      const found = (state.propertyListings ?? []).find(
+        ({ id }) => id === req.params.id
+      );
+      if (
+        found &&
+        found.ownerUserId === currentUserId(req) &&
+        allowedStatuses.has(String(req.body?.status))
+      ) {
+        found.status = String(req.body.status);
+      }
+      return found;
+    });
+    if (!listing) return res.status(404).json({ message: 'Property listing not found.' });
+    return res.json(listing);
+  });
+
+  router.post('/properties/listings/:id/conversations', (req, res) => {
+    const state = readPlatformState();
+    const listing = (state.propertyListings ?? []).find(
+      ({ id }) => id === req.params.id
+    );
+    if (!listing) return res.status(404).json({ message: 'Property listing not found.' });
+
+    const interestedUserId = currentUserId(req);
+    const ownerUserId = String(listing.ownerUserId);
+    if (interestedUserId === ownerUserId) {
+      return res.status(400).json({
+        message: 'You cannot start an enquiry on your own property listing.'
+      });
+    }
+
+    const conversation = updatePlatformState((platformState) => {
+      platformState.propertyConversations ??= [];
+      const existing = platformState.propertyConversations.find(
+        (item) =>
+          item.listingId === listing.id &&
+          item.interestedUserId === interestedUserId &&
+          item.ownerUserId === ownerUserId &&
+          item.status === 'ACTIVE'
+      );
+      if (existing) return existing;
+      const created = {
+        id: createPlatformId('property-conversation'),
+        listingId: listing.id,
+        interestedUserId,
+        ownerUserId,
+        createdAt: new Date().toISOString(),
+        status: 'ACTIVE'
+      };
+      platformState.propertyConversations.unshift(created);
+      return created;
+    });
+    return res.status(201).json(conversation);
+  });
+
+  router.get('/properties/conversations', (req, res) => {
+    const state = readPlatformState();
+    const userId = currentUserId(req);
+    const usersById = new Map(
+      state.users.map((user) => [
+        String(user.id),
+        `${user.firstName} ${user.lastName}`
+      ])
+    );
+    res.json(
+      (state.propertyConversations ?? [])
+        .filter(({ interestedUserId, ownerUserId }) =>
+          [interestedUserId, ownerUserId].includes(userId)
+        )
+        .map((conversation) => {
+          const listing = (state.propertyListings ?? []).find(
+            ({ id }) => id === conversation.listingId
+          );
+          return {
+            ...conversation,
+            listingTitle: listing?.title ?? 'Property',
+            interestedUserName:
+              usersById.get(conversation.interestedUserId) ?? 'Interested member',
+            ownerName:
+              usersById.get(conversation.ownerUserId) ??
+              listing?.ownerName ??
+              'Property owner'
+          };
+        })
+        .sort((first, second) => second.createdAt.localeCompare(first.createdAt))
+    );
+  });
+
+  router.get('/properties/conversations/:id/messages', (req, res) => {
+    const state = readPlatformState();
+    const conversation = (state.propertyConversations ?? []).find(
+      ({ id }) => id === req.params.id
+    );
+    if (!conversation) {
+      return res.status(404).json({ message: 'Property conversation not found.' });
+    }
+    if (
+      ![conversation.interestedUserId, conversation.ownerUserId].includes(
+        currentUserId(req)
+      )
+    ) {
+      return res.status(403).json({
+        message: 'You do not have access to this property conversation.'
+      });
+    }
+    return res.json(
+      (state.propertyMessages ?? [])
+        .filter(({ conversationId }) => conversationId === conversation.id)
+        .sort((first, second) => first.createdAt.localeCompare(second.createdAt))
+    );
+  });
+
+  router.post('/properties/conversations/:id/messages', (req, res) => {
+    const state = readPlatformState();
+    const conversation = (state.propertyConversations ?? []).find(
+      ({ id }) => id === req.params.id
+    );
+    if (!conversation) {
+      return res.status(404).json({ message: 'Property conversation not found.' });
+    }
+    const senderUserId = currentUserId(req);
+    if (
+      ![conversation.interestedUserId, conversation.ownerUserId].includes(
+        senderUserId
+      )
+    ) {
+      return res.status(403).json({
+        message: 'You do not have access to this property conversation.'
+      });
+    }
+    const messageText = String(req.body?.messageText ?? '').trim();
+    if (!messageText || messageText.length > 2000) {
+      return res.status(400).json({
+        message: 'Enter a valid message up to 2,000 characters.'
+      });
+    }
+    const message = updatePlatformState((platformState) => {
+      const created = {
+        id: createPlatformId('property-message'),
+        conversationId: conversation.id,
+        senderUserId,
+        messageText,
+        createdAt: new Date().toISOString()
+      };
+      platformState.propertyMessages ??= [];
+      platformState.propertyMessages.push(created);
+      return created;
+    });
+    return res.status(201).json(message);
+  });
+
   router.get('/jobs', (_req, res) => {
     res.json(readPlatformState().jobListings);
   });
 
   router.post('/jobs', (req, res) => {
-    const current = readPlatformState().users.find(
+    const platformState = readPlatformState();
+    const current = platformState.users.find(
       ({ id }) => String(id) === currentUserId(req)
+    );
+    const business = ownedBusiness(
+      platformState,
+      req,
+      req.body?.businessProfileId,
+      'JOB_SEARCH'
     );
     const title = String(req.body?.title ?? '').trim();
     if (!title) return res.status(400).json({ message: 'Enter a job title.' });
@@ -852,7 +1883,11 @@ export function createPlatformRouter({ requireAuth }) {
         id: createPlatformId('job'),
         title,
         listedByUserId: currentUserId(req),
-        listedByUserName: current ? `${current.firstName} ${current.lastName}` : 'Member',
+        listedByUserName:
+          business?.businessName ??
+          (current ? `${current.firstName} ${current.lastName}` : 'Member'),
+        businessProfileId: business?.id,
+        businessName: business?.businessName,
         status: 'OPEN',
         createdAt: new Date().toISOString()
       };

@@ -1,5 +1,147 @@
-<app-role-dashboard-shell
-  role="KZNCC User"
-  title="KZNCC member dashboard"
-  description="Access KZNCC announcements, council communication, member information and upcoming events."
-></app-role-dashboard-shell>
+<main class="staff-page">
+  <header>
+    <a class="brand" href="/dashboard/kzncc-user">
+      <img src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+      <span>Powered by Duranki</span>
+    </a>
+    @if (user()) {
+      <app-role-switcher
+        [userFullName]="user()!.firstName + ' ' + user()!.lastName"
+      ></app-role-switcher>
+    }
+    <button type="button" (click)="logout()">Sign out</button>
+  </header>
+
+  <section class="staff-hero">
+    <div>
+      <p>KZNCC STAFF WORKSPACE</p>
+      <h1>Subscriber content management</h1>
+      <span>
+        KZNCC Users are staff members who publish and update the general
+        dashboard seen by paying KZNCC subscribers.
+      </span>
+    </div>
+    <button type="button" (click)="openSubscriberDashboard()">
+      Preview subscriber dashboard
+    </button>
+  </section>
+
+  <nav aria-label="KZNCC staff sections">
+    <button
+      type="button"
+      [class.active]="activeTab() === 'announcements'"
+      (click)="activeTab.set('announcements')"
+    >Announcements</button>
+    <button
+      type="button"
+      [class.active]="activeTab() === 'messages'"
+      (click)="activeTab.set('messages')"
+    >Communication</button>
+    <button
+      type="button"
+      [class.active]="activeTab() === 'events'"
+      (click)="activeTab.set('events')"
+    >Events</button>
+  </nav>
+
+  @if (notice()) {
+    <p class="notice" role="status">{{ notice() }}</p>
+  }
+
+  @if (activeTab() === 'announcements') {
+    <section class="staff-grid">
+      <form (submit)="saveAnnouncement(); $event.preventDefault()">
+        <p>OFFICIAL ANNOUNCEMENT</p>
+        <h2>{{ editingAnnouncementId() ? 'Update announcement' : 'Publish announcement' }}</h2>
+        <label>Title<input [formControl]="announcementTitle"></label>
+        <label>Category<input [formControl]="announcementCategory"></label>
+        <label>Short description<textarea rows="2" [formControl]="announcementSummary"></textarea></label>
+        <label>Full message<textarea rows="6" [formControl]="announcementBody"></textarea></label>
+        <button type="submit">{{ editingAnnouncementId() ? 'Save update' : 'Publish' }}</button>
+      </form>
+      <section class="content-list">
+        <p>SUBSCRIBER ANNOUNCEMENTS</p>
+        <h2>Current announcements</h2>
+        @for (item of announcements(); track item.id) {
+          <article>
+            <span>{{ item.category }} &middot; {{ item.date | date:'mediumDate' }}</span>
+            <h3>{{ item.title }}</h3>
+            <p>{{ item.shortDescription }}</p>
+            <button type="button" (click)="editAnnouncement(item)">Edit</button>
+          </article>
+        }
+      </section>
+    </section>
+  }
+
+  @if (activeTab() === 'messages') {
+    <section class="staff-grid">
+      <form (submit)="saveMessage(); $event.preventDefault()">
+        <p>SUBSCRIBER COMMUNICATION</p>
+        <h2>{{ editingMessageId() ? 'Update message' : 'Publish message' }}</h2>
+        <label>Title<input [formControl]="messageTitle"></label>
+        <label>
+          Communication type
+          <select [formControl]="messageType">
+            <option value="General notice">General notice</option>
+            <option value="Church update">Church update</option>
+            <option value="Important alert">Important alert</option>
+            <option value="Member information">Member information</option>
+            <option value="Service update">Service update</option>
+          </select>
+        </label>
+        <label>Message body<textarea rows="7" [formControl]="messageBody"></textarea></label>
+        <button type="submit">{{ editingMessageId() ? 'Save update' : 'Publish' }}</button>
+      </form>
+      <section class="content-list">
+        <p>GENERAL DASHBOARD MESSAGES</p>
+        <h2>Current communication</h2>
+        @for (item of messages(); track item.id) {
+          <article>
+            <span>{{ item.type }} &middot; {{ item.dateTime | date:'medium' }}</span>
+            <h3>{{ item.title }}</h3>
+            <p>{{ item.body }}</p>
+            <button type="button" (click)="editMessage(item)">Edit</button>
+          </article>
+        }
+      </section>
+    </section>
+  }
+
+  @if (activeTab() === 'events') {
+    <section class="staff-grid">
+      <form (submit)="saveEvent(); $event.preventDefault()">
+        <p>COUNCIL EVENT</p>
+        <h2>{{ editingEventId() ? 'Update event' : 'Publish event' }}</h2>
+        <label>Event title<input [formControl]="eventTitle"></label>
+        <div class="form-row">
+          <label>Date<input type="date" [formControl]="eventDate"></label>
+          <label>Time<input type="time" [formControl]="eventTime"></label>
+        </div>
+        <label>Location<input [formControl]="eventLocation"></label>
+        <label>Description<textarea rows="5" [formControl]="eventDescription"></textarea></label>
+        <label>
+          RSVP status
+          <select [formControl]="eventStatus">
+            <option value="Open">Open</option>
+            <option value="Limited space">Limited space</option>
+            <option value="Registration soon">Registration soon</option>
+          </select>
+        </label>
+        <button type="submit">{{ editingEventId() ? 'Save update' : 'Publish' }}</button>
+      </form>
+      <section class="content-list">
+        <p>SUBSCRIBER EVENTS</p>
+        <h2>Current events</h2>
+        @for (item of events(); track item.id) {
+          <article>
+            <span>{{ item.date | date:'longDate' }} &middot; {{ item.time }}</span>
+            <h3>{{ item.title }}</h3>
+            <p>{{ item.location }}. {{ item.description }}</p>
+            <button type="button" (click)="editEvent(item)">Edit</button>
+          </article>
+        }
+      </section>
+    </section>
+  }
+</main>

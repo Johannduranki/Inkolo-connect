@@ -7,6 +7,7 @@ import { RoleSwitcherComponent } from './shared/components/role-switcher/role-sw
 import {
   Church,
   ChurchBranch,
+  CommunityBranding,
   MemberCommunity
 } from './core/models/member-community.model';
 import { MemberCommunityService } from './core/services/member-community.service';
@@ -19,6 +20,7 @@ import {
   DirectMemberMessage,
   MemberCommunicationService
 } from './core/services/member-communication.service';
+import { ProfileService } from './profile.service';
 
 interface ChurchEvent {
   day: string;
@@ -50,11 +52,19 @@ export class CommunityComponent implements OnInit {
   private readonly communities = inject(MemberCommunityService);
   private readonly scriptures = inject(DailyScriptureService);
   private readonly memberCommunication = inject(MemberCommunicationService);
+  readonly profiles = inject(ProfileService);
 
   readonly user = signal<User | null>(null);
   readonly profileOpen = signal(false);
   readonly subscriptions = signal<ServiceSubscription[]>([]);
   readonly walletOpen = signal(false);
+  readonly walletBrandLogo = signal('');
+  readonly walletBrandName = signal('Inkolo Connect');
+  readonly openingService = signal<{
+    serviceCode: string;
+    name: string;
+    image: string;
+  } | null>(null);
   readonly kznccChurches = signal<Church[]>([]);
   readonly churchBranches = signal<ChurchBranch[]>([]);
   readonly memberCommunity = signal<MemberCommunity | null>(null);
@@ -114,11 +124,21 @@ export class CommunityComponent implements OnInit {
     'vas-services': { name: 'VAS Services', image: '/service-vas.png', accent: '#58c91a' },
     eduu: { name: 'EduU', image: '/service-education.png', accent: '#087ce8' },
     'vuma-fibre': { name: 'Vuma Fibre', image: '/service-vuma-fibre.png', accent: '#8c2be2' },
-    'catch-a-ride': { name: 'Catch a Ride', image: '/service-catch-a-lift.png', accent: '#48b824' },
+    'catch-a-ride': { name: 'Catch a Lift', image: '/service-catch-a-lift.png', accent: '#48b824' },
     kzncc: { name: 'KZNCC', image: '/service-kzncc.png', accent: '#087ce8' },
     'keycha-properties': { name: 'Keytcha Properties', image: '/service-keycha-properties.png', accent: '#48b824' },
     wallet: { name: 'My Wallet', image: '/service-my-wallet.png', accent: '#087ce8' }
   };
+  readonly communityShortcutCodes = [
+    'wallet',
+    'referral',
+    'build-up-balance',
+    'keycha-properties',
+    'catch-a-ride',
+    'job-search',
+    'kzncc',
+    'vas-services'
+  ];
   readonly church = {
     name: 'The New Born Church',
     denomination: 'A welcoming faith community',
@@ -167,9 +187,11 @@ export class CommunityComponent implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.profiles.load().subscribe();
     this.auth.getProfile().subscribe({
       next: (user) => {
         this.user.set(user);
+        this.loadWalletBranding(user.id);
         this.loadDirectContacts();
         this.communities.getMemberCommunity(String(user.id)).subscribe((community) => {
           this.memberCommunity.set(community);
@@ -194,8 +216,33 @@ export class CommunityComponent implements OnInit {
     );
   }
 
+  communityBranding(): CommunityBranding {
+    return this.selectedKznccChurch()?.branding ?? {
+      primaryColor: '#062d6b',
+      secondaryColor: '#087ce8',
+      accentColor: '#58c91a',
+      backgroundColor: '#f2f8ff'
+    };
+  }
+
   communityHeading(): string {
     return this.communities.getCommunityHeading(this.memberCommunity());
+  }
+
+  communityChangeEmailLink(): string {
+    const user = this.user();
+    const subject = 'Inkolo Connect community change request';
+    const body = [
+      'Hello Duranki Admin,',
+      '',
+      'Please assist me to change my registered church or community.',
+      `Member: ${user ? `${user.firstName} ${user.lastName}` : ''}`,
+      `Current community: ${this.communityHeading()}`,
+      '',
+      'Reason for change:',
+      ''
+    ].join('\n');
+    return `mailto:admin@duranki.co.za?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
 
   onChurchSelectionChange(): void {
@@ -223,11 +270,18 @@ export class CommunityComponent implements OnInit {
         churchId,
         branchId || undefined
       )
-      .subscribe((community) => {
-        this.memberCommunity.set(community);
-        this.churchLinkedMessage.set(
-          'This church and branch are now linked to My Community.'
-        );
+      .subscribe({
+        next: (community) => {
+          this.memberCommunity.set(community);
+          this.churchLinkedMessage.set(
+            'Your church and branch are confirmed. Future changes must be requested from Duranki Admin.'
+          );
+        },
+        error: ({ error }) => {
+          this.churchLinkedMessage.set(
+            error?.message ?? 'Your community could not be confirmed.'
+          );
+        }
       });
   }
 
@@ -263,6 +317,49 @@ export class CommunityComponent implements OnInit {
       }));
   }
 
+  communityShortcutServices() {
+    const activeByCode = new Map(
+      this.activeServices().map((service) => [service.serviceCode, service])
+    );
+
+    return this.communityShortcutCodes
+      .map((serviceCode) => activeByCode.get(serviceCode))
+      .filter((service) => service !== undefined);
+  }
+
+  openServiceFromCommunity(service: {
+    serviceCode: string;
+    name: string;
+    image: string;
+  }): void {
+    if (service.serviceCode === 'community') {
+      return;
+    }
+
+    this.openingService.set(service);
+    void this.router.navigate(['/dashboard/member'], {
+      queryParams: {
+        from: 'community',
+        service: service.serviceCode
+      }
+    });
+  }
+
+  handleActiveServiceClick(
+    event: Event,
+    service: {
+      serviceCode: string;
+      name: string;
+      image: string;
+    }
+  ): void {
+    if (service.serviceCode === 'community') {
+      return;
+    }
+    event.preventDefault();
+    this.openServiceFromCommunity(service);
+  }
+
   subscriptionPrice(subscription: ServiceSubscription): string {
     return subscription.amountCents === 0
       ? 'Free'
@@ -273,6 +370,19 @@ export class CommunityComponent implements OnInit {
     return this.subscriptions().some(
       (subscription) => subscription.serviceCode === 'wallet' && subscription.status === 'active'
     );
+  }
+
+  private loadWalletBranding(userId: number): void {
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem(`inkolo_wallet_brand_${userId}`) ?? 'null'
+      );
+      this.walletBrandLogo.set(String(saved?.logo ?? ''));
+      this.walletBrandName.set(String(saved?.team ?? 'Inkolo Connect'));
+    } catch {
+      this.walletBrandLogo.set('');
+      this.walletBrandName.set('Inkolo Connect');
+    }
   }
 
   sendMessage(): void {

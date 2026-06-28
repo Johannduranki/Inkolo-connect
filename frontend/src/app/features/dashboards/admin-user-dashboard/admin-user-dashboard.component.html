@@ -13,13 +13,125 @@
   </header>
 
   <section class="admin-hero">
-    <p>COMMUNITY ADMINISTRATION</p>
-    <h1>Member role management</h1>
-    <span>
-      Assign the roles each community member may use. Their role dropdown will
-      only show these assigned roles.
-    </span>
+    <div>
+      <p>COMMUNITY ADMINISTRATION</p>
+      <h1>Member role management</h1>
+      <span>
+        Assign the roles each community member may use. Their role dropdown will
+        only show these assigned roles.
+      </span>
+    </div>
+    <button type="button" class="report-button" (click)="openReportBuilder()">
+      Create report
+    </button>
   </section>
+
+  @if (reportOpen()) {
+    <div class="report-backdrop" (click)="reportOpen.set(false)">
+      <section
+        class="report-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="report-dialog-title"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="report-dialog-heading">
+          <div>
+            <p>ADMIN REPORTS</p>
+            <h2 id="report-dialog-title">What report would you like to create?</h2>
+          </div>
+          <button type="button" aria-label="Close report builder" (click)="reportOpen.set(false)">×</button>
+        </div>
+
+        <div class="report-filters">
+          <label>
+            Report
+            <select [formControl]="reportType">
+              <option value="BY_CHURCH">Members who paid per church</option>
+              <option value="BY_MONTH">All members paid for a month</option>
+              <option value="BY_SERVICE">Members who paid per service</option>
+            </select>
+          </label>
+          <label>
+            Month
+            <input type="month" [formControl]="reportMonth">
+          </label>
+          <label>
+            Church
+            <select [formControl]="reportChurchId">
+              <option value="">All churches</option>
+              @for (church of churches(); track church.id) {
+                <option [value]="church.id">{{ church.name }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Paid service
+            <select [formControl]="reportServiceCode">
+              <option value="">All paid services</option>
+              @for (service of reportServices; track service.code) {
+                <option [value]="service.code">{{ service.name }}</option>
+              }
+            </select>
+          </label>
+        </div>
+
+        <div class="report-actions">
+          <button type="button" (click)="createReport()" [disabled]="reportLoading()">
+            {{ reportLoading() ? 'Creating...' : 'Create report' }}
+          </button>
+          @if (generatedReport()) {
+            <button type="button" class="report-download" (click)="downloadReportCsv()">
+              Download CSV
+            </button>
+          }
+        </div>
+
+        @if (reportNotice()) {
+          <p class="report-notice">{{ reportNotice() }}</p>
+        }
+
+        @if (generatedReport(); as report) {
+          <div class="report-summary">
+            <article><span>Paid members</span><strong>{{ report.totalMembers }}</strong></article>
+            <article><span>Paid records</span><strong>{{ report.totalPayments }}</strong></article>
+            <article>
+              <span>Total paid value</span>
+              <strong>{{ report.totalAmountCents / 100 | currency:'ZAR':'symbol-narrow' }}</strong>
+            </article>
+          </div>
+          <div class="report-table-wrap">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>Member</th>
+                  <th>Church</th>
+                  <th>Service</th>
+                  <th>Plan</th>
+                  <th>Amount</th>
+                  <th>Paid date</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of report.rows; track row.userId + row.serviceCode + row.paidAt) {
+                  <tr>
+                    <td><strong>{{ row.memberName }}</strong><small>{{ row.telephoneNumber }}</small></td>
+                    <td>{{ row.churchName }}<small>{{ row.branchName }}</small></td>
+                    <td>{{ row.serviceName }}</td>
+                    <td>{{ row.planLabel }}</td>
+                    <td>{{ row.amountCents / 100 | currency:'ZAR':'symbol-narrow' }}</td>
+                    <td>{{ row.paidAt | date:'mediumDate' }}</td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="6">No paid records match this report.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    </div>
+  }
 
   <div class="admin-layout">
     <section class="analytics-panel">
@@ -80,13 +192,84 @@
       </div>
     </section>
 
+    <section class="community-branding-panel">
+      <div class="panel-heading">
+        <div>
+          <p>COMMUNITY BRANDING</p>
+          <h2>Church logo and colour scheme</h2>
+        </div>
+        <span>{{ churches().length }} communities</span>
+      </div>
+
+      <div class="community-branding-editor">
+        <div class="community-branding-controls">
+          <label>
+            Church or community
+            <select
+              [formControl]="selectedChurchId"
+              (change)="loadSelectedChurchBranding()"
+            >
+              @for (church of churches(); track church.id) {
+                <option [value]="church.id">{{ church.name }}</option>
+              }
+            </select>
+          </label>
+          <label class="community-logo-upload">
+            Community logo
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              (change)="chooseCommunityLogo($event)"
+            >
+          </label>
+          <label>Primary colour <input type="color" [formControl]="communityPrimary"></label>
+          <label>Secondary colour <input type="color" [formControl]="communitySecondary"></label>
+          <label>Accent colour <input type="color" [formControl]="communityAccent"></label>
+          <label>Page background <input type="color" [formControl]="communityBackground"></label>
+          <div class="community-branding-actions">
+            <button type="button" (click)="saveCommunityBranding()">Save community branding</button>
+            <button type="button" class="secondary-button" (click)="resetCommunityBranding()">Use Inkolo defaults</button>
+          </div>
+          @if (brandingNotice()) {
+            <p class="user-notice">{{ brandingNotice() }}</p>
+          }
+        </div>
+
+        <div
+          class="community-brand-preview"
+          [style.--preview-primary]="communityPrimary.value"
+          [style.--preview-secondary]="communitySecondary.value"
+          [style.--preview-accent]="communityAccent.value"
+          [style.--preview-background]="communityBackground.value"
+        >
+          <div class="community-brand-preview-bar">
+            <img src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+            @if (communityLogo()) {
+              <i></i>
+              <img [src]="communityLogo()" [alt]="(selectedChurch()?.name || 'Community') + ' logo'">
+            }
+          </div>
+          <div>
+            <small>COMMUNITY DASHBOARD</small>
+            <strong>{{ selectedChurch()?.name || 'Select a community' }}</strong>
+            <span>The selected colours and logo appear on this community's dashboard.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="user-management-panel">
       <div class="panel-heading">
         <div><p>USER ADMINISTRATION</p><h2>Add or remove platform users</h2></div>
         @if (selectedMember(); as member) {
-          <button type="button" class="danger-button" (click)="removeSelectedUser()">
-            Remove {{ member.fullName }}
-          </button>
+          <div class="user-management-actions">
+            <button type="button" class="reset-user-button" (click)="resetSelectedUserData()">
+              Reset user data
+            </button>
+            <button type="button" class="danger-button" (click)="removeSelectedUser()">
+              Remove {{ member.fullName }}
+            </button>
+          </div>
         }
       </div>
       <div class="new-user-form">
@@ -117,13 +300,14 @@
       </select>
 
       @if (selectedMember(); as member) {
-        <div class="member-summary">
+        <button type="button" class="member-summary" (click)="openMemberProfile()">
           <span>{{ member.fullName.charAt(0) }}</span>
           <div>
             <strong>{{ member.fullName }}</strong>
             <small>{{ member.telephoneNumber }}</small>
+            <em>Open member profile</em>
           </div>
-        </div>
+        </button>
       }
     </aside>
 
@@ -159,39 +343,6 @@
           At least one role is retained. Changes to your own profile immediately
           update the dropdown in this header and are saved for the next refresh.
         </p>
-      }
-    </section>
-
-    <section class="agreement-panel">
-      @if (selectedMember(); as member) {
-        <div class="panel-heading">
-          <div>
-            <p>LEGAL EVIDENCE</p>
-            <h2>Accepted terms for {{ member.fullName }}</h2>
-          </div>
-          <span>{{ agreements().length }} records</span>
-        </div>
-
-        @if (agreements().length) {
-          <div class="agreement-list">
-            @for (agreement of agreements(); track agreement.id) {
-              <article>
-                <div>
-                  <strong>{{ agreement.serviceName }}</strong>
-                  <span>{{ agreement.acceptedAt | date:'medium' }}</span>
-                  <small>
-                    Version {{ agreement.documentVersion }} · {{ agreement.planCode }}
-                  </small>
-                  <code>SHA-256: {{ agreement.documentSha256 }}</code>
-                </div>
-                <button type="button" (click)="viewAgreement(agreement)">View terms</button>
-                <button type="button" (click)="downloadEvidence(agreement)">Evidence</button>
-              </article>
-            }
-          </div>
-        } @else {
-          <p class="role-note">This member has no recorded service acceptances yet.</p>
-        }
       }
     </section>
 
@@ -256,4 +407,117 @@
       </div>
     </section>
   </div>
+
+  @if (memberProfileOpen()) {
+    <div class="member-profile-backdrop" (click)="closeMemberProfile()">
+      <section
+        class="member-profile-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-member-profile-title"
+        (click)="$event.stopPropagation()"
+      >
+        <button
+          type="button"
+          class="member-profile-close"
+          aria-label="Close member profile"
+          (click)="closeMemberProfile()"
+        >×</button>
+
+        @if (memberProfileLoading()) {
+          <p class="member-profile-loading">Loading member profile...</p>
+        } @else if (memberProfile(); as profile) {
+          <div class="member-profile-heading">
+            <span class="member-profile-photo">
+              @if (profile.profile?.profilePhoto) {
+                <img [src]="profile.profile!.profilePhoto" [alt]="profile.fullName">
+              } @else {
+                {{ profile.firstName.charAt(0) }}{{ profile.lastName.charAt(0) }}
+              }
+            </span>
+            <div>
+              <p>MEMBER PROFILE</p>
+              <h2 id="admin-member-profile-title">{{ profile.fullName }}</h2>
+              <span>{{ profile.telephoneNumber }}</span>
+            </div>
+          </div>
+
+          <nav class="member-profile-tabs" aria-label="Member profile sections">
+            <button
+              type="button"
+              [class.active]="memberProfileTab() === 'details'"
+              (click)="memberProfileTab.set('details')"
+            >Personal details</button>
+            <button
+              type="button"
+              [class.active]="memberProfileTab() === 'documents'"
+              (click)="memberProfileTab.set('documents')"
+            >
+              Documents file
+              <span>{{ memberDocuments().length + agreements().length }}</span>
+            </button>
+          </nav>
+
+          @if (memberProfileTab() === 'details') {
+            <div class="admin-profile-details">
+              <article><span>Telephone</span><strong>{{ profile.profile?.telephoneNumber || profile.telephoneNumber }}</strong></article>
+              <article><span>Email</span><strong>{{ profile.profile?.email || profile.email || 'Not provided' }}</strong></article>
+              <article><span>ID number</span><strong>{{ profile.profile?.idNumber || 'Not provided' }}</strong></article>
+              <article><span>Address</span><strong>{{ profile.profile?.address || 'Not provided' }}</strong></article>
+              <article><span>Town or city</span><strong>{{ profile.profile?.city || 'Not provided' }}</strong></article>
+              <article><span>Postal code</span><strong>{{ profile.profile?.postalCode || 'Not provided' }}</strong></article>
+              <article class="wide"><span>Community</span><strong>{{ memberCommunityHeading() }}</strong></article>
+              <article class="wide"><span>Assigned roles</span><strong>{{ profile.roles.join(', ') }}</strong></article>
+            </div>
+          } @else {
+            <section class="admin-document-file">
+              <div class="document-file-heading">
+                <div>
+                  <p>SERVICE PROVIDER DOCUMENTS</p>
+                  <h3>Documents created for {{ profile.fullName }}</h3>
+                </div>
+                <span>{{ memberDocuments().length }}</span>
+              </div>
+              @for (document of memberDocuments(); track document.id) {
+                <article>
+                  <div>
+                    <strong>{{ document.fileName }}</strong>
+                    <span>{{ document.documentType }} · {{ document.uploadedBy }}</span>
+                    <small>Created {{ document.uploadedAt | date:'medium' }} · {{ document.status }}</small>
+                  </div>
+                  @if (document.fileUrl) {
+                    <a [href]="document.fileUrl" target="_blank" rel="noopener">Open</a>
+                  }
+                </article>
+              } @empty {
+                <p class="document-file-empty">No service-provider documents have been created for this member.</p>
+              }
+
+              <div class="document-file-heading legal-file-heading">
+                <div>
+                  <p>LEGAL EVIDENCE</p>
+                  <h3>Accepted contracts and Terms and Conditions</h3>
+                </div>
+                <span>{{ agreements().length }}</span>
+              </div>
+              @for (agreement of agreements(); track agreement.id) {
+                <article>
+                  <div>
+                    <strong>{{ agreement.serviceName }}</strong>
+                    <span>Accepted {{ agreement.acceptedAt | date:'medium' }} · {{ agreement.planCode }}</span>
+                    <small>Version {{ agreement.documentVersion }}</small>
+                    <code>SHA-256: {{ agreement.documentSha256 }}</code>
+                  </div>
+                  <button type="button" (click)="viewAgreement(agreement)">View terms</button>
+                  <button type="button" (click)="downloadEvidence(agreement)">Evidence</button>
+                </article>
+              } @empty {
+                <p class="document-file-empty">This member has no recorded legal acceptance evidence.</p>
+              }
+            </section>
+          }
+        }
+      </section>
+    </div>
+  }
 </main>

@@ -1,3 +1,251 @@
 :host {
   display: block;
+  min-height: 100vh;
+}
+
+.staff-page {
+  min-height: 100vh;
+  padding-bottom: 4rem;
+  color: #294b63;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(88, 201, 26, 0.14), transparent 28rem),
+    #f3f9fd;
+}
+
+header {
+  position: sticky;
+  z-index: 10;
+  top: 0;
+  display: grid;
+  min-height: 5rem;
+  padding: 0 clamp(1rem, 4vw, 3rem);
+  grid-template-columns: 1fr auto auto;
+  gap: 1rem;
+  align-items: center;
+  border-bottom: 1px solid #d5e4ee;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: #657d8e;
+  font-size: 0.65rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.brand img {
+  width: 7rem;
+  height: 3.5rem;
+  object-fit: contain;
+}
+
+header > button {
+  border: 0;
+  color: #60798c;
+  background: transparent;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.staff-hero,
+nav,
+.notice,
+.staff-grid {
+  width: min(calc(100% - 2rem), 76rem);
+  margin-inline: auto;
+}
+
+.staff-hero {
+  display: flex;
+  padding: 2.5rem 0 1.5rem;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.staff-hero p,
+form > p,
+.content-list > p {
+  margin: 0 0 0.35rem;
+  color: #49a923;
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.staff-hero h1 {
+  max-width: 15ch;
+  margin: 0;
+  color: #063a78;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  line-height: 1;
+}
+
+.staff-hero span {
+  display: block;
+  max-width: 46rem;
+  margin-top: 0.8rem;
+  color: #6c8495;
+  line-height: 1.55;
+}
+
+.staff-hero button,
+form button,
+.content-list button {
+  padding: 0.7rem 0.9rem;
+  border: 0;
+  border-radius: 0.6rem;
+  color: #fff;
+  background: linear-gradient(145deg, #0a83e9, #063a78);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+nav {
+  display: flex;
+  gap: 0.45rem;
+}
+
+nav button {
+  padding: 0.7rem 1rem;
+  border: 1px solid #c9ddea;
+  border-radius: 0.65rem;
+  color: #35617e;
+  background: #fff;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+nav button.active {
+  color: #fff;
+  border-color: #087ce8;
+  background: #087ce8;
+}
+
+.notice {
+  box-sizing: border-box;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border-radius: 0.65rem;
+  color: #236b1a;
+  background: #e9f8e5;
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+.staff-grid {
+  display: grid;
+  margin-top: 1rem;
+  grid-template-columns: minmax(18rem, 0.8fr) minmax(0, 1.2fr);
+  gap: 1rem;
+}
+
+form,
+.content-list {
+  padding: 1.2rem;
+  border: 1px solid #cfdfeb;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 1rem 3rem rgba(6, 45, 107, 0.07);
+}
+
+form {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+}
+
+form h2,
+.content-list h2 {
+  margin: 0 0 0.4rem;
+  color: #063a78;
+}
+
+form label {
+  display: grid;
+  gap: 0.35rem;
+  color: #526f82;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+form input,
+form textarea,
+form select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.7rem;
+  border: 1px solid #bfd4e2;
+  border-radius: 0.6rem;
+  color: #153f5a;
+  background: #f9fcff;
+  font: inherit;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.content-list article {
+  padding: 0.9rem 0;
+  border-top: 1px solid #e1ebf2;
+}
+
+.content-list article > span {
+  color: #4ca126;
+  font-size: 0.62rem;
+  font-weight: 850;
+}
+
+.content-list h3 {
+  margin: 0.3rem 0;
+  color: #174b72;
+}
+
+.content-list article p {
+  color: #6c8393;
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.content-list button {
+  padding: 0.5rem 0.7rem;
+  color: #087ce8;
+  border: 1px solid #c5dced;
+  background: #f3f9ff;
+}
+
+@media (max-width: 760px) {
+  header {
+    grid-template-columns: 1fr auto;
+  }
+
+  header app-role-switcher {
+    grid-column: 1 / -1;
+    padding-bottom: 0.7rem;
+  }
+
+  .staff-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .staff-grid,
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  nav {
+    overflow-x: auto;
+  }
 }
