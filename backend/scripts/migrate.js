@@ -23,10 +23,37 @@ const connection = await mysql.createConnection({
 });
 
 try {
+  await connection.query(`CREATE DATABASE IF NOT EXISTS \`${databaseName}\``);
+  await connection.query(`USE \`${databaseName}\``);
+  await connection.query(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      filename VARCHAR(255) NOT NULL PRIMARY KEY,
+      applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   for (const file of migrationFiles) {
+    const [applied] = await connection.execute(
+      'SELECT filename FROM schema_migrations WHERE filename = ? LIMIT 1',
+      [file]
+    );
+    if (applied.length) continue;
+
     const source = await readFile(path.join(databaseDirectory, file), 'utf8');
-    const sql = source.replaceAll('duranki_login', databaseName);
-    await connection.query(sql);
+    const sql = source
+      .replaceAll('duranki_login', databaseName)
+      .replaceAll('ADD COLUMN IF NOT EXISTS', 'ADD COLUMN');
+
+    try {
+      await connection.query(sql);
+    } catch (error) {
+      if (error?.code !== 'ER_DUP_FIELDNAME') throw error;
+    }
+
+    await connection.execute(
+      'INSERT INTO schema_migrations (filename) VALUES (?)',
+      [file]
+    );
     console.log(`Applied database migration ${file}`);
   }
 } finally {
