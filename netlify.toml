@@ -1,0 +1,6 @@
+[build]
+  command = "node scripts/netlify-build.mjs"
+  publish = "frontend/dist/duranki-login/browser"
+
+[build.environment]
+  NODE_VERSION = "22"

@@ -15,4 +15,4 @@ RUN npm --prefix backend ci --omit=dev
 COPY backend backend
 COPY --from=frontend-build /app/frontend/dist frontend/dist
 EXPOSE 3000
-CMD ["npm", "start"]
+CMD ["sh", "-c", "npm --prefix backend run migrate && npm start"]
