@@ -4,10 +4,18 @@ import { Capacitor } from '@capacitor/core';
 // Current development server on the local Wi-Fi network. Replace this with the
 // production HTTPS API before publishing to the Play Store.
 const defaultNativeApiUrl = 'http://192.168.8.136:3000';
+const hostedApiUrl = 'https://inkolo-connect-api-production.up.railway.app';
 
 export const nativeApiInterceptor: HttpInterceptorFn = (request, next) => {
-  if (!Capacitor.isNativePlatform() || !request.url.startsWith('/api')) {
+  if (!request.url.startsWith('/api')) {
     return next(request);
+  }
+
+  if (!Capacitor.isNativePlatform()) {
+    const isNetlifyDemo = window.location.hostname.endsWith('.netlify.app');
+    return isNetlifyDemo
+      ? next(request.clone({ url: `${hostedApiUrl}${request.url}` }))
+      : next(request);
   }
 
   const configuredApiUrl = localStorage
