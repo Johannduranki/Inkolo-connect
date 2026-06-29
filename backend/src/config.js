@@ -34,6 +34,7 @@ export function getConfig() {
     idPepper: process.env.ID_PEPPER,
     jwtSecret: process.env.JWT_SECRET,
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1h',
-    allowDemoAuth: process.env.ALLOW_DEMO_AUTH === 'true'
+    allowDemoAuth: process.env.ALLOW_DEMO_AUTH === 'true',
+    forceDemoMode: process.env.FORCE_DEMO_MODE === 'true'
   };
 }
