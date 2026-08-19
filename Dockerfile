@@ -13,7 +13,7 @@ RUN npm install
 
 
 # Copy the entire backend code
-COPY /backend
+COPY /backend ./
 
 # # Copy the Angular dist folder (assumes it’s built already)
 # COPY dist/frontend ../dist/frontend
