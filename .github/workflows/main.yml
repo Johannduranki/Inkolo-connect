@@ -27,7 +27,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build backend Docker image
-        run: docker build -t $IMAGE_NAME:$IMAGE_TAG -t .
+        run: docker build -t $IMAGE_NAME:$IMAGE_TAG .
 
       - name: Push backend Docker image
         run: |
