@@ -30,12 +30,12 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build backend Docker image
-        run: docker build -t $IMAGE_NAME:$IMAGE_TAG .
+        run: docker build -t $IMAGE_NAME:$IMAGE_TAG -t $IMAGE_NAME:latest .
 
       - name: Push backend Docker image
         run: |
           docker push $IMAGE_NAME:$IMAGE_TAG
-          # docker push $IMAGE_NAME:latest
+          docker push $IMAGE_NAME:latest
 
       - name: Deploy to server via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -45,14 +45,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_SSH_PORT }}
           script: |
-            # Authenticate sudo ONCE and let it cache for the rest of this
-            # script (default cache window is ~15 min), so individual
-            # docker commands below don't need the password piped in again.
-            export SUDO_PW="${{ secrets.SERVER_SUDO_PASSWORD }}"
-            echo "$SUDO_PW" | sudo -S -v
-            unset SUDO_PW
-
-            echo "${{ secrets.GHCR_TOKEN }}" | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin <<< "${{ secrets.GHCR_TOKEN }}"
 
             cd /home/Duranki/durankidemo
 
