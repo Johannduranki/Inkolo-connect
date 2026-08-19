@@ -27,12 +27,12 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build backend Docker image
-        run: docker build -t $IMAGE_NAME:$IMAGE_TAG -t $IMAGE_NAME:latest .
+        run: docker build -t $IMAGE_NAME:$IMAGE_TAG -t .
 
       - name: Push backend Docker image
         run: |
           docker push $IMAGE_NAME:$IMAGE_TAG
-          docker push $IMAGE_NAME:latest
+          # docker push $IMAGE_NAME:latest
 
       - name: Deploy to server via SSH
         uses: appleboy/ssh-action@v1.0.3
