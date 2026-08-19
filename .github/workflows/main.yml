@@ -54,7 +54,7 @@ jobs:
 
             echo "${{ secrets.GHCR_TOKEN }}" | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            cd ~/durankidemo
+            cd /home/Duranki/durankidemo
 
             # Pull the newly built backend image only (db and frontend
             # images are untouched, so this won't disturb them)
