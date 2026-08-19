@@ -1,0 +1,63 @@
+name: Deploy to On-Prem Server
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build backend Docker image
+        run: docker build -t $IMAGE_NAME:$IMAGE_TAG -t $IMAGE_NAME:latest .
+
+      - name: Push backend Docker image
+        run: |
+          docker push $IMAGE_NAME:$IMAGE_TAG
+          docker push $IMAGE_NAME:latest
+
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_SSH_PORT }}
+          script: |
+            # Authenticate sudo ONCE and let it cache for the rest of this
+            # script (default cache window is ~15 min), so individual
+            # docker commands below don't need the password piped in again.
+            export SUDO_PW="${{ secrets.SERVER_SUDO_PASSWORD }}"
+            echo "$SUDO_PW" | sudo -S -v
+            unset SUDO_PW
+
+            echo "${{ secrets.GHCR_TOKEN }}" | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            cd ~/durankiDemo
+
+            # Pull the newly built backend image only (db and frontend
+            # images are untouched, so this won't disturb them)
+            sudo docker compose pull backend
+
+            # Recreate only the backend service with the new image.
+            # --no-deps stops compose from also restarting db/frontend
+            # just because backend depends_on them.
+            sudo docker compose up -d --no-deps backend
+
+            # Clean up old dangling images to save disk space
+            sudo docker image prune -f
