@@ -1,18 +1,25 @@
-FROM node:22-alpine AS frontend-build
-WORKDIR /app
-COPY package.json ./
-COPY frontend/package*.json frontend/
-RUN npm --prefix frontend ci
-COPY frontend frontend
-RUN npm --prefix frontend run build
+# Use Node.js base image
+FROM node:18
 
-FROM node:22-alpine AS production
-ENV NODE_ENV=production
-WORKDIR /app
-COPY package.json ./
-COPY backend/package*.json backend/
-RUN npm --prefix backend ci --omit=dev
-COPY backend backend
-COPY --from=frontend-build /app/frontend/dist frontend/dist
-EXPOSE 3000
-CMD ["sh", "-c", "npm --prefix backend run migrate && npm start"]
+# Set working directory to backend folder
+WORKDIR /usr/src/app
+
+# Copy only backend-specific files
+COPY /package*.json ./
+
+# Install backend dependencies
+RUN npm install
+
+
+
+# Copy the entire backend code
+COPY /backend
+
+# # Copy the Angular dist folder (assumes it’s built already)
+# COPY dist/frontend ../dist/frontend
+
+# Expose the port
+EXPOSE 3001
+
+# Start the server
+CMD ["node", "server.js"]
