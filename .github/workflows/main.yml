@@ -2,7 +2,8 @@ name: Deploy to On-Prem Server
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch: {}
 
 env:
@@ -11,17 +12,32 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
       packages: write
+
     steps:
+      # ---------------------------------------------------------
+      # 1. Checkout source code
+      # ---------------------------------------------------------
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # ---------------------------------------------------------
+      # 2. Create lowercase GHCR image name
+      # ---------------------------------------------------------
       - name: Set lowercase image name
         run: |
-          echo "IMAGE_NAME=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          IMAGE_NAME="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          echo "IMAGE_NAME=$IMAGE_NAME" >> "$GITHUB_ENV"
 
+          echo "Image: $IMAGE_NAME"
+          echo "Tag: $IMAGE_TAG"
+
+      # ---------------------------------------------------------
+      # 3. Login to GitHub Container Registry
+      # ---------------------------------------------------------
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -29,14 +45,27 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # ---------------------------------------------------------
+      # 4. Build backend image
+      # ---------------------------------------------------------
       - name: Build backend Docker image
-        run: docker build -t $IMAGE_NAME:$IMAGE_TAG -t $IMAGE_NAME:latest .
+        run: |
+          docker build \
+            -t "$IMAGE_NAME:$IMAGE_TAG" \
+            -t "$IMAGE_NAME:latest" \
+            .
 
+      # ---------------------------------------------------------
+      # 5. Push backend image to GHCR
+      # ---------------------------------------------------------
       - name: Push backend Docker image
         run: |
-          docker push $IMAGE_NAME:$IMAGE_TAG
-          docker push $IMAGE_NAME:latest
+          docker push "$IMAGE_NAME:$IMAGE_TAG"
+          docker push "$IMAGE_NAME:latest"
 
+      # ---------------------------------------------------------
+      # 6. Test SSH connection
+      # ---------------------------------------------------------
       - name: Test SSH connection to server
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -45,33 +74,133 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_SSH_PORT }}
           script: |
-            echo "SSH connection successful"
-            whoami
-            pwd
-            ls -la ~/durankidemo || echo "WARNING: ~/durankidemo not found"
-            sudo docker ps --format "table {{.Names}}\t{{.Status}}" || echo "WARNING: passwordless sudo docker not working"
+            set -e
 
-      - name: Deploy to server via SSH
+            echo "======================================"
+            echo "SSH connection successful"
+            echo "======================================"
+
+            echo "User:"
+            whoami
+
+            echo "Hostname:"
+            hostname
+
+            echo "Current directory:"
+            pwd
+
+            echo "Docker version:"
+            sudo docker --version
+
+            echo "Docker access:"
+            sudo docker ps --format "table {{.Names}}\t{{.Status}}"
+
+            echo "Deployment directory:"
+            ls -la ~/durankidemo
+
+      # ---------------------------------------------------------
+      # 7. Deploy backend
+      # ---------------------------------------------------------
+      - name: Deploy backend to on-prem server
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_SSH_PORT }}
-          request_pty: true
+          script_stop: true
           script: |
-            sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin <<< "${{ secrets.GHCR_TOKEN }}"
+            set -e
 
+            echo "======================================"
+            echo "Starting deployment"
+            echo "======================================"
+
+            # ---------------------------------------------------
+            # Login to GHCR
+            # ---------------------------------------------------
+            echo "Logging into GitHub Container Registry..."
+
+            echo "${{ secrets.GHCR_TOKEN }}" | \
+              sudo docker login ghcr.io \
+                --username "${{ github.actor }}" \
+                --password-stdin
+
+            # ---------------------------------------------------
+            # Go to application directory
+            # ---------------------------------------------------
             cd ~/durankidemo
 
-            # Pull the newly built backend image only (db and frontend
-            # images are untouched, so this won't disturb them)
+            echo "Deployment directory:"
+            pwd
+
+            # ---------------------------------------------------
+            # Show current containers
+            # ---------------------------------------------------
+            echo "Current containers:"
+            sudo docker compose ps
+
+            # ---------------------------------------------------
+            # Pull the new backend image
+            # ---------------------------------------------------
+            echo "Pulling latest backend image..."
+
             sudo docker compose pull backend
 
-            # Recreate only the backend service with the new image.
-            # --no-deps stops compose from also restarting db/frontend
-            # just because backend depends_on them.
+            # ---------------------------------------------------
+            # Recreate ONLY backend
+            #
+            # --no-deps prevents docker compose from restarting
+            # the database or frontend.
+            # ---------------------------------------------------
+            echo "Starting updated backend..."
+
             sudo docker compose up -d --no-deps backend
 
-            # Clean up old dangling images to save disk space
+            # ---------------------------------------------------
+            # Wait a few seconds for backend startup
+            # ---------------------------------------------------
+            echo "Waiting for backend to start..."
+
+            sleep 10
+
+            # ---------------------------------------------------
+            # Check backend status
+            # ---------------------------------------------------
+            echo "Backend status:"
+
+            sudo docker compose ps backend
+
+            # ---------------------------------------------------
+            # Check that backend container is running
+            # ---------------------------------------------------
+            BACKEND_STATUS=$(sudo docker inspect \
+              --format='{{.State.Status}}' \
+              backend 2>/dev/null || echo "not-found")
+
+            echo "Backend container status: $BACKEND_STATUS"
+
+            if [ "$BACKEND_STATUS" != "running" ]; then
+              echo "ERROR: Backend container is not running."
+
+              echo "Backend logs:"
+              sudo docker compose logs --tail=100 backend
+
+              exit 1
+            fi
+
+            # ---------------------------------------------------
+            # Clean up dangling images
+            # ---------------------------------------------------
+            echo "Cleaning up unused Docker images..."
+
             sudo docker image prune -f
+
+            # ---------------------------------------------------
+            # Final status
+            # ---------------------------------------------------
+            echo "======================================"
+            echo "Deployment completed successfully"
+            echo "======================================"
+
+            sudo docker compose ps
