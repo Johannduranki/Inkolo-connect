@@ -90,10 +90,10 @@ jobs:
             pwd
 
             echo "Docker version:"
-            sudo docker --version
+            docker --version
 
             echo "Docker access:"
-            sudo docker ps --format "table {{.Names}}\t{{.Status}}"
+             docker ps --format "table {{.Names}}\t{{.Status}}"
 
             echo "Deployment directory:"
             ls -la ~/durankidemo
@@ -122,7 +122,7 @@ jobs:
             echo "Logging into GitHub Container Registry..."
 
             echo "${{ secrets.GHCR_TOKEN }}" | \
-              sudo docker login ghcr.io \
+               docker login ghcr.io \
                 --username "${{ github.actor }}" \
                 --password-stdin
 
@@ -138,7 +138,7 @@ jobs:
             # Show current containers
             # ---------------------------------------------------
             echo "Current containers:"
-            sudo docker compose ps
+            docker compose ps
 
             # ---------------------------------------------------
             # Pull the new backend image
@@ -169,7 +169,7 @@ jobs:
             # ---------------------------------------------------
             echo "Backend status:"
 
-            sudo docker compose ps backend
+            docker compose ps backend
 
             # ---------------------------------------------------
             # Check that backend container is running
@@ -184,7 +184,7 @@ jobs:
               echo "ERROR: Backend container is not running."
 
               echo "Backend logs:"
-              sudo docker compose logs --tail=100 backend
+               docker compose logs --tail=100 backend
 
               exit 1
             fi
@@ -193,8 +193,7 @@ jobs:
             # Clean up dangling images
             # ---------------------------------------------------
             echo "Cleaning up unused Docker images..."
-
-            sudo docker image prune -f
+                  docker image prune -f
 
             # ---------------------------------------------------
             # Final status
