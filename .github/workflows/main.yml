@@ -96,7 +96,7 @@ jobs:
              docker ps --format "table {{.Names}}\t{{.Status}}"
 
             echo "Deployment directory:"
-            ls -la ~/durankidemo
+            ls -la ~/durankiDemo
 
       # ---------------------------------------------------------
       # 7. Deploy backend
@@ -129,7 +129,7 @@ jobs:
             # ---------------------------------------------------
             # Go to application directory
             # ---------------------------------------------------
-            cd ~/durankidemo
+            cd ~/durankiDemo
 
             echo "Deployment directory:"
             pwd
