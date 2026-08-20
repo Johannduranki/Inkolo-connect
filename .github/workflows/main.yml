@@ -144,8 +144,7 @@ jobs:
             # Pull the new backend image
             # ---------------------------------------------------
             echo "Pulling latest backend image..."
-
-            sudo docker compose pull backend
+             docker compose pull backend
 
             # ---------------------------------------------------
             # Recreate ONLY backend
@@ -155,7 +154,7 @@ jobs:
             # ---------------------------------------------------
             echo "Starting updated backend..."
 
-            sudo docker compose up -d --no-deps backend
+               docker compose up -d --no-deps backend
 
             # ---------------------------------------------------
             # Wait a few seconds for backend startup
@@ -201,5 +200,4 @@ jobs:
             echo "======================================"
             echo "Deployment completed successfully"
             echo "======================================"
-
-            sudo docker compose ps
+              docker compose ps
