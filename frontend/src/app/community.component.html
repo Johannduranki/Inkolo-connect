@@ -11,8 +11,8 @@
       Services
     </button>
     <div class="community-header-brand">
-      <a class="brand" href="/dashboard" aria-label="Inkolo Connect dashboard">
-        <img class="brand-logo" src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+      <a class="brand" href="/dashboard" aria-label="Duranki dashboard">
+        <img class="brand-logo" src="/duranki-up-logo.png" alt="Duranki">
       </a>
       @if (selectedKznccChurch()?.branding?.logoUrl; as communityLogo) {
         <span class="community-brand-divider" aria-hidden="true"></span>
@@ -74,9 +74,9 @@
                 @if (walletBrandLogo()) {
                   <img [src]="walletBrandLogo()" [alt]="walletBrandName()">
                 } @else {
-                  <img src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+                  <img src="/duranki-up-logo.png" alt="Duranki">
                 }
-                <b>INKOLO WALLET</b>
+                <b>DURANKI WALLET</b>
               </span>
               <strong>•••• 2086</strong>
               <small>{{ user()?.firstName }} {{ user()?.lastName }}</small>

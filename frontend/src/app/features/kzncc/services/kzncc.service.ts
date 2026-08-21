@@ -13,7 +13,7 @@ const announcements: KznccAnnouncement[] = [
     category: 'Platform',
     shortDescription: 'The new KZNCC member communication area is now available.',
     message:
-      'Welcome to the KZNCC digital platform. Members can now receive official announcements, council messages and event information through Inkolo Connect.'
+      'Welcome to the KZNCC digital platform. Members can now receive official announcements, council messages and event information through Duranki.'
   },
   {
     id: 2,
@@ -97,7 +97,7 @@ const messages: KznccMessage[] = [
     senderName: 'KZNCC Events Office',
     dateTime: '2026-06-07T10:45:00+02:00',
     type: 'Important alert',
-    body: 'Only use official KZNCC registration links shared inside Inkolo Connect or by your church office.'
+    body: 'Only use official KZNCC registration links shared inside Duranki or by your church office.'
   },
   {
     id: 4,

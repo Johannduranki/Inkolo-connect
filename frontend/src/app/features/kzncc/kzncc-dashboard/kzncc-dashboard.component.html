@@ -1,14 +1,15 @@
 <main class="kzncc-page">
   <header class="topbar">
-    <div class="brand-group">
+    <div class="header-brand-group brand-group">
       <a
         href=""
-        aria-label="Inkolo Connect dashboard"
+        class="brand"
+        aria-label="Duranki dashboard"
         (click)="$event.preventDefault(); openRoleDashboard()"
       >
-        <img src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+        <img class="header-logo" src="/duranki-up-logo.png" alt="Duranki">
       </a>
-      <span>Powered by Duranki</span>
+      <span class="top-powered-by">Powered by Duranki</span>
     </div>
     <nav class="service-navigation" aria-label="KZNCC navigation">
       <a
@@ -27,8 +28,11 @@
         <app-role-switcher
           [userFullName]="user()!.firstName + ' ' + user()!.lastName"
         ></app-role-switcher>
+        <span class="avatar" aria-hidden="true">
+          {{ user()!.firstName.charAt(0) }}{{ user()!.lastName.charAt(0) }}
+        </span>
       }
-      <button type="button" (click)="logout()">Sign out</button>
+      <button class="sign-out" type="button" (click)="logout()">Sign out</button>
     </div>
   </header>
 

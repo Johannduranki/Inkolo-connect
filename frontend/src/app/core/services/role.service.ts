@@ -138,7 +138,8 @@ export class RoleService {
     5: ['Member', 'KZNCC Admin'],
     6: ['Admin User'],
     7: ['Service Provider Admin'],
-    8: ['Service Provider User']
+    8: ['Service Provider User'],
+    19: ['Service Provider Admin']
   };
   private readonly userRolesSubject = new BehaviorSubject<UserRole[]>(
     this.rolesForUser(this.currentUserId)
@@ -195,6 +196,12 @@ export class RoleService {
         fullName: 'Mandla Cele',
         telephoneNumber: '081 700 8009',
         roles: this.rolesForUser(8)
+      },
+      {
+        id: 19,
+        fullName: 'Vuma Admin',
+        telephoneNumber: '082 900 1001',
+        roles: this.rolesForUser(19)
       }
     ].map((member) => ({
       ...member,

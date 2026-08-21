@@ -1,4 +1,4 @@
-# Inkolo Connect
+# Duranki
 
 A standalone authentication prototype using:
 
@@ -76,7 +76,7 @@ Open `http://localhost:4200` and sign in with the seeded ID.
 - `GET /api/health`
 - `POST /api/auth/login` with `{ "idNumber": "9001015009087" }`
 - `GET /api/auth/me` with `Authorization: Bearer <token>`
-# Inkolo Connect platform
+# Duranki platform
 
 ## Local services
 

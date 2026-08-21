@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Inkolo Connect</string>
-    <string name="title_activity_main">Inkolo Connect</string>
-    <string name="package_name">za.co.inkoloconnect.app</string>
-    <string name="custom_url_scheme">za.co.inkoloconnect.app</string>
+    <string name="app_name">Mvola Wallet</string>
+    <string name="title_activity_main">Mvola Wallet</string>
+    <string name="package_name">mg.mvola.wallet.demo</string>
+    <string name="custom_url_scheme">mg.mvola.wallet.demo</string>
 </resources>

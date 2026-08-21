@@ -9,4 +9,7 @@ backend/uploads/
 backend/data/*.json
 work/
 outputs/
+tmp/
+.netlify/
+*.zip
 frontend/pnpm-workspace.yaml

@@ -117,11 +117,50 @@ interface WalletTransaction {
   amount: number;
 }
 
+interface VumaDataBundle {
+  code: string;
+  name: string;
+  dataSize: string;
+  price: number;
+  validity: string;
+}
+
+interface VumaPublicity {
+  active: boolean;
+  title: string;
+  message: string;
+  image: string;
+  link: string;
+}
+
 interface UpcomingWalletSpending {
   serviceCode: string;
   serviceName: string;
   planName: string;
   amount: number;
+}
+
+type WalletAction =
+  | 'topup'
+  | 'cashout'
+  | 'transfer'
+  | 'airtime'
+  | 'data'
+  | 'electricity'
+  | 'bills'
+  | 'vouchers'
+  | 'merchant'
+  | 'scanqr'
+  | 'showqr'
+  | 'tapnfc'
+  | 'request'
+  | 'beneficiary'
+  | 'statement';
+
+interface WalletOperatorFunction {
+  code: WalletAction;
+  title: string;
+  description: string;
 }
 
 @Component({
@@ -238,10 +277,30 @@ export class DashboardComponent implements OnInit {
     { name: 'SuperSport United', badge: 'SSU', color: '#1753a6' },
     { name: 'Stellenbosch FC', badge: 'SFC', color: '#9c1c2b' }
   ];
-  readonly walletAction = signal<'topup' | 'cashout' | 'transfer' | null>(null);
+  readonly walletAction = signal<WalletAction | null>(null);
   readonly walletActionLoading = signal(false);
   readonly walletActionNotice = signal('');
+  readonly walletOperatorFunctions: WalletOperatorFunction[] = [
+    { code: 'topup', title: 'Top Up', description: 'Bank card, voucher or EFT' },
+    { code: 'transfer', title: 'Send Money', description: 'Member wallet transfer' },
+    { code: 'cashout', title: 'Cash Out', description: 'Bank account withdrawal' },
+    { code: 'airtime', title: 'Buy Airtime', description: 'All mobile networks' },
+    { code: 'data', title: 'Buy Data', description: 'Bundles and validity' },
+    { code: 'electricity', title: 'Electricity', description: 'Prepaid token purchase' },
+    { code: 'bills', title: 'Pay Bills', description: 'Account, school, church or policy' },
+    { code: 'vouchers', title: 'Vouchers', description: 'Food, retail and gaming' },
+    { code: 'merchant', title: 'Merchant Pay', description: 'QR or reference payment' },
+    { code: 'scanqr', title: 'Scan QR', description: 'Pay merchant or send money' },
+    { code: 'showqr', title: 'Show My QR', description: 'Receive money instantly' },
+    { code: 'tapnfc', title: 'Tap NFC', description: 'Tap phone/card to pay' },
+    { code: 'request', title: 'Request Money', description: 'Ask another member to pay' },
+    { code: 'beneficiary', title: 'Beneficiaries', description: 'Save people and meters' },
+    { code: 'statement', title: 'Statements', description: 'Download or email history' }
+  ];
   readonly walletAmount = new FormControl('', { nonNullable: true });
+  readonly walletOperatorTarget = new FormControl('', { nonNullable: true });
+  readonly walletOperatorProvider = new FormControl('Vodacom', { nonNullable: true });
+  readonly walletOperatorProduct = new FormControl('Wallet transfer', { nonNullable: true });
   readonly africanBankAccountHolder = new FormControl('', { nonNullable: true });
   readonly africanBankAccountNumber = new FormControl('', { nonNullable: true });
   readonly africanBankAccountType = new FormControl<'SAVINGS' | 'CURRENT'>('SAVINGS', {
@@ -271,6 +330,30 @@ export class DashboardComponent implements OnInit {
   readonly vasProviders = signal<string[]>([]);
   readonly vasBundles = signal<DataBundle[]>([]);
   readonly savedVasBeneficiaries = signal<SavedBeneficiary[]>([]);
+  readonly vumaDataBundles = signal<VumaDataBundle[]>([
+    { code: 'vf-20gb', name: 'Vuma Force 20 GB Top-Up', dataSize: '20 GB', price: 99, validity: '30 days' },
+    { code: 'vf-50gb', name: 'Vuma Force 50 GB Top-Up', dataSize: '50 GB', price: 199, validity: '30 days' },
+    { code: 'vf-100gb', name: 'Vuma Force 100 GB Top-Up', dataSize: '100 GB', price: 349, validity: '30 days' }
+  ]);
+  readonly selectedVumaDataBundle = new FormControl('vf-50gb', { nonNullable: true });
+  readonly vumaFibreAccount = new FormControl('', { nonNullable: true });
+  readonly vumaDataPurchaseComplete = signal('');
+  readonly vumaMicroIspOpen = signal(false);
+  readonly vumaMicroIspSubmitted = signal('');
+  readonly vumaMicroIspName = new FormControl('', { nonNullable: true });
+  readonly vumaMicroIspPhone = new FormControl('', { nonNullable: true });
+  readonly vumaMicroIspArea = new FormControl('', { nonNullable: true });
+  readonly vumaMicroIspSize = new FormControl('20ft standard unit', { nonNullable: true });
+  readonly vumaMicroIspNotes = new FormControl('', { nonNullable: true });
+  private readonly vumaPublicityKey = 'inkolo_vuma_publicity';
+  private readonly defaultVumaPublicity: VumaPublicity = {
+    active: true,
+    title: 'Bruno Mars: The Romantic Tour',
+    message: 'Vumatel presents Bruno Mars live in South Africa at FNB Stadium, Johannesburg.',
+    image: '/vuma-bruno-mars-publicity.png',
+    link: 'https://vumatel.co.za'
+  };
+  readonly vumaPublicity = signal<VumaPublicity>(this.defaultVumaPublicity);
   readonly walletBalance = signal(850);
   readonly walletTransactions = signal<WalletTransaction[]>([
     { description: 'Wallet activated', date: 'Today', amount: 0 },
@@ -405,7 +488,7 @@ export class DashboardComponent implements OnInit {
   readonly assistantMessages = signal<AssistantMessage[]>([
     {
       role: 'assistant',
-      text: 'Hello! I am the Inkolo Connect assistant. Ask me about services, subscriptions or your account.'
+      text: 'Hello! I am the Duranki assistant. Ask me about services, subscriptions or your account.'
     }
   ]);
   readonly announcements: Announcement[] = [
@@ -592,36 +675,18 @@ export class DashboardComponent implements OnInit {
       ]
     },
     {
-      code: 'eduu',
-      name: 'EduU',
-      description: 'Learn, grow and succeed through digital educational services.',
-      image: '/service-education.png',
-      accent: '#087ce8',
-      tag: 'Education',
-      availability: 'available',
-      billingNote: 'Access learning resources and educational opportunities.',
-      plans: [
-        {
-          code: 'free',
-          name: 'EduU access',
-          price: 'Free',
-          description: 'Activate access to EduU learning services.'
-        }
-      ]
-    },
-    {
       code: 'vuma-fibre',
-      name: 'Vuma Fibre',
-      description: 'Explore fast and reliable fibre connectivity for your home.',
+      name: 'Vuma Force',
+      description: 'Explore fibre connectivity, education access and data services from Vuma.',
       image: '/service-vuma-fibre.png',
       accent: '#a62ee8',
-      tag: 'Connectivity',
+      tag: 'Connectivity and services',
       availability: 'available',
-      billingNote: 'Register your interest in Vuma Fibre connectivity.',
+      billingNote: 'Register for Vuma Force and open Vuma services.',
       plans: [
         {
           code: 'free',
-          name: 'Vuma Fibre enquiry',
+          name: 'Vuma Force enquiry',
           price: 'Free enquiry',
           description: 'Explore availability and register your interest.'
         }
@@ -684,7 +749,7 @@ export class DashboardComponent implements OnInit {
     {
       code: 'wallet',
       name: 'Wallet',
-      description: 'Manage your Inkolo Connect funds, balances and transactions in one place.',
+      description: 'Manage your Duranki funds, balances and transactions in one place.',
       image: '/service-my-wallet.png',
       accent: '#56b837',
       tag: 'Money',
@@ -702,6 +767,7 @@ export class DashboardComponent implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.loadVumaPublicity();
     this.requestedServiceCode = this.route.snapshot.queryParamMap.get('service') ?? '';
     this.returnToCommunityOnClose =
       this.route.snapshot.queryParamMap.get('from') === 'community';
@@ -967,6 +1033,8 @@ export class DashboardComponent implements OnInit {
         ? ''
         : service.code === 'vas-services' && this.subscriptionFor(service.code)
         ? 'airtime-data'
+        : service.code === 'vuma-fibre' && this.subscriptionFor(service.code)
+        ? 'buy-vuma-data'
         : service.plans[0]?.code ?? ''
     );
     this.funeralInkoloPlan.set('');
@@ -989,11 +1057,26 @@ export class DashboardComponent implements OnInit {
     this.vasRecipientName.setValue('');
     this.vasSaveBeneficiary.setValue(false);
     this.vasSelectedBeneficiary.setValue('');
+    this.vumaDataPurchaseComplete.set('');
+    this.vumaFibreAccount.setValue('');
+    this.vumaMicroIspOpen.set(false);
+    this.vumaMicroIspSubmitted.set('');
+    this.vumaMicroIspArea.setValue('');
+    this.vumaMicroIspSize.setValue('20ft standard unit');
+    this.vumaMicroIspNotes.setValue('');
+    this.selectedVumaDataBundle.setValue('vf-50gb');
     if (service.code === 'vas-services') {
       this.vasAccount.setValue(this.profiles.profile().telephoneNumber);
       this.vasConfirmAccount.setValue(this.profiles.profile().telephoneNumber);
       this.loadVasBeneficiaries();
       this.loadVasBundles();
+    }
+    if (service.code === 'vuma-fibre' && this.subscriptionFor(service.code)) {
+      this.vumaFibreAccount.setValue(this.profiles.profile().telephoneNumber);
+      this.vumaMicroIspName.setValue(
+        `${this.profiles.profile().firstName} ${this.profiles.profile().lastName}`.trim()
+      );
+      this.vumaMicroIspPhone.setValue(this.profiles.profile().telephoneNumber);
     }
     if (service.code === 'referral' && this.subscriptionFor('referral')) {
       this.loadReferrals();
@@ -1017,7 +1100,9 @@ export class DashboardComponent implements OnInit {
     this.vumaSharingConsent.set(false);
     this.referralNotice.set('');
     this.vasPurchaseComplete.set('');
+    this.vumaDataPurchaseComplete.set('');
     this.vasConfirmAccount.setValue('');
+    this.vumaFibreAccount.setValue('');
     this.bankConfirmationFile.set(null);
     this.idDocumentFile.set(null);
     this.returnToCommunity();
@@ -1168,6 +1253,51 @@ export class DashboardComponent implements OnInit {
 
   isActiveEduUView(service: Service): boolean {
     return service.code === 'eduu' && Boolean(this.subscriptionFor('eduu'));
+  }
+
+  isActiveVumaView(service: Service): boolean {
+    return service.code === 'vuma-fibre' && Boolean(this.subscriptionFor('vuma-fibre'));
+  }
+
+  loadVumaPublicity(): void {
+    try {
+      this.vumaPublicity.set(
+        JSON.parse(localStorage.getItem(this.vumaPublicityKey) || 'null') ??
+          this.defaultVumaPublicity
+      );
+    } catch {
+      this.vumaPublicity.set(this.defaultVumaPublicity);
+    }
+  }
+
+  selectedVumaBundle(): VumaDataBundle | undefined {
+    return this.vumaDataBundles().find(
+      ({ code }) => code === this.selectedVumaDataBundle.value
+    );
+  }
+
+  submitVumaMicroIspInterest(): void {
+    const area = this.vumaMicroIspArea.value.trim();
+    if (!area) {
+      this.vumaMicroIspSubmitted.set('Enter the community or area for the Micro ISP opportunity.');
+      return;
+    }
+    const payload = {
+      name: this.vumaMicroIspName.value.trim(),
+      cellphone: this.vumaMicroIspPhone.value.trim(),
+      area,
+      size: this.vumaMicroIspSize.value,
+      notes: this.vumaMicroIspNotes.value.trim(),
+      submittedAt: new Date().toISOString()
+    };
+    try {
+      localStorage.setItem('inkolo_vuma_micro_isp_interest', JSON.stringify(payload));
+    } catch {
+      // Demo storage can be unavailable in some embedded browser modes.
+    }
+    this.vumaMicroIspSubmitted.set(
+      `Micro ISP interest submitted for ${area}. Vuma will review the ${this.vumaMicroIspSize.value} opportunity.`
+    );
   }
 
   hasServiceTerms(service: Service): boolean {
@@ -1787,7 +1917,7 @@ export class DashboardComponent implements OnInit {
     if (userId) {
       localStorage.removeItem(`inkolo_wallet_brand_${userId}`);
     }
-    this.walletBrandNotice.set('The Inkolo Connect logo has been restored.');
+    this.walletBrandNotice.set('The Duranki logo has been restored.');
   }
 
   createTeamBadge(badge: string, color: string): string {
@@ -1867,10 +1997,13 @@ export class DashboardComponent implements OnInit {
       );
   }
 
-  openWalletAction(action: 'topup' | 'cashout' | 'transfer'): void {
+  openWalletAction(action: WalletAction): void {
     this.walletAction.set(action);
     this.walletAmount.setValue('');
     this.walletActionNotice.set('');
+    this.walletOperatorTarget.setValue('');
+    this.walletOperatorProvider.setValue('Vodacom');
+    this.walletOperatorProduct.setValue(this.walletActionTitle(action));
     this.walletRecipientTelephone.setValue('');
     this.walletTransferReference.setValue('');
     if (action === 'cashout') {
@@ -2270,6 +2403,10 @@ export class DashboardComponent implements OnInit {
     this.buySellPayments
       .getPaymentRequests(conversation.id)
       .subscribe((requests) => this.marketplacePaymentRequests.set(requests));
+  }
+
+  walletActionTitle(action = this.walletAction()): string {
+    return this.walletOperatorFunctions.find(({ code }) => code === action)?.title ?? 'Wallet action';
   }
 
   closePropertyMarketplace(): void {
@@ -2828,6 +2965,35 @@ export class DashboardComponent implements OnInit {
     });
   }
 
+  completeVumaDataPurchase(): void {
+    const bundle = this.selectedVumaBundle();
+    const fibreAccount = this.vumaFibreAccount.value.trim();
+
+    if (!bundle) {
+      this.subscriptionError.set('Choose a Vuma Force data bundle.');
+      return;
+    }
+
+    if (!fibreAccount || fibreAccount.length < 6) {
+      this.subscriptionError.set('Enter the Vuma Force account or linked cellphone number.');
+      return;
+    }
+
+    this.walletBalance.update((balance) => balance - bundle.price);
+    this.walletTransactions.update((transactions) => [
+      {
+        description: `Vuma Force data: ${bundle.dataSize}`,
+        date: 'Today',
+        amount: -bundle.price
+      },
+      ...transactions
+    ]);
+    this.subscriptionError.set('');
+    this.vumaDataPurchaseComplete.set(
+      `Vuma Force data purchase successful. ${bundle.dataSize} loaded for ${fibreAccount}.`
+    );
+  }
+
   onVasBuyingForChange(): void {
     const phone =
       this.vasBuyingFor.value === 'MYSELF'
@@ -3036,7 +3202,7 @@ export class DashboardComponent implements OnInit {
     }
 
     if (normalized.includes('vuma') || normalized.includes('fibre') || normalized.includes('internet')) {
-      return 'Vuma Fibre lets you explore fast home fibre connectivity and register an enquiry.';
+      return 'Vuma Force lets you explore fast home fibre connectivity and register an enquiry.';
     }
 
     if (normalized.includes('ride') || normalized.includes('lift') || normalized.includes('transport')) {
@@ -3055,7 +3221,7 @@ export class DashboardComponent implements OnInit {
       return 'Choose a service card and select Subscribe. Free services activate immediately, while paid services show their available plan and price.';
     }
 
-    return 'I can help with Funeral Services, Job Search, Wallet, Referral, My Community, VAS Services, EduU, Vuma Fibre, Catch a Lift and Buy and Sell.';
+    return 'I can help with Funeral Services, Job Search, Wallet, Referral, My Community, VAS Services, EduU, Vuma Force, Catch a Lift and Buy and Sell.';
   }
 
   logout(): void {

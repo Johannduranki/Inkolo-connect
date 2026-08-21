@@ -17,7 +17,7 @@ PUBLIC = Path(
 EFFECTIVE_DATE = "10 June 2026"
 REGISTRATION_NUMBER = "2025/674136/07"
 REGISTRATION_LINE = (
-    f"Inkolo Connect (Pty) Ltd - Registration number {REGISTRATION_NUMBER}"
+    f"Duranki (Pty) Ltd - Registration number {REGISTRATION_NUMBER}"
 )
 
 DOCUMENTS = [
@@ -135,8 +135,8 @@ def normalized_text(text: str) -> str:
         flags=re.IGNORECASE,
     )
     text = re.sub(
-        r"Inkolo Connect \(Pty\) Ltd, registration number\s*_+,",
-        f"Inkolo Connect (Pty) Ltd, registration number {REGISTRATION_NUMBER},",
+        r"Duranki \(Pty\) Ltd, registration number\s*_+,",
+        f"Duranki (Pty) Ltd, registration number {REGISTRATION_NUMBER},",
         text,
         flags=re.IGNORECASE,
     )

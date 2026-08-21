@@ -1,15 +1,23 @@
 <main class="role-page">
-  <header>
-    <a class="brand" href="" (click)="$event.preventDefault(); openRoleDashboard()">
-      <img src="/inkolo-connect-logo.png" alt="Inkolo Connect">
-      <span>Powered by Duranki</span>
-    </a>
-    @if (user()) {
-      <app-role-switcher
-        [userFullName]="user()!.firstName + ' ' + user()!.lastName"
-      ></app-role-switcher>
-    }
-    <button type="button" (click)="logout()">Sign out</button>
+  <header class="topbar">
+    <div class="header-brand-group">
+      <a class="brand" href="" (click)="$event.preventDefault(); openRoleDashboard()" aria-label="Duranki dashboard">
+        <img class="header-logo" src="/duranki-up-logo.png" alt="Duranki">
+      </a>
+      <span class="top-powered-by">Powered by Duranki</span>
+    </div>
+    <span aria-hidden="true"></span>
+    <div class="account">
+      @if (user()) {
+        <app-role-switcher
+          [userFullName]="user()!.firstName + ' ' + user()!.lastName"
+        ></app-role-switcher>
+        <span class="avatar" aria-hidden="true">
+          {{ user()!.firstName.charAt(0) }}{{ user()!.lastName.charAt(0) }}
+        </span>
+      }
+      <button class="sign-out" type="button" (click)="logout()">Sign out</button>
+    </div>
   </header>
 
   <div class="role-layout">

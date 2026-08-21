@@ -91,11 +91,8 @@ const servicePlans = {
     'airtime-data': { amountCents: 0, label: 'Buy Airtime or Data' },
     electricity: { amountCents: 0, label: 'Prepaid Electricity' }
   },
-  eduu: {
-    free: { amountCents: 0, label: 'EduU access' }
-  },
   'vuma-fibre': {
-    free: { amountCents: 0, label: 'Vuma Fibre enquiry' }
+    free: { amountCents: 0, label: 'Vuma Force enquiry' }
   },
   'catch-a-ride': {
     free: { amountCents: 0, label: 'Catch a Lift access' }
@@ -166,7 +163,7 @@ export function createApp({ databaseAvailable = true } = {}) {
         callback(null, true);
         return;
       }
-      callback(new Error('Origin is not allowed by Inkolo Connect.'));
+      callback(new Error('Origin is not allowed by Duranki.'));
     }
   }));
   app.use(express.json({ limit: '2mb' }));

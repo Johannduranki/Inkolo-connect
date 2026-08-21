@@ -59,7 +59,7 @@ export class CommunityComponent implements OnInit {
   readonly subscriptions = signal<ServiceSubscription[]>([]);
   readonly walletOpen = signal(false);
   readonly walletBrandLogo = signal('');
-  readonly walletBrandName = signal('Inkolo Connect');
+  readonly walletBrandName = signal('Duranki');
   readonly openingService = signal<{
     serviceCode: string;
     name: string;
@@ -123,7 +123,7 @@ export class CommunityComponent implements OnInit {
     'job-search': { name: 'Job Search', image: '/service-job-search.png', accent: '#1685ea' },
     'vas-services': { name: 'VAS Services', image: '/service-vas.png', accent: '#58c91a' },
     eduu: { name: 'EduU', image: '/service-education.png', accent: '#087ce8' },
-    'vuma-fibre': { name: 'Vuma Fibre', image: '/service-vuma-fibre.png', accent: '#8c2be2' },
+    'vuma-fibre': { name: 'Vuma Force', image: '/service-vuma-fibre.png', accent: '#8c2be2' },
     'catch-a-ride': { name: 'Catch a Lift', image: '/service-catch-a-lift.png', accent: '#48b824' },
     kzncc: { name: 'KZNCC', image: '/service-kzncc.png', accent: '#087ce8' },
     'keycha-properties': { name: 'Keytcha Properties', image: '/service-keycha-properties.png', accent: '#48b824' },
@@ -137,6 +137,7 @@ export class CommunityComponent implements OnInit {
     'catch-a-ride',
     'job-search',
     'kzncc',
+    'vuma-fibre',
     'vas-services'
   ];
   readonly church = {
@@ -231,7 +232,7 @@ export class CommunityComponent implements OnInit {
 
   communityChangeEmailLink(): string {
     const user = this.user();
-    const subject = 'Inkolo Connect community change request';
+    const subject = 'Duranki community change request';
     const body = [
       'Hello Duranki Admin,',
       '',
@@ -306,7 +307,7 @@ export class CommunityComponent implements OnInit {
         ...subscription,
         ...(this.serviceDetails[subscription.serviceCode] ?? {
           name: subscription.planLabel,
-          image: '/inkolo-connect-logo.png',
+          image: '/duranki-up-logo.png',
           accent: '#087ce8'
         }),
         name:
@@ -333,6 +334,11 @@ export class CommunityComponent implements OnInit {
     image: string;
   }): void {
     if (service.serviceCode === 'community') {
+      return;
+    }
+
+    if (service.serviceCode === 'vuma-fibre') {
+      window.location.href = '/vuma-fibre-service.html';
       return;
     }
 
@@ -378,10 +384,10 @@ export class CommunityComponent implements OnInit {
         localStorage.getItem(`inkolo_wallet_brand_${userId}`) ?? 'null'
       );
       this.walletBrandLogo.set(String(saved?.logo ?? ''));
-      this.walletBrandName.set(String(saved?.team ?? 'Inkolo Connect'));
+      this.walletBrandName.set(String(saved?.team ?? 'Duranki'));
     } catch {
       this.walletBrandLogo.set('');
-      this.walletBrandName.set('Inkolo Connect');
+      this.walletBrandName.set('Duranki');
     }
   }
 

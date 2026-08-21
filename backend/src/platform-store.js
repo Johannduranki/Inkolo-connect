@@ -301,7 +301,7 @@ function jobSeed() {
     {
       id: 'job-001',
       title: 'Office Administrator',
-      description: 'Office Administrator opportunity available to an Inkolo Connect community member.',
+      description: 'Office Administrator opportunity available to an Duranki community member.',
       category: 'Admin',
       jobType: 'Admin',
       employmentType: 'FULL_TIME',
@@ -321,7 +321,7 @@ function jobSeed() {
     {
       id: 'job-002',
       title: 'Shop Assistant',
-      description: 'Shop Assistant opportunity available to an Inkolo Connect community member.',
+      description: 'Shop Assistant opportunity available to an Duranki community member.',
       category: 'Sales',
       jobType: 'Sales',
       employmentType: 'PART_TIME',
@@ -416,6 +416,7 @@ function initialState() {
     [6, 'Sipho', 'Ncube', '0763004005', 'sipho@inkoloconnect.local', ['Admin User']],
     [7, 'Zanele', 'Mkhize', '0795006007', 'zanele@africanbank.local', ['Service Provider Admin']],
     [8, 'Mandla', 'Cele', '0817008009', 'mandla@africanbank.local', ['Service Provider User']],
+    [19, 'Vuma', 'Admin', '0829001001', 'vuma.admin@vuma.local', ['Service Provider Admin']],
     [9, 'Bongani', 'Zulu', '0714101001', 'bongani.zulu@inkoloconnect.local', ['Member']],
     [10, 'Nomusa', 'Khumalo', '0714101002', 'nomusa.khumalo@inkoloconnect.local', ['Member']],
     [11, 'Sibusiso', 'Dlamini', '0714101003', 'sibusiso.dlamini@inkoloconnect.local', ['Member']],
@@ -617,6 +618,40 @@ function initialState() {
   };
 }
 
+function ensureVumaAdminUser(loaded) {
+  loaded.users = (loaded.users ?? []).filter(
+    (user) =>
+      Number(user.id) !== 19 &&
+      user.telephoneNumber !== '0829001001' &&
+      user.telephoneNumber !== '0719998899'
+  );
+  loaded.users.push({
+    id: 19,
+    firstName: 'Vuma',
+    lastName: 'Admin',
+    telephoneNumber: '0829001001',
+    email: 'vuma.admin@vuma.local',
+    roles: ['Service Provider Admin'],
+    status: 'active',
+    membershipType: null
+  });
+
+  loaded.profiles = (loaded.profiles ?? []).filter(
+    (profile) => Number(profile.userId) !== 19
+  );
+  loaded.profiles.push({
+    userId: 19,
+    idNumber: '',
+    telephoneNumber: '0829001001',
+    email: 'vuma.admin@vuma.local',
+    address: '',
+    city: '',
+    postalCode: '',
+    emergencyContactName: '',
+    emergencyContactNumber: ''
+  });
+}
+
 function loadState() {
   mkdirSync(dataDirectory, { recursive: true });
   try {
@@ -692,6 +727,7 @@ function loadState() {
     if ((loaded.version ?? 1) < 11) {
       loaded.memberDocuments ??= [];
     }
+    ensureVumaAdminUser(loaded);
     loaded.version = 11;
     writeFileSync(storePath, JSON.stringify(loaded, null, 2));
     return loaded;

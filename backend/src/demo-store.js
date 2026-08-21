@@ -9,7 +9,8 @@ const demoUsers = [
   { id: 5, telephone_number: '0741002003', first_name: 'Ayanda', last_name: 'Dlamini', email: 'ayanda@inkoloconnect.local', roles: ['Member', 'KZNCC Admin'], status: 'active', membership_type: null },
   { id: 6, telephone_number: '0763004005', first_name: 'Sipho', last_name: 'Ncube', email: 'sipho@inkoloconnect.local', roles: ['Admin User'], status: 'active', membership_type: null },
   { id: 7, telephone_number: '0795006007', first_name: 'Zanele', last_name: 'Mkhize', email: 'zanele@africanbank.local', roles: ['Service Provider Admin'], status: 'active', membership_type: null },
-  { id: 8, telephone_number: '0817008009', first_name: 'Mandla', last_name: 'Cele', email: 'mandla@africanbank.local', roles: ['Service Provider User'], status: 'active', membership_type: null }
+  { id: 8, telephone_number: '0817008009', first_name: 'Mandla', last_name: 'Cele', email: 'mandla@africanbank.local', roles: ['Service Provider User'], status: 'active', membership_type: null },
+  { id: 19, telephone_number: '0829001001', first_name: 'Vuma', last_name: 'Admin', email: 'vuma.admin@vuma.local', roles: ['Service Provider Admin'], status: 'active', membership_type: null }
 ];
 
 const demoSubscriptions = new Map();

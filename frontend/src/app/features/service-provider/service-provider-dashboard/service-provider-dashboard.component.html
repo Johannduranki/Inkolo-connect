@@ -1,11 +1,25 @@
 <main class="provider-page">
-  <header>
-    <a href="/dashboard/member"><img src="/inkolo-connect-logo.png" alt="Inkolo Connect"><span>Powered by Duranki</span></a>
-    @if (user()) { <app-role-switcher [userFullName]="user()!.firstName + ' ' + user()!.lastName"></app-role-switcher> }
-    <button (click)="logout()">Sign out</button>
+  <header class="topbar">
+    <div class="header-brand-group">
+      <div class="brand">
+        <img class="header-logo" src="/duranki-up-logo.png" alt="Duranki">
+      </div>
+      <span class="top-powered-by">Powered by Duranki</span>
+    </div>
+    <span aria-hidden="true"></span>
+    <div class="account">
+      @if (user()) {
+        <app-role-switcher [userFullName]="user()!.firstName + ' ' + user()!.lastName"></app-role-switcher>
+        <span class="avatar" aria-hidden="true">
+          {{ user()!.firstName.charAt(0) }}{{ user()!.lastName.charAt(0) }}
+        </span>
+      }
+      <button class="sign-out" type="button" (click)="logout()">Sign out</button>
+    </div>
   </header>
   <nav>
     <button [class.active]="activeTab() === 'overview'" (click)="activeTab.set('overview')">Overview</button>
+    <button [class.active]="activeTab() === 'vuma'" (click)="activeTab.set('vuma')">Vuma Force</button>
     <button [class.active]="activeTab() === 'members'" (click)="activeTab.set('members')">Paid members</button>
     <button [class.active]="activeTab() === 'billing'" (click)="activeTab.set('billing')">Billing</button>
     <button [class.active]="activeTab() === 'invoices'" (click)="activeTab.set('invoices')">Invoices</button>
@@ -14,8 +28,270 @@
   @if (notice()) { <p class="notice">{{ notice() }}</p> }
   <section class="hero">
     <p>{{ role() }}</p><h1>{{ summary()?.provider?.name }}</h1>
-    <span>Restricted to this provider's Funeral Cover services and linked paid members.</span>
+    <span>Restricted to provider services, linked paid members, and Vuma Force reporting.</span>
   </section>
+
+  @if (activeTab() === 'vuma') {
+    <section class="vuma-hero">
+      <div>
+        <p>VUMA FORCE ADMIN</p>
+        <h2>Services, internet usage and church member spend</h2>
+        <span>Open Vuma services, track Vuma Force users, monthly internet spend, data usage, and church-level performance.</span>
+      </div>
+      <img src="/service-vuma-fibre.png" alt="Vuma Force">
+    </section>
+
+    <section class="panel">
+      <div class="heading">
+        <div>
+          <p>VUMA SERVICES</p>
+          <h2>Services inside Vuma Force</h2>
+        </div>
+        <strong>{{ vumaServiceRevenue() | currency:'ZAR' }}</strong>
+      </div>
+      <div class="vuma-service-grid">
+        @for (service of vumaServices(); track service.code) {
+          <article>
+            <img [src]="service.image" [alt]="service.name">
+            <div>
+              <span>{{ service.status }}</span>
+              <h3>{{ service.name }}</h3>
+              <p>{{ service.description }}</p>
+            </div>
+            <dl>
+              <div><dt>Active users</dt><dd>{{ service.activeUsers }}</dd></div>
+              <div><dt>Monthly revenue</dt><dd>{{ service.monthlyRevenue | currency:'ZAR' }}</dd></div>
+            </dl>
+            <button type="button">{{ service.code === 'education' ? 'Open Education' : 'Open Buy Data' }}</button>
+          </article>
+        }
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="heading">
+        <div>
+          <p>PUBLICITY</p>
+          <h2>Load publicity for Vuma subscribers</h2>
+        </div>
+      </div>
+      <div class="vuma-publicity-admin">
+        <div class="vuma-publicity-preview">
+          <img [src]="vumaPublicityImage()" alt="Active Vuma publicity">
+        </div>
+        <form class="vuma-publicity-form" (ngSubmit)="publishVumaPublicity()">
+          <label>
+            <span>Campaign title</span>
+            <input [formControl]="vumaPublicityTitle">
+          </label>
+          <label>
+            <span>Message for subscribers</span>
+            <textarea [formControl]="vumaPublicityMessage"></textarea>
+          </label>
+          <label>
+            <span>Campaign link</span>
+            <input type="url" [formControl]="vumaPublicityLink">
+          </label>
+          <label>
+            <span>Upload campaign image</span>
+            <input type="file" accept="image/*" (change)="uploadVumaPublicityImage($event)">
+          </label>
+          <div class="vuma-publicity-actions">
+            <button type="submit">Publish publicity</button>
+            <button type="button" class="secondary" (click)="resetVumaPublicity()">Reset to demo poster</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="summary-grid">
+      <article class="live-revenue"><span>Live internet received</span><strong>{{ liveVumaRevenue() | currency:'ZAR' }}</strong><small>Growing as subscribers buy data</small></article>
+      <article><span>Total Vuma users</span><strong>{{ filteredVumaUsers().length }}</strong></article>
+      <article><span>Active users</span><strong>{{ vumaActiveUsers() }}</strong></article>
+      <article><span>Total internet spend</span><strong>{{ vumaTotalSpend() | currency:'ZAR' }}</strong></article>
+      <article><span>Average spend per user</span><strong>{{ vumaAverageSpend() | currency:'ZAR' }}</strong></article>
+      <article><span>Total data used</span><strong>{{ vumaTotalDataUsed() }} GB</strong></article>
+      <article><span>Church groups</span><strong>{{ vumaChurchBreakdown().length }}</strong></article>
+      <article><span>Payment due</span><strong>{{ filteredVumaUsers().length - vumaActiveUsers() }}</strong></article>
+      <article><span>Reporting month</span><strong>July 2026</strong></article>
+    </section>
+
+    <section class="panel">
+      <div class="heading">
+        <div>
+          <p>NETWORK MAP</p>
+          <h2>ISP down to micro ISP structure</h2>
+        </div>
+      </div>
+      <div class="vuma-network-map">
+        @for (node of vumaNetwork(); track node.level) {
+          <article>
+            <span>{{ node.level }}</span>
+            <h3>{{ node.name }}</h3>
+            <p>{{ node.area }}</p>
+            <dl>
+              <div><dt>Network size</dt><dd>{{ node.countLabel }}</dd></div>
+              <div><dt>Revenue handled</dt><dd>{{ node.revenue | currency:'ZAR' }}</dd></div>
+              <div><dt>Uptime</dt><dd>{{ node.uptime }}%</dd></div>
+            </dl>
+          </article>
+        }
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="heading">
+        <div>
+          <p>PERFORMANCE</p>
+          <h2>Performance per ISP and micro ISP</h2>
+        </div>
+      </div>
+      <div class="vuma-performance-chart">
+        @for (isp of vumaIspPerformance(); track isp.name) {
+          <article>
+            <div>
+              <strong>{{ isp.name }}</strong>
+              <span>{{ isp.layer }} · {{ isp.area }} · {{ isp.subscribers }} subscribers</span>
+            </div>
+            <div class="vuma-bar-track">
+              <span [style.width.%]="vumaPerformanceWidth(isp.revenue)"></span>
+            </div>
+            <dl>
+              <div><dt>Revenue</dt><dd>{{ isp.revenue | currency:'ZAR' }}</dd></div>
+              <div><dt>Uptime</dt><dd>{{ isp.uptime }}%</dd></div>
+              <div><dt>Growth</dt><dd>{{ isp.growth }}%</dd></div>
+            </dl>
+          </article>
+        }
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="heading">
+        <div>
+          <p>COMMUNICATION</p>
+          <h2>Targeted Vuma communication channel</h2>
+        </div>
+      </div>
+      <form class="vuma-communication" (ngSubmit)="sendVumaCommunication()">
+        <label>
+          <span>Target group</span>
+          <select [formControl]="communicationTarget">
+            <option>All Vuma subscribers</option>
+            <option>Active subscribers only</option>
+            <option>Payment due subscribers</option>
+            <option>Micro ISP entrepreneurs</option>
+            <option>Church administrators</option>
+          </select>
+        </label>
+        <label>
+          <span>Area / district</span>
+          <select [formControl]="communicationArea">
+            <option>All areas</option>
+            <option>Umlazi</option>
+            <option>KwaMashu</option>
+            <option>Pinetown</option>
+            <option>Durban Central</option>
+            <option>Pietermaritzburg</option>
+          </select>
+        </label>
+        <label class="message">
+          <span>Message</span>
+          <textarea [formControl]="communicationMessage"></textarea>
+        </label>
+        <aside>
+          <strong>Audience preview</strong>
+          <p>{{ communicationTarget.value }} · {{ communicationArea.value }}</p>
+          <small>Channel supports service notices, data bundle campaigns, outage alerts, church-area campaigns, and micro ISP retailer updates.</small>
+        </aside>
+        <button type="submit">Queue message</button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="heading">
+        <div>
+          <p>ALL VUMA USERS</p>
+          <h2>Members and internet spend</h2>
+        </div>
+        <button type="button">Export CSV</button>
+      </div>
+      <div class="filters">
+        <input [formControl]="vumaSearch" placeholder="Search member, cellphone or package">
+        <select [formControl]="vumaChurchFilter">
+          <option value="ALL">All churches</option>
+          @for (church of vumaChurchOptions(); track church) {
+            <option [value]="church">{{ church }}</option>
+          }
+        </select>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Member</th>
+              <th>Church</th>
+              <th>Fibre package</th>
+              <th>Monthly spend</th>
+              <th>Data used</th>
+              <th>Status</th>
+              <th>Last payment</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (member of filteredVumaUsers(); track member.id) {
+              <tr>
+                <td><b>{{ member.memberName }}</b><span>{{ member.cellphone }}</span></td>
+                <td>{{ member.churchName }}<span>{{ member.branchName }}</span></td>
+                <td>{{ member.planName }}</td>
+                <td>{{ member.monthlySpend | currency:'ZAR' }}</td>
+                <td>{{ member.dataUsedGb }} GB</td>
+                <td>
+                  <em [class.good]="member.status === 'Active'">{{ member.status }}</em>
+                </td>
+                <td>{{ member.lastPaymentDate | date:'mediumDate' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="heading">
+        <div>
+          <p>CHURCH BREAKDOWN</p>
+          <h2>Spend per church and member list</h2>
+        </div>
+      </div>
+      <div class="church-breakdown">
+        @for (church of vumaChurchBreakdown(); track church.churchName + church.branchName) {
+          <article>
+            <header>
+              <div>
+                <strong>{{ church.churchName }}</strong>
+                <span>{{ church.branchName }}</span>
+              </div>
+              <b>{{ church.totalSpend | currency:'ZAR' }}</b>
+            </header>
+            <dl>
+              <div><dt>Members</dt><dd>{{ church.memberCount }}</dd></div>
+              <div><dt>Average spend</dt><dd>{{ church.averageSpend | currency:'ZAR' }}</dd></div>
+              <div><dt>Data used</dt><dd>{{ church.totalDataUsedGb }} GB</dd></div>
+            </dl>
+            <div class="church-member-list">
+              @for (member of church.members; track member.id) {
+                <span>
+                  <b>{{ member.memberName }}</b>
+                  {{ member.monthlySpend | currency:'ZAR' }} - {{ member.planName }}
+                </span>
+              }
+            </div>
+          </article>
+        }
+      </div>
+    </section>
+  }
 
   @if (activeTab() === 'overview') {
     <section class="summary-grid">

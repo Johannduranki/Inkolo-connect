@@ -1,4 +1,4 @@
-package za.co.inkoloconnect.app;
+package mg.mvola.wallet.demo;
 
 import com.getcapacitor.BridgeActivity;
 

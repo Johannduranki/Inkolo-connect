@@ -22,7 +22,7 @@ const reportServiceNames = {
   'job-search': 'Job Search',
   'vas-services': 'VAS Services',
   eduu: 'EduU',
-  'vuma-fibre': 'Vuma Fibre',
+  'vuma-fibre': 'Vuma Force',
   'catch-a-ride': 'Catch a Lift',
   kzncc: 'KZNCC',
   'keycha-properties': 'Keytcha Properties',

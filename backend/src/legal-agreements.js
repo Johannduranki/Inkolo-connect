@@ -15,7 +15,7 @@ const serviceNames = {
   'job-search': 'Job Search',
   'vas-services': 'VAS Services',
   eduu: 'EduU',
-  'vuma-fibre': 'Vuma Fibre',
+  'vuma-fibre': 'Vuma Force',
   'catch-a-ride': 'Catch a Lift',
   kzncc: 'KZNCC Membership',
   'keycha-properties': 'Keytcha Properties',
@@ -43,7 +43,7 @@ function genericTerms(serviceCode, planCode) {
 <body>
 <h1>${serviceName} Terms and Conditions</h1>
 <p>Version 1.0, effective 10 June 2026.</p>
-<p>Inkolo Connect (Pty) Ltd, registration number 2025/674136/07.</p>
+<p>Duranki (Pty) Ltd, registration number 2025/674136/07.</p>
 <p>The member requests activation of the ${serviceName} service under plan ${planCode}.</p>
 <p>The member confirms that the information supplied is accurate, agrees to applicable service fees,
 privacy processing, service rules, provider requirements, and electronic record keeping.</p>

@@ -13,8 +13,8 @@
   }
   <header class="topbar">
     <div class="header-brand-group">
-      <a class="brand" href="/dashboard" aria-label="Inkolo Connect dashboard">
-        <img class="header-logo" src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+      <a class="brand" href="/dashboard" aria-label="Duranki dashboard">
+        <img class="header-logo" src="/duranki-up-logo.png" alt="Duranki">
       </a>
       <span class="top-powered-by">Powered by Duranki</span>
     </div>
@@ -113,10 +113,10 @@
                   @if (walletBrandLogo()) {
                     <img class="wallet-custom-logo" [src]="walletBrandLogo()" [alt]="walletBrandTeam()">
                   } @else {
-                    <img src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+                    <img src="/duranki-up-logo.png" alt="Duranki">
                   }
                 </span>
-                <b>INKOLO WALLET</b>
+                <b>DURANKI WALLET</b>
               </span>
               <span class="bank-card-chip" aria-hidden="true"></span>
               <strong>•••• •••• •••• 2086</strong>
@@ -152,7 +152,7 @@
 
   <section class="hero">
     <div>
-      <p class="eyebrow">YOUR INKOLO CONNECT ECOSYSTEM</p>
+      <p class="eyebrow">YOUR DURANKI ECOSYSTEM</p>
       <h1 class="welcome-line">
         @if (user()) {
           Hi, {{ user()!.firstName }} {{ user()!.lastName }}
@@ -180,10 +180,10 @@
                   @if (walletBrandLogo()) {
                     <img class="wallet-custom-logo" [src]="walletBrandLogo()" [alt]="walletBrandTeam()">
                   } @else {
-                    <img src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+                    <img src="/duranki-up-logo.png" alt="Duranki">
                   }
                 </span>
-              <b>INKOLO WALLET</b>
+              <b>DURANKI WALLET</b>
             </span>
             <span class="bank-card-chip" aria-hidden="true"></span>
             <strong>•••• •••• •••• 2086</strong>
@@ -219,7 +219,7 @@
       <div class="section-heading">
         <div>
           <p class="eyebrow">EXPLORE</p>
-          <h2>Inkolo Connect services</h2>
+          <h2>Duranki services</h2>
         </div>
         <span>{{ availableServices().length }} services available</span>
       </div>
@@ -375,12 +375,12 @@
     <div>
       <p class="eyebrow">THE ECOSYSTEM IS GROWING</p>
       <h2>More services are on the way.</h2>
-      <p>New Inkolo Connect services will appear here as they become available.</p>
+      <p>New Duranki services will appear here as they become available.</p>
     </div>
   </section>
 
   <footer>
-    <span>Inkolo Connect Platform</span>
+    <span>Duranki Platform</span>
     <span>One account. A growing ecosystem.</span>
   </footer>
 
@@ -458,7 +458,7 @@
                     <img [src]="plan.image" [alt]="plan.name">
                   }
                   <div>
-                    <small>{{ plan.provider || 'Inkolo Connect' }}</small>
+                    <small>{{ plan.provider || 'Duranki' }}</small>
                     <strong>{{ plan.name }}</strong>
                     <span>{{ plan.description }}</span>
                   </div>
@@ -581,7 +581,7 @@
           <section class="wallet-workspace" aria-labelledby="wallet-workspace-title">
             <div class="wallet-workspace-heading">
               <div>
-                <p class="eyebrow">INKOLO WALLET</p>
+                <p class="eyebrow">DURANKI WALLET</p>
                 <h3 id="wallet-workspace-title">Wallet activity</h3>
                 <p>Review money received, money spent and your upcoming monthly payments.</p>
               </div>
@@ -939,6 +939,147 @@
               </p>
             </div>
           </section>
+        } @else if (isActiveVumaView(service)) {
+          <section class="vuma-workspace" aria-labelledby="vuma-workspace-title">
+            <div class="vuma-workspace-heading">
+              <img src="/service-vuma-fibre.png" alt="" aria-hidden="true">
+              <div>
+                <p class="eyebrow">VUMA FORCE SERVICE</p>
+                <h3 id="vuma-workspace-title">Your active Vuma Force services</h3>
+                <p>
+                  Vuma Force is active on your account. Open Education or buy
+                  Vuma Force data from inside this service.
+                </p>
+              </div>
+            </div>
+
+            @if (vumaPublicity().active) {
+              <article class="vuma-publicity-card">
+                <img [src]="vumaPublicity().image" alt="Vuma subscriber publicity">
+                <div>
+                  <p class="eyebrow">VUMA PUBLICITY</p>
+                  <h4>{{ vumaPublicity().title }}</h4>
+                  <p>{{ vumaPublicity().message }}</p>
+                  <a [href]="vumaPublicity().link" target="_blank" rel="noopener">View campaign</a>
+                </div>
+              </article>
+            }
+
+            <div class="vuma-inner-services">
+              <article>
+                <img src="/service-education.png" alt="Education">
+                <div>
+                  <span>Included</span>
+                  <h4>Education</h4>
+                  <p>EduU learning resources and education opportunities for Vuma-connected members.</p>
+                </div>
+                <button type="button">Open Education</button>
+              </article>
+              <article class="vuma-micro-isp-card">
+                <img src="/vuma-shop-in-box-micro-isp.png" alt="Vuma Shop-in-Box micro ISP business">
+                <div>
+                  <span>Business opportunity</span>
+                  <h4>Start a Micro ISP Business</h4>
+                  <p>
+                    Apply to run a Vuma-powered Shop-in-Box retail unit for data,
+                    devices, airtime, payments, fibre and home services in your community.
+                  </p>
+                </div>
+                <button type="button" (click)="vumaMicroIspOpen.set(true)">
+                  Start application
+                </button>
+              </article>
+            </div>
+
+            @if (vumaMicroIspOpen()) {
+              <form class="vuma-micro-isp-form" (ngSubmit)="submitVumaMicroIspInterest()">
+                <label>
+                  <span>Your name</span>
+                  <input [formControl]="vumaMicroIspName">
+                </label>
+                <label>
+                  <span>Cellphone</span>
+                  <input type="tel" [formControl]="vumaMicroIspPhone">
+                </label>
+                <label>
+                  <span>Community or area</span>
+                  <input [formControl]="vumaMicroIspArea" placeholder="Example: Umlazi, Soweto, Pinetown">
+                </label>
+                <label>
+                  <span>Preferred unit size</span>
+                  <select [formControl]="vumaMicroIspSize">
+                    <option>10ft mini unit</option>
+                    <option>20ft standard unit</option>
+                    <option>30ft flagship unit</option>
+                    <option>Double expanded retail hub</option>
+                  </select>
+                </label>
+                <label class="wide">
+                  <span>Why this area is a good fit</span>
+                  <textarea
+                    [formControl]="vumaMicroIspNotes"
+                    placeholder="Tell Vuma about your community, foot traffic, location or business experience."
+                  ></textarea>
+                </label>
+                <button type="submit">Submit interest</button>
+              </form>
+              @if (vumaMicroIspSubmitted()) {
+                <p class="purchase-success">{{ vumaMicroIspSubmitted() }}</p>
+              }
+            }
+
+            <section class="vuma-force-panel" aria-labelledby="vuma-force-title">
+              <img src="/vuma-force-distributed-retail-system.png" alt="Vuma Force distributed retail system">
+              <div>
+                <p class="eyebrow">VUMA FORCE</p>
+                <h4 id="vuma-force-title">Distributed retail system</h4>
+                <p>
+                  The Micro ISP opportunity is part of Vuma Force: a networked retail
+                  ecosystem connecting entrepreneurs, retail units, suppliers and
+                  customers in local communities.
+                </p>
+                <ul>
+                  <li>Local entrepreneur ownership</li>
+                  <li>Shop-in-Box retail unit</li>
+                  <li>Vuma standards and governance</li>
+                  <li>Supplier, technology and deployment support</li>
+                </ul>
+              </div>
+            </section>
+
+            @if (selectedPlanCode() === 'buy-vuma-data') {
+              <div class="vuma-data-form">
+                <label>
+                  <span>Vuma Force account or linked cellphone</span>
+                  <input
+                    type="text"
+                    [formControl]="vumaFibreAccount"
+                    placeholder="Enter Vuma account or cellphone"
+                  >
+                </label>
+                <label>
+                  <span>Data bundle</span>
+                  <select [formControl]="selectedVumaDataBundle">
+                    @for (bundle of vumaDataBundles(); track bundle.code) {
+                      <option [value]="bundle.code">
+                        {{ bundle.name }} · {{ bundle.dataSize }} · R{{ bundle.price }}
+                      </option>
+                    }
+                  </select>
+                </label>
+                @if (selectedVumaBundle(); as bundle) {
+                  <div class="vuma-bundle-summary">
+                    <span>{{ bundle.dataSize }}</span>
+                    <strong>R{{ bundle.price }}</strong>
+                    <small>Valid for {{ bundle.validity }}</small>
+                  </div>
+                }
+              </div>
+              @if (vumaDataPurchaseComplete()) {
+                <p class="purchase-success">{{ vumaDataPurchaseComplete() }}</p>
+              }
+            }
+          </section>
         } @else if (service.code === 'community') {
           <div class="vas-purchase-form">
             <label>
@@ -1210,7 +1351,7 @@
 
         @if (service.code === 'vuma-fibre' && !subscriptionFor(service.code)) {
           <section class="vuma-consent-panel">
-            <strong>Vuma Fibre availability enquiry</strong>
+            <strong>Vuma Force availability enquiry</strong>
             <p>
               Do you want to share your personal details with Vuma so they can contact you
               about fibre availability in your area?
@@ -1222,7 +1363,7 @@
                 (change)="vumaSharingConsent.set($any($event.target).checked)"
               >
               <span>
-                Yes, I consent to Inkolo Connect sharing my name, contact details and address
+                Yes, I consent to Duranki sharing my name, contact details and address
                 with Vuma for this fibre availability enquiry.
               </span>
             </label>
@@ -1235,6 +1376,7 @@
           !isActiveWalletView(service) &&
           !isActiveCatchRideView(service) &&
           !isActiveEduUView(service) &&
+          !isActiveVumaView(service) &&
           !service.application &&
           !vasPurchaseEnabled(service)
         ) {
@@ -1268,7 +1410,8 @@
           isActiveReferralView(service) ||
           isActiveWalletView(service) ||
           isActiveCatchRideView(service) ||
-          isActiveEduUView(service)
+          isActiveEduUView(service) ||
+          (isActiveVumaView(service) && selectedPlanCode() !== 'buy-vuma-data')
         ) {
           <button
             class="confirm-subscription"
@@ -1298,7 +1441,18 @@
             Buy now
           </button>
           <p class="payment-note">
-            Purchase confirmation will be recorded against your Inkolo Connect account.
+            Purchase confirmation will be recorded against your Duranki account.
+          </p>
+        } @else if (isActiveVumaView(service) && selectedPlanCode() === 'buy-vuma-data') {
+          <button
+            class="confirm-subscription"
+            type="button"
+            (click)="completeVumaDataPurchase()"
+          >
+            Buy Vuma Force data
+          </button>
+          <p class="payment-note">
+            This purchase belongs to Vuma Force and is separate from VAS Services.
           </p>
         } @else {
           <button
@@ -1347,7 +1501,7 @@
           <div>
             <p class="eyebrow">COMMUNITY MARKETPLACE</p>
             <h2 id="marketplace-title">Buy and Sell</h2>
-            <p>Discover items offered by trusted Inkolo Connect members.</p>
+            <p>Discover items offered by trusted Duranki members.</p>
           </div>
           <div class="business-heading-actions">
             <button type="button" class="business-tools-button" (click)="openBusinessCenter('BUY_SELL')">
@@ -1626,7 +1780,7 @@
           <div>
             <p class="eyebrow">PROPERTY MARKETPLACE</p>
             <h2 id="property-marketplace-title">Keytcha Properties</h2>
-            <p>Find property rentals and sales listed by Inkolo Connect members.</p>
+            <p>Find property rentals and sales listed by Duranki members.</p>
           </div>
           <div class="business-heading-actions">
             <button type="button" class="business-tools-button" (click)="openBusinessCenter('KEYTCHA_PROPERTIES')">
@@ -1930,7 +2084,7 @@
           <div>
             <p class="eyebrow">COMMUNITY OPPORTUNITIES</p>
             <h2 id="jobs-title">Job Search</h2>
-            <p>Find available work or share a vacancy with Inkolo Connect members.</p>
+            <p>Find available work or share a vacancy with Duranki members.</p>
           </div>
           <div class="business-heading-actions">
             <button type="button" class="business-tools-button" (click)="openBusinessCenter('JOB_SEARCH')">
@@ -2187,7 +2341,7 @@
           <div>
             <span class="assistant-status"></span>
             <div>
-              <h2 id="assistant-title">Inkolo Connect Assistant</h2>
+              <h2 id="assistant-title">Duranki Assistant</h2>
               <p>Here to help</p>
             </div>
           </div>
@@ -2227,7 +2381,7 @@
             type="text"
             [formControl]="assistantQuestion"
             placeholder="Ask a question..."
-            aria-label="Ask the Inkolo Connect assistant"
+            aria-label="Ask the Duranki assistant"
             maxlength="500"
           >
           <button
@@ -2245,7 +2399,7 @@
       class="assistant-launcher"
       type="button"
       [attr.aria-expanded]="assistantOpen()"
-      aria-label="Open Inkolo Connect help assistant"
+      aria-label="Open Duranki help assistant"
       (click)="toggleAssistant()"
     >
       <img src="/duranki-bot.png" alt="">
@@ -2277,7 +2431,7 @@
           (click)="closeWalletAction()"
         >×</button>
 
-        <p class="eyebrow">INKOLO WALLET</p>
+        <p class="eyebrow">DURANKI WALLET</p>
         <h2 id="wallet-action-title">
           {{
             walletAction() === 'topup'
@@ -2289,12 +2443,12 @@
         </h2>
         <p class="wallet-action-copy">
           @if (walletAction() === 'topup') {
-            Your bank card payment is processed securely by Cycle. Inkolo Connect does not
+            Your bank card payment is processed securely by Cycle. Duranki does not
             store your card details.
           } @else if (walletAction() === 'cashout') {
             Cash out your available Izaka directly to your personal African Bank account.
           } @else {
-            Send Izaka instantly to another registered Inkolo Connect member wallet.
+            Send Izaka instantly to another registered Duranki member wallet.
           }
         </p>
 
@@ -2356,7 +2510,7 @@
           </label>
           <div class="member-transfer-note">
             <strong>Member-to-member transfer</strong>
-            <span>The recipient must have an active Inkolo Connect wallet.</span>
+            <span>The recipient must have an active Duranki wallet.</span>
           </div>
         } @else {
           <div class="cycle-payment-note">
@@ -2531,7 +2685,7 @@
         <h2 id="wallet-branding-title">Change your wallet card logo</h2>
         <p>
           Upload your own logo or choose an optional football-team style.
-          Your selection will replace the Inkolo Connect logo on your wallet card.
+          Your selection will replace the Duranki logo on your wallet card.
         </p>
 
         <div class="football-team-options">
@@ -2565,7 +2719,7 @@
           <div class="wallet-brand-preview" [style.--team-color]="walletBrandColor()">
             <img [src]="walletBrandLogo()" [alt]="walletBrandTeam()">
             <div>
-              <small>INKOLO WALLET</small>
+              <small>DURANKI WALLET</small>
               <strong>{{ walletBrandTeam() }}</strong>
               <span>{{ user()?.firstName }} {{ user()?.lastName }}</span>
             </div>

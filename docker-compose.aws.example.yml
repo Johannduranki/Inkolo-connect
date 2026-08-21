@@ -1,0 +1,12 @@
+services:
+  duranki-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.aws
+    image: duranki-web:aws
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.aws.example
+    volumes:
+      - ./uploads:/app/uploads
