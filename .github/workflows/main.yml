@@ -1,0 +1,203 @@
+name: Deploy to On-Prem Server
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+
+env:
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # ---------------------------------------------------------
+      # 1. Checkout source code
+      # ---------------------------------------------------------
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ---------------------------------------------------------
+      # 2. Create lowercase GHCR image name
+      # ---------------------------------------------------------
+      - name: Set lowercase image name
+        run: |
+          IMAGE_NAME="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          echo "IMAGE_NAME=$IMAGE_NAME" >> "$GITHUB_ENV"
+
+          echo "Image: $IMAGE_NAME"
+          echo "Tag: $IMAGE_TAG"
+
+      # ---------------------------------------------------------
+      # 3. Login to GitHub Container Registry
+      # ---------------------------------------------------------
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ---------------------------------------------------------
+      # 4. Build backend image
+      # ---------------------------------------------------------
+      - name: Build backend Docker image
+        run: |
+          docker build \
+            -t "$IMAGE_NAME:$IMAGE_TAG" \
+            -t "$IMAGE_NAME:latest" \
+            .
+
+      # ---------------------------------------------------------
+      # 5. Push backend image to GHCR
+      # ---------------------------------------------------------
+      - name: Push backend Docker image
+        run: |
+          docker push "$IMAGE_NAME:$IMAGE_TAG"
+          docker push "$IMAGE_NAME:latest"
+
+      # ---------------------------------------------------------
+      # 6. Test SSH connection
+      # ---------------------------------------------------------
+      - name: Test SSH connection to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_SSH_PORT }}
+          script: |
+            set -e
+
+            echo "======================================"
+            echo "SSH connection successful"
+            echo "======================================"
+
+            echo "User:"
+            whoami
+
+            echo "Hostname:"
+            hostname
+
+            echo "Current directory:"
+            pwd
+
+            echo "Docker version:"
+            docker --version
+
+            echo "Docker access:"
+             docker ps --format "table {{.Names}}\t{{.Status}}"
+
+            echo "Deployment directory:"
+            ls -la ~/durankiDemo
+
+      # ---------------------------------------------------------
+      # 7. Deploy backend
+      # ---------------------------------------------------------
+      - name: Deploy backend to on-prem server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_SSH_PORT }}
+          script_stop: true
+          script: |
+            set -e
+
+            echo "======================================"
+            echo "Starting deployment"
+            echo "======================================"
+
+            # ---------------------------------------------------
+            # Login to GHCR
+            # ---------------------------------------------------
+            echo "Logging into GitHub Container Registry..."
+
+            echo "${{ secrets.GHCR_TOKEN }}" | \
+               docker login ghcr.io \
+                --username "${{ github.actor }}" \
+                --password-stdin
+
+            # ---------------------------------------------------
+            # Go to application directory
+            # ---------------------------------------------------
+            cd ~/durankiDemo
+
+            echo "Deployment directory:"
+            pwd
+
+            # ---------------------------------------------------
+            # Show current containers
+            # ---------------------------------------------------
+            echo "Current containers:"
+            docker compose ps
+
+            # ---------------------------------------------------
+            # Pull the new backend image
+            # ---------------------------------------------------
+            echo "Pulling latest backend image..."
+             docker compose pull backend
+
+            # ---------------------------------------------------
+            # Recreate ONLY backend
+            #
+            # --no-deps prevents docker compose from restarting
+            # the database or frontend.
+            # ---------------------------------------------------
+            echo "Starting updated backend..."
+
+               docker compose up -d --no-deps backend
+
+            # ---------------------------------------------------
+            # Wait a few seconds for backend startup
+            # ---------------------------------------------------
+            echo "Waiting for backend to start..."
+
+            sleep 10
+
+            # ---------------------------------------------------
+            # Check backend status
+            # ---------------------------------------------------
+            echo "Backend status:"
+
+            docker compose ps backend
+
+            # ---------------------------------------------------
+            # Check that backend container is running
+            # ---------------------------------------------------
+            BACKEND_STATUS=$(sudo docker inspect \
+              --format='{{.State.Status}}' \
+              backend 2>/dev/null || echo "not-found")
+
+            echo "Backend container status: $BACKEND_STATUS"
+
+            if [ "$BACKEND_STATUS" != "running" ]; then
+              echo "ERROR: Backend container is not running."
+
+              echo "Backend logs:"
+               docker compose logs --tail=100 backend
+
+              exit 1
+            fi
+
+            # ---------------------------------------------------
+            # Clean up dangling images
+            # ---------------------------------------------------
+            echo "Cleaning up unused Docker images..."
+                  docker image prune -f
+
+            # ---------------------------------------------------
+            # Final status
+            # ---------------------------------------------------
+            echo "======================================"
+            echo "Deployment completed successfully"
+            echo "======================================"
+              docker compose ps
