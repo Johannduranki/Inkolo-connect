@@ -1,0 +1,23 @@
+[build]
+  command = "npm install && npm run build"
+  publish = "dist/duranki-login"
+  functions = "netlify/functions"
+
+# Environment variables (configure these in Netlify dashboard)
+[build.environment]
+  NODE_ENV = "production"
+
+# Redirect rules for Angular SPA
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# API proxy - Update the API_URL to your backend URL
+# For local backend: http://localhost:3000
+# For deployed backend: https://your-backend-domain.com
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
