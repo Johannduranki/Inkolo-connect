@@ -1,34 +1,45 @@
 <main class="kzncc-page">
   <header class="topbar">
-    <div class="brand-group">
+    <div class="header-brand-group brand-group">
       <a
         href=""
-        aria-label="Inkolo Connect dashboard"
+        class="brand"
+        aria-label="Duranki dashboard"
         (click)="$event.preventDefault(); openRoleDashboard()"
       >
-        <img src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+        <img class="header-logo" src="/duranki-up-logo.png" alt="Duranki">
       </a>
-      <span>Powered by Duranki</span>
+      <span class="top-powered-by">Powered by Duranki</span>
     </div>
-    <a
-      class="my-services"
-      href=""
-      (click)="$event.preventDefault(); openRoleDashboard()"
-    >Service Dashboard</a>
+    <nav class="service-navigation" aria-label="KZNCC navigation">
+      <a
+        class="community-return"
+        href=""
+        (click)="$event.preventDefault(); returnToCommunity()"
+      >Return to My Community</a>
+      <a
+        class="my-services"
+        href=""
+        (click)="$event.preventDefault(); openRoleDashboard()"
+      >Service Dashboard</a>
+    </nav>
     <div class="account">
       @if (user()) {
         <app-role-switcher
           [userFullName]="user()!.firstName + ' ' + user()!.lastName"
         ></app-role-switcher>
+        <span class="avatar" aria-hidden="true">
+          {{ user()!.firstName.charAt(0) }}{{ user()!.lastName.charAt(0) }}
+        </span>
       }
-      <button type="button" (click)="logout()">Sign out</button>
+      <button class="sign-out" type="button" (click)="logout()">Sign out</button>
     </div>
   </header>
 
   <section class="kzncc-hero">
     <img src="/service-kzncc.png" alt="KZNCC Christian Council">
     <div>
-      <p>KZNCC MEMBER SERVICE</p>
+      <p>KZNCC SUBSCRIBER SERVICE</p>
       <h1>KZNCC communication centre</h1>
       <span>Announcements, council messages and events for subscribed members.</span>
     </div>
@@ -85,7 +96,7 @@
   } @else {
     <section class="member-welcome">
       <div>
-        <p>ACTIVE KZNCC MEMBER</p>
+        <p>ACTIVE KZNCC SUBSCRIBER</p>
         <h2>Welcome, {{ user()?.firstName }}</h2>
       </div>
       <div class="active-membership-actions">

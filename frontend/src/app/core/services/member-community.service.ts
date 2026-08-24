@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import {
   Church,
   ChurchBranch,
+  CommunityBranding,
   MemberCommunity
 } from '../models/member-community.model';
 
@@ -19,6 +20,29 @@ export class MemberCommunityService {
   getBranchesByChurch(churchId: string): Observable<ChurchBranch[]> {
     return this.http.get<ChurchBranch[]>(
       `${this.apiUrl}/churches/${churchId}/branches`
+    );
+  }
+
+  getAdminChurches(): Observable<Church[]> {
+    return this.http.get<Church[]>(`${this.apiUrl}/admin/churches`);
+  }
+
+  updateChurchBranding(
+    churchId: string,
+    branding: CommunityBranding
+  ): Observable<Church> {
+    return this.http.put<Church>(
+      `${this.apiUrl}/admin/churches/${churchId}/branding`,
+      branding
+    );
+  }
+
+  uploadChurchLogo(churchId: string, logo: File): Observable<Church> {
+    const formData = new FormData();
+    formData.append('logo', logo);
+    return this.http.post<Church>(
+      `${this.apiUrl}/admin/churches/${churchId}/logo`,
+      formData
     );
   }
 

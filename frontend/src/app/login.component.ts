@@ -49,7 +49,8 @@ export class LoginComponent {
     { id: 5, firstName: 'Ayanda', lastName: 'Dlamini', telephoneNumber: '0741002003', description: 'Member + KZNCC Admin' },
     { id: 6, firstName: 'Sipho', lastName: 'Ncube', telephoneNumber: '0763004005', description: 'Duranki Admin User' },
     { id: 7, firstName: 'Zanele', lastName: 'Mkhize', telephoneNumber: '0795006007', description: 'Service Provider Admin' },
-    { id: 8, firstName: 'Mandla', lastName: 'Cele', telephoneNumber: '0817008009', description: 'Service Provider User' }
+    { id: 8, firstName: 'Mandla', lastName: 'Cele', telephoneNumber: '0817008009', description: 'Service Provider User' },
+    { id: 19, firstName: 'Vuma', lastName: 'Admin', telephoneNumber: '0829001001', description: 'Vuma Force Admin' }
   ];
 
   chooseDemoUser(user: DemoLoginUser): void {
@@ -119,11 +120,21 @@ export class LoginComponent {
     lastName: string;
     roles: UserRole[];
   }): void {
+    const isVumaAdmin =
+      user.id === 19 ||
+      (user.firstName.trim().toLowerCase() === 'vuma' &&
+        user.lastName.trim().toLowerCase() === 'admin');
+
     this.roles.initializeUser(
       user.id,
       user.roles,
       `${user.firstName} ${user.lastName}`
     );
+    if (isVumaAdmin) {
+      window.location.href = '/dashboard/service-provider-admin';
+      return;
+    }
+
     const activeRole = this.roles.getActiveRole();
     if (activeRole !== 'Member') {
       void this.router.navigate([

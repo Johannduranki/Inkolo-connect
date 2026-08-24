@@ -1,13 +1,13 @@
 <main class="login-page">
-  <section class="brand-panel" aria-label="Inkolo Connect introduction">
+  <section class="brand-panel" aria-label="Duranki introduction">
     <div class="logo-frame">
-      <img class="inkolo-logo" src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+      <img class="inkolo-logo" src="/duranki-up-logo.png" alt="Duranki">
     </div>
     <div>
-      <p class="eyebrow">INKOLO CONNECT</p>
+      <p class="eyebrow">DURANKI</p>
       <h1>Welcome back.</h1>
       <p class="brand-copy">
-        Sign in securely to access your Inkolo Connect workspace.
+        Sign in securely to access your Duranki workspace.
       </p>
     </div>
     <p class="support">Need help? Contact your platform administrator.</p>
@@ -16,14 +16,14 @@
   <section class="form-panel">
     <form class="login-card" (submit)="submit(); $event.preventDefault()" novalidate>
       <div class="mobile-brand">
-        <img class="inkolo-logo mobile" src="/inkolo-connect-logo.png" alt="Inkolo Connect">
+        <img class="inkolo-logo mobile" src="/duranki-up-logo.png" alt="Duranki">
       </div>
 
       <p class="eyebrow dark">ACCOUNT ACCESS</p>
       <h2>{{ mode() === 'register' ? 'Create your account' : 'Tell us who you are' }}</h2>
       <p class="form-intro">
         @if (mode() === 'register') {
-          Register as an Inkolo Connect member using your name, surname and telephone number.
+          Register as an Duranki member using your name, surname and telephone number.
         } @else {
           Choose a registered user, then continue to their assigned dashboard roles.
         }
@@ -113,7 +113,7 @@
       >
       <p id="telephone-help" class="field-help">
         @if (mode() === 'register') {
-          This number becomes your secure Inkolo Connect login.
+          This number becomes your secure Duranki login.
         } @else {
           The selected user's registered number is filled automatically.
         }

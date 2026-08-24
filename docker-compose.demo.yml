@@ -1,0 +1,16 @@
+services:
+  duranki-demo:
+    build:
+      context: .
+      dockerfile: Dockerfile.demo
+    image: duranki-demo:latest
+    container_name: duranki-demo
+    ports:
+      - "4200:4200"
+    environment:
+      ALLOW_DEMO_AUTH: "true"
+      FORCE_DEMO_MODE: "true"
+      JWT_SECRET: "local-demo-secret"
+      ID_PEPPER: "local-demo-pepper"
+    volumes:
+      - ./backend/uploads:/app/uploads

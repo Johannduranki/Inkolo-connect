@@ -228,7 +228,7 @@ export class WalletService {
             amount: request.amount,
             message:
               error?.message ??
-              'No Inkolo Connect member wallet was found for that cellphone number.'
+              'No Duranki member wallet was found for that cellphone number.'
           })
         )
       );

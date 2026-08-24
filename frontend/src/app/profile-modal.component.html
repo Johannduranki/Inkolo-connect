@@ -3,7 +3,7 @@
     <button class="profile-close" type="button" aria-label="Close profile" (click)="closed.emit()">×</button>
     <p>MEMBER DETAILS</p>
     <h2 id="profile-title">My Profile</h2>
-    <span class="profile-intro">Add the personal information used by your Inkolo Connect services.</span>
+    <span class="profile-intro">Add the personal information used by your Duranki services.</span>
 
     <nav class="profile-tabs" aria-label="Profile sections">
       <button
@@ -24,6 +24,35 @@
 
     @if (activeTab() === 'details') {
       <div class="profile-grid">
+        <div class="profile-photo-editor">
+          <div class="profile-photo-preview">
+            @if (profilePhoto()) {
+              <img [src]="profilePhoto()" alt="Your profile">
+            } @else {
+              <span aria-hidden="true">Add photo</span>
+            }
+          </div>
+          <div>
+            <strong>Profile photo</strong>
+            <span>This photo appears beside My Profile.</span>
+            <label class="profile-photo-upload">
+              Choose photo
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                (change)="selectProfilePhoto($event)"
+              >
+            </label>
+            @if (profilePhoto()) {
+              <button type="button" class="remove-profile-photo" (click)="removeProfilePhoto()">
+                Remove photo
+              </button>
+            }
+            @if (photoError()) {
+              <small class="profile-photo-error">{{ photoError() }}</small>
+            }
+          </div>
+        </div>
         <div class="profile-community">
           <span>My Community</span>
           <strong>{{ communityHeading() }}</strong>
@@ -63,7 +92,7 @@
       </div>
 
       <button class="profile-save" type="button" (click)="save()">Save personal details</button>
-      <small>Your details are securely saved to your Inkolo Connect account.</small>
+      <small>Your details are securely saved to your Duranki account.</small>
     } @else {
       <div class="profile-documents">
         <app-my-documents [memberId]="memberId"></app-my-documents>

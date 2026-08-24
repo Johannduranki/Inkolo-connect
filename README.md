@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-# Inkolo-connect
-Webapp
-=======
-# Inkolo Connect ID Login Module
+# Duranki
 
 A standalone authentication prototype using:
 
@@ -80,7 +76,7 @@ Open `http://localhost:4200` and sign in with the seeded ID.
 - `GET /api/health`
 - `POST /api/auth/login` with `{ "idNumber": "9001015009087" }`
 - `GET /api/auth/me` with `Authorization: Bearer <token>`
-# Inkolo Connect platform
+# Duranki platform
 
 ## Local services
 
@@ -126,4 +122,3 @@ Authenticated members can:
 - send persistent direct messages.
 
 The Angular My Community screen uses these API endpoints directly.
->>>>>>> 97ac217 (webapp)
