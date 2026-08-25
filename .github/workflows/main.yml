@@ -173,7 +173,7 @@ jobs:
             # ---------------------------------------------------
             # Check that backend container is running
             # ---------------------------------------------------
-            BACKEND_STATUS=$(sudo docker inspect \
+            BACKEND_STATUS=$(docker inspect \
               --format='{{.State.Status}}' \
                 durankidemo_backend 2>/dev/null || echo "not-found")
 
