@@ -1,0 +1,47 @@
+services:
+  db:
+    image: mariadb:10.5.15
+    container_name: durankidemo_mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: A!kFbv08SdfY1EC1Ek@Yo
+      MYSQL_DATABASE: durankidemo_core
+    ports:
+      - "3309:3306"
+    volumes:
+      - durankidemo_mariadb_data:/var/lib/mysql
+
+  backend:
+    image: durankidemo_backend
+    container_name: durankidemo_backend
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - "4001:3001"
+    environment:
+      PORT: 3001
+      DB_HOST: db
+      DB_USER: root
+      DB_PASSWORD: A!kFbv08SdfY1EC1Ek@Yo
+      DB_NAME: durankidemo_core
+      ID_PEPPER: replace-with-a-long-random-secret
+      JWT_SECRET: 3e64bd41692af630198d8a0861970a2645e41b62a06d3b2d6210e1544edcad48
+      JWT_EXPIRES_IN: 1h
+      FRONTEND_ORIGIN: http://localhost:8080
+
+  frontend:
+    image: httpd:latest
+    container_name: durankidemo_frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - durankidemo_frontend:/usr/local/apache2
+
+volumes:
+  durankidemo_mariadb_data:
+  durankidemo_frontend:
