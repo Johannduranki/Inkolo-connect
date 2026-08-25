@@ -28,7 +28,7 @@ services:
       ID_PEPPER: replace-with-a-long-random-secret
       JWT_SECRET: 3e64bd41692af630198d8a0861970a2645e41b62a06d3b2d6210e1544edcad48
       JWT_EXPIRES_IN: 1h
-      FRONTEND_ORIGIN: http://localhost:8080
+      FRONTEND_ORIGIN: http://app-dev.durankidemo.network:8080
 
   frontend:
     image: httpd:latest
