@@ -175,7 +175,7 @@ jobs:
             # ---------------------------------------------------
             BACKEND_STATUS=$(sudo docker inspect \
               --format='{{.State.Status}}' \
-              backend 2>/dev/null || echo "not-found")
+                durankidemo_backend 2>/dev/null || echo "not-found")
 
             echo "Backend container status: $BACKEND_STATUS"
 
