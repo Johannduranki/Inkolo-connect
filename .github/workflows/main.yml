@@ -8,6 +8,7 @@ on:
 
 env:
   IMAGE_TAG: ${{ github.sha }}
+  FRONTEND_ARCHIVE: frontend-dist-${{ github.run_id }}-${{ github.run_attempt }}.tar.gz
 
 jobs:
   deploy:
@@ -53,8 +54,8 @@ jobs:
           fi
 
           echo "Angular output directory: $DIST_DIR"
-          tar -czf frontend-dist.tar.gz -C "$DIST_DIR" .
-          test -s frontend-dist.tar.gz
+          tar -czf "$FRONTEND_ARCHIVE" -C "$DIST_DIR" .
+          test -s "$FRONTEND_ARCHIVE"
 
       # 3. Create lowercase GHCR image name
       - name: Set lowercase image name
@@ -95,7 +96,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_SSH_PORT }}
-          source: frontend-dist.tar.gz
+          source: ${{ env.FRONTEND_ARCHIVE }}
           target: ~/durankiDemo/
           overwrite: true
 
@@ -186,7 +187,7 @@ jobs:
             fi
 
             # Extract the uploaded Angular build
-            ARCHIVE="$HOME/durankiDemo/frontend-dist.tar.gz"
+            ARCHIVE="$HOME/durankiDemo/${{ env.FRONTEND_ARCHIVE }}"
             STAGING_DIR="/tmp/duranki-angular-dist"
 
             if [ ! -s "$ARCHIVE" ]; then
