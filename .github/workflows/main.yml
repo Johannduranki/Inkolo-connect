@@ -1,10 +1,7 @@
-name: Deploy to On-Prem Server
+name: Legacy deployment (retired)
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 env:
   IMAGE_TAG: ${{ github.sha }}
@@ -12,6 +9,7 @@ env:
 
 jobs:
   deploy:
+    if: ${{ false }}
     runs-on: ubuntu-latest
 
     permissions:

@@ -5,9 +5,13 @@ dist/
 .npmrc
 coverage/
 *.log
+backend/logs/
 *.msi
 backend/uploads/
 backend/data/*.json
+backend/data/*.sqlite*
+backend/data/mfa.key
+backend/data/backups/
 work/
 outputs/
 tmp/
