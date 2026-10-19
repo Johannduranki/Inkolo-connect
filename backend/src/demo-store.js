@@ -10,7 +10,7 @@ const demoUsers = [
   { id: 6, telephone_number: '0763004005', first_name: 'Sipho', last_name: 'Ncube', email: 'sipho@inkoloconnect.local', roles: ['Admin User'], status: 'active', membership_type: null },
   { id: 7, telephone_number: '0795006007', first_name: 'Zanele', last_name: 'Mkhize', email: 'zanele@africanbank.local', roles: ['Service Provider Admin'], status: 'active', membership_type: null },
   { id: 8, telephone_number: '0817008009', first_name: 'Mandla', last_name: 'Cele', email: 'mandla@africanbank.local', roles: ['Service Provider User'], status: 'active', membership_type: null },
-  { id: 19, telephone_number: '0829001001', first_name: 'Vuma', last_name: 'Admin', email: 'vuma.admin@vuma.local', roles: ['Service Provider Admin'], status: 'active', membership_type: null }
+  { id: 19, telephone_number: '0829001001', first_name: 'Vuma', last_name: 'Admin', email: 'vuma.admin@vuma.local', roles: ['Service Provider Admin'], status: 'active', membership_type: null },
 ];
 
 const demoSubscriptions = new Map();
@@ -22,6 +22,7 @@ export function findDemoUser(telephoneNumber, pepper) {
     (user) => hashIdNumber(user.telephoneNumber, pepper) === suppliedHash
   );
   if (platformUser) return getDemoUserById(platformUser.id);
+  if (readPlatformState().demoUsersDisabled) return null;
   const user = demoUsers.find(
     (user) => hashIdNumber(user.telephone_number, pepper) === suppliedHash
   );
@@ -29,31 +30,32 @@ export function findDemoUser(telephoneNumber, pepper) {
 }
 
 export function getDemoUserById(id) {
-  const user = demoUsers.find((item) => String(item.id) === String(id));
+  const user = readPlatformState().demoUsersDisabled ? undefined : demoUsers.find((item) => String(item.id) === String(id));
   const platformUser = readPlatformState().users.find(
     (item) => String(item.id) === String(id)
   );
   if (!user && !platformUser) return null;
+  const preferDemoAccount = String(id) === '1000001' && !platformUser;
   return {
-    id: platformUser?.id ?? user.id,
-    telephone_number: platformUser?.telephoneNumber ?? user.telephone_number,
-    first_name: platformUser?.firstName ?? user.first_name,
-    last_name: platformUser?.lastName ?? user.last_name,
-    email: platformUser?.email ?? user?.email ?? null,
-    roles: platformUser?.roles ?? user?.roles ?? ['Member'],
-    status: platformUser?.status ?? user?.status ?? 'active',
+    id: preferDemoAccount ? user.id : platformUser?.id ?? user.id,
+    telephone_number: preferDemoAccount ? user.telephone_number : platformUser?.telephoneNumber ?? user.telephone_number,
+    first_name: preferDemoAccount ? user.first_name : platformUser?.firstName ?? user.first_name,
+    last_name: preferDemoAccount ? user.last_name : platformUser?.lastName ?? user.last_name,
+    email: preferDemoAccount ? user.email : platformUser?.email ?? user?.email ?? null,
+    roles: preferDemoAccount ? user.roles : platformUser?.roles ?? user?.roles ?? ['Member'],
+    status: preferDemoAccount ? user.status : platformUser?.status ?? user?.status ?? 'active',
     membership_type: user?.membership_type ?? null
   };
 }
 
-export function updateDemoProfile(id, firstName, lastName) {
+export async function updateDemoProfile(id, firstName, lastName) {
   const user = getDemoUserById(id);
   if (!user) {
     return null;
   }
   user.first_name = firstName;
   user.last_name = lastName;
-  updatePlatformState((state) => {
+  await updatePlatformState((state) => {
     const platformUser = state.users.find((item) => String(item.id) === String(id));
     if (platformUser) {
       platformUser.firstName = firstName;
@@ -75,15 +77,14 @@ export function getDemoSubscriptions(userId) {
       );
 }
 
-export function saveDemoSubscription(userId, subscription) {
+export async function saveDemoSubscription(userId, subscription) {
   const saved = {
     userId: Number(userId),
     ...subscription,
     status: 'active',
     subscribedAt: new Date().toISOString()
   };
-  demoSubscriptions.set(`${userId}:${subscription.serviceCode}`, saved);
-  updatePlatformState((state) => {
+  await updatePlatformState((state) => {
     state.serviceSubscriptions ??= [];
     const index = state.serviceSubscriptions.findIndex(
       (item) =>
@@ -96,6 +97,7 @@ export function saveDemoSubscription(userId, subscription) {
       state.serviceSubscriptions.push(saved);
     }
   });
+  demoSubscriptions.set(`${userId}:${subscription.serviceCode}`, saved);
   return saved;
 }
 

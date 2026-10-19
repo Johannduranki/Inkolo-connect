@@ -1,7 +1,8 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import { MysqlPlatformStore } from './mysql-platform-store.js';
 
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
 const dataDirectory = path.resolve(moduleDirectory, '../data');
@@ -656,6 +657,10 @@ function loadState() {
   mkdirSync(dataDirectory, { recursive: true });
   try {
     const loaded = JSON.parse(readFileSync(storePath, 'utf8'));
+    if (loaded.realDataOnly) {
+      loaded.demoUsersDisabled = true;
+      return loaded;
+    }
     if ((loaded.version ?? 1) < 2) {
       loaded.marketplaceListings = loaded.marketplaceListings?.length
         ? loaded.marketplaceListings
@@ -727,18 +732,31 @@ function loadState() {
     if ((loaded.version ?? 1) < 11) {
       loaded.memberDocuments ??= [];
     }
-    ensureVumaAdminUser(loaded);
+    if (!loaded.demoUsersDisabled) ensureVumaAdminUser(loaded);
     loaded.version = 11;
     writeFileSync(storePath, JSON.stringify(loaded, null, 2));
     return loaded;
-  } catch {
+  } catch (error) {
+    if (existsSync(storePath) || existsSync(path.join(dataDirectory,'import-mode.json'))) throw error;
     const state = initialState();
     writeFileSync(storePath, JSON.stringify(state, null, 2));
     return state;
   }
 }
 
-let state = loadState();
+const markerPath = path.join(dataDirectory,'platform-storage-mode.json');
+const savedStorage = existsSync(markerPath) ? JSON.parse(readFileSync(markerPath,'utf8')).storage : null;
+export const platformStorage = process.env.PLATFORM_STORAGE || savedStorage || 'json';
+if (savedStorage==='mariadb' && platformStorage!=='mariadb') throw Error('Platform rollback requires a verified reverse migration.');
+if (!['json','mariadb'].includes(platformStorage)) throw Error('Unsupported platform storage.');
+let state = platformStorage==='json' ? loadState() : undefined;
+let sqlStore;
+export async function initializePlatformStorage(pool) {
+  if (platformStorage!=='mariadb') return;
+  if(sqlStore)throw Error('Platform storage already initialized.');
+  sqlStore=new MysqlPlatformStore(pool);
+  await sqlStore.open();
+}
 
 function persist() {
   writeFileSync(temporaryStorePath, JSON.stringify(state, null, 2));
@@ -746,13 +764,22 @@ function persist() {
 }
 
 export function readPlatformState() {
+  if(platformStorage==='mariadb') {
+    if(!sqlStore)throw Object.assign(Error('Platform storage is not ready.'),{status:503});
+    return sqlStore.read();
+  }
   return state;
 }
 
 export function updatePlatformState(mutator) {
-  const result = mutator(state);
-  persist();
-  return result;
+  if(platformStorage==='mariadb') {
+    if(!sqlStore)throw Object.assign(Error('Platform storage is not ready.'),{status:503});
+    return sqlStore.update(mutator);
+  }
+  const previous=state;
+  state=structuredClone(previous);
+  try { const result=mutator(state);persist();return result; }
+  catch(error){state=previous;throw error;}
 }
 
 export function createPlatformId(prefix) {

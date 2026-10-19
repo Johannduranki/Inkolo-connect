@@ -18,3 +18,8 @@ tmp/
 .netlify/
 *.zip
 frontend/pnpm-workspace.yaml
+.runlogs/
+output/
+*.pre-migration-*
+.pre-migration-*
+USER_LOGINS_README.md

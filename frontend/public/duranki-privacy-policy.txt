@@ -1,0 +1,333 @@
+01
+Introduction
+Durakni respects your privacy and is committed to protecting your personal information.
+
+This Privacy Policy explains how Durakni collects, uses, stores, shares, protects, and processes personal information when you use the Durakni platform, website, mobile application, wallet services, community dashboards, tenant services, marketplace services, payment features, communication tools, and any related products or services.
+
+Durakni operates as a digital platform that may provide services directly and may also make services available through tenants, communities, churches, trader groups, business partners, suppliers, payment providers, financial service providers, insurance or funeral cover providers, and other approved third-party service providers.
+
+This Privacy Policy is intended to comply with the Protection of Personal Information Act 4 of 2013, commonly known as POPIA. POPIA gives data subjects rights to access personal information held about them, subject to legal requirements.
+
+02
+Definitions
+In this policy:
+
+“Durakni”, “we”, “us”, or “our”
+means Durakni (Pty) Ltd and its authorised representatives.
+“User”, “you”, or “your”
+means any person who registers for, accesses, or uses the Durakni platform.
+“Tenant”
+means an organisation, community structure, church body, trader group, company, or partner using Durakni to manage its members or community.
+“Community”
+means a group of members registered under a tenant or organisation on Durakni.
+“Personal Information”
+means information relating to an identifiable person or juristic person, including names, ID numbers, contact details, addresses, financial details, location data, account information, device information, and any other information protected under POPIA.
+“Processing”
+means collecting, receiving, storing, using, updating, sharing, deleting, or otherwise handling personal information.
+“Third-Party Service Provider”
+means any approved external company that provides services through or in connection with Durakni.
+03
+What Personal Information We Collect
+Durakni may collect the following categories of personal information:
+
+3.1 Registration and Identity Information
+We may collect:
+
+Full name and surname
+ID number, passport number, or registration number
+Date of birth
+Gender, where required for a specific service
+Nationality
+Profile photo
+Signature, where required
+Username and password
+Organisation, church, tenant, community, branch, or trader group details
+3.2 Contact Information
+We may collect:
+
+Mobile number
+Email address
+Physical address
+Postal address
+Emergency contact details, where required
+Communication preferences
+3.3 Financial and Payment Information
+Depending on the services used, we may collect or process:
+
+Wallet account information
+Bank account details for payouts
+Payment transaction records
+Subscription payment records
+Refund details
+Proof of payment
+POS transaction information
+Marketplace sale and purchase records
+Commission and revenue share records
+Payment status and failed payment records
+Durakni may use approved payment providers, banks, wallet providers, card processors, or payment gateways. We do not store full card details unless legally permitted and technically secured through approved tokenisation or payment provider systems.
+
+3.4 KYC and Verification Information
+For security, compliance, wallet, payment, banking, financial, or partner services, we may collect:
+
+ID document images
+Selfie or facial verification data
+Proof of address
+Business registration documents
+Tax or compliance documents
+Bank confirmation letters
+Verification results from third-party providers
+3.5 Device and Technical Information
+We may collect:
+
+IP address
+Device type
+Operating system
+Browser type
+App version
+Login history
+Location data, where required and consented to
+Cookies and tracking data
+Security logs
+Error logs
+Usage data
+Analytics data
+3.6 Community and Service Information
+Where applicable, we may collect:
+
+Community membership information
+Church or tenant affiliation
+Branch or region
+Member status
+Subscription status
+Communication history
+Attendance or event participation records
+Marketplace listings
+Service requests
+Training module progress
+Ratings and reviews
+Support tickets and complaints
+3.7 Sensitive or Special Personal Information
+Duranki will only process special personal information where legally allowed, necessary for a specific service, or where you have given consent. This may include information relating to:
+
+Health-related cover applications, if required by a partner provider
+Biometric verification
+Religious or community affiliation, where you voluntarily join a church or religious community on Durakni
+Children’s information, where a parent, guardian, school, church, or authorised party provides the required consent
+04
+How We Collect Personal Information
+We may collect personal information:
+
+Directly from you when you register or use the platform
+From tenants, communities, churches, organisations, or authorised administrators
+From third-party service providers
+From payment providers and banks
+From verification and KYC providers
+Through website cookies and app analytics
+Through customer support interactions
+Through forms, surveys, applications, onboarding documents, or service agreements
+From public sources where legally permitted
+05
+Why We Process Personal Information
+Duranki processes personal information for the following purposes:
+
+5.1 Platform Registration and Account Management
+To create, verify, manage, and secure your Durakni account.
+
+5.2 Community and Tenant Management
+To allow tenants, churches, organisations, trader groups, and communities to manage their members, communications, services, dashboards, and subscriptions.
+
+5.3 Wallets, Payments, POS, and Transactions
+To process wallet transfers, payment collections, subscriptions, refunds, marketplace payments, POS payments, commission calculations, payouts, and financial records.
+
+5.4 Service Delivery
+To provide access to services such as funeral cover, banking services, marketplace services, member benefits, training modules, communication tools, event services, business tools, and other partner services.
+
+5.5 Compliance and Verification
+To comply with legal, regulatory, banking, anti-fraud, anti-money laundering, KYC, POPIA, CPA, tax, accounting, and reporting obligations.
+
+5.6 Communication
+To send:
+
+Account notifications
+Payment confirmations
+Service updates
+Subscription notices
+Community messages
+Security alerts
+Marketing messages, where permitted
+Support responses
+Policy updates
+5.7 Security and Fraud Prevention
+To detect, prevent, investigate, and respond to fraud, unauthorised access, cybercrime, misuse of the platform, suspicious transactions, and security incidents.
+
+5.8 Analytics and Platform Improvement
+To improve Duranki’s performance, user experience, services, reporting, dashboards, support processes, and product development.
+
+5.9 Legal Claims and Dispute Resolution
+To enforce agreements, investigate complaints, resolve disputes, respond to legal requests, and protect the rights of Duranki, users, tenants, partners, and service providers.
+
+06
+Legal Basis for Processing
+Duranki may process personal information where:
+
+You have given consent
+Processing is necessary to perform a contract with you
+Processing is required by law
+Processing protects your legitimate interests
+Processing is necessary for Duranki’s legitimate business interests
+Processing is necessary for a third-party service you requested
+Processing is necessary for security, fraud prevention, or compliance
+07
+Sharing of Personal Information
+Duranki may share personal information with:
+
+Approved tenants and community administrators
+Banks and payment providers
+Wallet and POS service providers
+Insurance, funeral cover, and benefit providers
+Marketplace buyers and sellers, where necessary
+Delivery or logistics providers
+KYC and verification providers
+IT hosting and cloud service providers
+Communication providers, including SMS, email, WhatsApp, and notification providers
+Accountants, auditors, legal advisors, and compliance consultants
+Government departments, regulators, courts, or law enforcement where legally required
+Business partners where the user has requested or accepted the service
+Durakni will only share information that is reasonably necessary for the relevant purpose.
+
+08
+Tenant and Community Access to Information
+Where you join a tenant, church, trader group, business group, or community on Durakni, certain authorised administrators may access limited member information necessary to manage that community.
+
+This may include:
+
+Your name
+Contact details
+Membership status
+Subscription status
+Service participation
+Payment status, where relevant
+Communication records related to the community
+Event or attendance records, where applicable
+Durakni may restrict access to sensitive information and may apply role-based access controls.
+
+09
+Third-Party Services
+Some services on Durakni may be provided by third-party providers. These may include banking, payment, funeral cover, insurance, airtime, data, marketplace, delivery, lending, training, and other services.
+
+When you choose to use a third-party service, your information may be shared with that provider so that the service can be delivered.
+
+Third-party providers may have their own privacy policies, terms, refund rules, underwriting rules, approval criteria, and service conditions. Durakni is not responsible for the privacy practices of independent third-party providers, but we will take reasonable steps to work with reputable providers.
+
+10
+Direct Marketing
+Duranki may send marketing communications about services, promotions, community benefits, new features, and partner offerings where permitted by law.
+
+You may opt out of marketing communications at any time by using the unsubscribe link, app settings, or contacting us.
+
+Even if you opt out of marketing, we may still send important service messages, security notices, payment notices, policy updates, or account-related communications.
+
+11
+Cookies and Tracking Technologies
+Duranki may use cookies, analytics tools, pixels, logs, and similar technologies to:
+
+Keep users logged in
+Improve platform performance
+Understand usage patterns
+Improve marketing
+Prevent fraud
+Secure the platform
+Remember user preferences
+You may control cookies through your browser settings, but disabling cookies may affect platform functionality.
+
+12
+Storage and Security
+Duranki takes reasonable technical and organisational measures to protect personal information against loss, theft, unauthorised access, misuse, alteration, or destruction.
+
+These measures may include:
+
+Password protection
+Encryption where appropriate
+Secure cloud hosting
+Access controls
+Audit logs
+Role-based permissions
+Staff confidentiality obligations
+Security monitoring
+Backup systems
+Incident response processes
+No system is completely secure, and users must also protect their passwords, devices, and login details.
+
+13
+Retention of Personal Information
+Duranki will keep personal information only for as long as reasonably necessary for:
+
+Providing services
+Account management
+Legal compliance
+Tax and accounting records
+Transaction history
+Dispute resolution
+Fraud prevention
+Regulatory reporting
+Contractual obligations
+When personal information is no longer required, Duranki will securely delete, destroy, de-identify, or archive it where legally permitted.
+
+14
+Cross-Border Transfers
+Duranki may use cloud hosting, software, support, analytics, or service providers located outside South Africa.
+
+Where personal information is transferred outside South Africa, Duranki will take reasonable steps to ensure that the information is protected in line with POPIA and applicable law.
+
+15
+Children’s Personal Information
+Duranki does not knowingly collect personal information from children without the required consent from a parent, guardian, school, church, or authorised responsible party.
+
+Where services involve children, Duranki will process their information only where legally permitted and necessary for the relevant service.
+
+16
+Your Rights
+Subject to POPIA and other applicable laws, you may have the right to:
+
+Ask what personal information Duranki holds about you
+Request access to your personal information
+Ask Duranki to correct or update your information
+Ask Duranki to delete information where legally allowed
+Object to certain processing
+Withdraw consent where processing is based on consent
+Opt out of direct marketing
+Lodge a complaint with Duranki
+Lodge a complaint with the Information Regulator
+POPIA allows data subjects to request access to records or descriptions of personal information held about them, subject to identity verification and legal requirements.
+
+17
+User Responsibilities
+You are responsible for:
+
+Providing accurate information
+Keeping your login details safe
+Updating your contact and banking details
+Reporting suspicious activity
+Reading third-party service terms before accepting a service
+Ensuring that you are authorised to provide information about another person, business, member, employee, child, or community member
+18
+Data Breaches
+If Duranki becomes aware of a security compromise involving personal information, we will take reasonable steps to investigate, contain, and respond to the incident.
+
+Where legally required, we will notify affected users and/or the Information Regulator.
+
+19
+Complaints and Contact Details
+For privacy questions, access requests, correction requests, or complaints, please contact:
+
+DURANKI INFORMATION OFFICER
+Contact the Duranki Information Officer through the platform support channel.
+You may also contact the Information Regulator of South Africa. The Information Regulator is the independent body established under POPIA.
+
+20
+Changes to This Privacy Policy
+Duranki may update this Privacy Policy from time to time.
+
+When we make material changes, we may notify users through the platform, email, SMS, WhatsApp, website notice, or other appropriate communication channels.
+
+Continued use of Duranki after an update means you accept the updated Privacy Policy.
