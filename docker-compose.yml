@@ -15,8 +15,8 @@ services:
       - webnet
 
   backend:
-    image: ghcr.io/johannduranki/inkolo-connect:latest
-    container_name: durankidemo_backend
+    image: durankidemo_backend
+    container_name: durankidemo_backendd
     restart: always
     depends_on:
       - db
