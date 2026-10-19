@@ -31,11 +31,11 @@ jobs:
           cache-dependency-path: app/package-lock.json
 
       - name: Install Angular dependencies
-        working-directory: frontend
+        working-directory: app
         run: npm ci
 
       - name: Build Angular production files
-        working-directory: frontend
+        working-directory: app
         run: npm run build -- --configuration production
 
       - name: Package Angular dist
@@ -43,12 +43,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          DIST_DIR="$(find frontend/dist -type f -name index.html -print -quit | sed 's|/index.html$||')"
+          DIST_DIR="$(find app/dist -type f -name index.html -print -quit | sed 's|/index.html$||')"
 
           if [ -z "$DIST_DIR" ] || [ ! -f "$DIST_DIR/index.html" ]; then
             echo "ERROR: Angular dist/index.html was not found."
             echo "Contents of app/dist (if present):"
-            find frontend/dist -maxdepth 4 -type f 2>/dev/null | head -100 || true
+            find app/dist -maxdepth 4 -type f 2>/dev/null | head -100 || true
             exit 1
           fi
 
@@ -94,3 +94,147 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_SSH_PORT }}
+          source: frontend-dist.tar.gz
+          target: ~/durankiDemo/
+          overwrite: true
+
+      # 8. Test SSH connection
+      - name: Test SSH connection to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_SSH_PORT }}
+          script: |
+            set -e
+            echo "======================================"
+            echo "SSH connection successful"
+            echo "======================================"
+            echo "User: $(whoami)"
+            echo "Hostname: $(hostname)"
+            echo "Docker version:"
+            docker --version
+            echo "Docker access:"
+            docker ps --format "table {{.Names}}\t{{.Status}}"
+            echo "Deployment directory:"
+            ls -la "$HOME/durankiDemo"
+
+      # 9. Deploy backend and frontend
+      - name: Deploy application to on-prem server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_SSH_PORT }}
+          script_stop: true
+          script: |
+            set -e
+
+            echo "======================================"
+            echo "Starting deployment"
+            echo "======================================"
+
+            # Login to GitHub Container Registry
+            echo "Logging into GitHub Container Registry..."
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io \
+              --username "${{ github.actor }}" \
+              --password-stdin
+
+            # Go to application directory
+            cd "$HOME/durankiDemo"
+            echo "Deployment directory: $(pwd)"
+
+            # Show current containers
+            echo "Current containers:"
+            docker compose ps
+
+            # Pull and redeploy backend only
+            echo "Pulling latest backend image..."
+            docker compose pull backend
+
+            echo "Starting updated backend..."
+            docker compose up -d --no-deps backend
+
+            # Wait for backend startup
+            echo "Waiting for backend to start..."
+            sleep 10
+
+            # Verify backend container
+            BACKEND_STATUS="$(docker inspect --format='{{.State.Status}}' durankidemo_backend 2>/dev/null || echo "not-found")"
+            echo "Backend container status: $BACKEND_STATUS"
+
+            if [ "$BACKEND_STATUS" != "running" ]; then
+              echo "ERROR: Backend container is not running."
+              docker compose ps backend
+              docker compose logs --tail=100 backend
+              exit 1
+            fi
+
+            # Verify frontend container is already running
+            FRONTEND_CONTAINER="durankidemo_frontend"
+            FRONTEND_STATUS="$(docker inspect --format='{{.State.Status}}' "$FRONTEND_CONTAINER" 2>/dev/null || echo "not-found")"
+            echo "Frontend container status: $FRONTEND_STATUS"
+
+            if [ "$FRONTEND_STATUS" != "running" ]; then
+              echo "ERROR: Frontend container is not running."
+              docker compose ps frontend
+              docker compose logs --tail=100 frontend
+              exit 1
+            fi
+
+            # Extract the uploaded Angular build
+            ARCHIVE="$HOME/durankiDemo/frontend-dist.tar.gz"
+            STAGING_DIR="/tmp/duranki-angular-dist"
+
+            if [ ! -s "$ARCHIVE" ]; then
+              echo "ERROR: Frontend build archive is missing or empty: $ARCHIVE"
+              exit 1
+            fi
+
+            rm -rf "$STAGING_DIR"
+            mkdir -p "$STAGING_DIR"
+            tar -xzf "$ARCHIVE" -C "$STAGING_DIR"
+
+            if [ ! -s "$STAGING_DIR/index.html" ]; then
+              echo "ERROR: Extracted Angular index.html is missing or empty."
+              find "$STAGING_DIR" -maxdepth 3 -type f | head -100 || true
+              exit 1
+            fi
+
+            # Copy the build into the running Apache container.
+            # The Apache document root is /usr/local/apache2/htdocs.
+            echo "Copying Angular build into Apache container..."
+            docker exec "$FRONTEND_CONTAINER" sh -c \
+              'rm -rf /tmp/angular-new && mkdir -p /tmp/angular-new'
+            docker cp "$STAGING_DIR/." "$FRONTEND_CONTAINER":/tmp/angular-new/
+            docker exec "$FRONTEND_CONTAINER" test -s /tmp/angular-new/index.html
+
+            # Replace existing static files with the new Angular build.
+            docker exec "$FRONTEND_CONTAINER" sh -c '
+              set -e
+              find /usr/local/apache2/htdocs -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+              cp -a /tmp/angular-new/. /usr/local/apache2/htdocs/
+              rm -rf /tmp/angular-new
+            '
+
+            # Verify the deployed Angular entry point.
+            docker exec "$FRONTEND_CONTAINER" test -s /usr/local/apache2/htdocs/index.html
+
+            rm -rf "$STAGING_DIR"
+            rm -f "$ARCHIVE"
+
+            echo "Angular frontend deployed successfully."
+
+            # Clean up dangling Docker images
+            echo "Cleaning up unused Docker images..."
+            docker image prune -f
+
+            # Final status
+            echo "======================================"
+            echo "Deployment completed successfully"
+            echo "======================================"
+            docker compose ps
+
