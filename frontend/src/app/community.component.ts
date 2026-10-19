@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService, ServiceSubscription, User } from './auth.service';
 import { ProfileModalComponent } from './profile-modal.component';
 import { RoleSwitcherComponent } from './shared/components/role-switcher/role-switcher.component';
@@ -49,6 +49,7 @@ interface CommunityChatMessage {
 export class CommunityComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly communities = inject(MemberCommunityService);
   private readonly scriptures = inject(DailyScriptureService);
   private readonly memberCommunication = inject(MemberCommunicationService);
@@ -80,41 +81,8 @@ export class CommunityComponent implements OnInit {
   readonly selectedDirectMember = signal<CommunityMemberContact | null>(null);
   readonly directMessages = signal<DirectMemberMessage[]>([]);
   readonly directCommunicationNotice = signal('');
-  readonly chatMessages = signal<CommunityChatMessage[]>([
-    {
-      author: 'Nandi M.',
-      initials: 'NM',
-      message: 'Morning everyone. Please remember the family food drive this month.',
-      time: '09:14'
-    },
-    {
-      author: 'Thabo K.',
-      initials: 'TK',
-      message: 'Thank you. I will bring a grocery parcel on Sunday.',
-      time: '09:18'
-    }
-  ]);
-  readonly announcements = [
-    {
-      category: 'Church',
-      title: 'New Born Church monthly gathering',
-      summary: 'Join members for worship, updates and upcoming community opportunities.',
-      date: '14 June',
-      featured: true
-    },
-    {
-      category: 'Community',
-      title: 'Family food drive',
-      summary: 'Bring non-perishable goods to the church reception before 27 June.',
-      date: '27 June'
-    },
-    {
-      category: 'Youth',
-      title: 'Youth fellowship registration',
-      summary: 'Young members can register at the church office after Sunday service.',
-      date: '20 June'
-    }
-  ];
+  readonly chatMessages = signal<CommunityChatMessage[]>([]);
+  readonly announcements = [] as {category:string;title:string;summary:string;date:string;featured?:boolean}[];
   readonly serviceDetails: Record<string, { name: string; image: string; accent: string }> = {
     'build-up-balance': { name: 'Buy and Sell', image: '/service-buy-and-sell.png', accent: '#248fe5' },
     funeral: { name: 'Funeral Services', image: '/service-funeral-general.png', accent: '#2d963d' },
@@ -160,32 +128,7 @@ export class CommunityComponent implements OnInit {
     }
   };
 
-  readonly events: ChurchEvent[] = [
-    {
-      day: '17',
-      month: 'JUN',
-      title: 'Midweek Prayer Gathering',
-      time: '18:00',
-      location: 'Prayer Room',
-      description: 'A quiet evening of prayer, reflection and community support.'
-    },
-    {
-      day: '20',
-      month: 'JUN',
-      title: 'Youth Fellowship',
-      time: '14:00',
-      location: 'Community Hall',
-      description: 'Music, activities and a message for young community members.'
-    },
-    {
-      day: '27',
-      month: 'JUN',
-      title: 'Family Food Drive',
-      time: '10:00',
-      location: 'Church Courtyard',
-      description: 'Bring non-perishable goods to support families in our community.'
-    }
-  ];
+  readonly events: ChurchEvent[] = [];
 
   ngOnInit(): void {
     this.profiles.load().subscribe();
@@ -194,7 +137,7 @@ export class CommunityComponent implements OnInit {
         this.user.set(user);
         this.loadWalletBranding(user.id);
         this.loadDirectContacts();
-        this.communities.getMemberCommunity(String(user.id)).subscribe((community) => {
+        this.communities.getMemberCommunity(String(user.id), this.route.snapshot.queryParamMap.get('communityId') ?? undefined).subscribe((community) => {
           this.memberCommunity.set(community);
           this.churchSelection.setValue(community?.churchId ?? '');
           this.branchSelection.setValue(community?.branchId ?? '');
@@ -228,6 +171,26 @@ export class CommunityComponent implements OnInit {
 
   communityHeading(): string {
     return this.communities.getCommunityHeading(this.memberCommunity());
+  }
+
+  isTradingCommunity(): boolean {
+    const member = this.memberCommunity();
+    const id = this.route.snapshot.queryParamMap.get('communityId') ?? member?.churchId;
+    return ['trader-ilembe', 'community-ilembe-traders'].includes(id ?? '') ||
+      /^(Traders KZN|Trader Connect)$/i.test(member?.churchName?.trim() ?? '');
+  }
+
+  traderInsight(): string {
+    const insights = [
+      'Keep accurate daily sales and expense records to understand your business.',
+      'Listen to your customers and use their feedback to improve your service.',
+      'Check stock regularly so your best-selling products stay available.',
+      'Reliable suppliers, fair prices and visible products build repeat customers.',
+      'Separate business money from personal spending.',
+      'Clear prices and friendly service help build customer trust.',
+      'Set a practical business goal and review your progress each week.'
+    ];
+    return insights[(this.dailyScripture().day - 1) % insights.length];
   }
 
   communityChangeEmailLink(): string {
@@ -346,7 +309,8 @@ export class CommunityComponent implements OnInit {
     void this.router.navigate(['/dashboard/member'], {
       queryParams: {
         from: 'community',
-        service: service.serviceCode
+        service: service.serviceCode,
+        communityId: this.memberCommunity()?.churchId
       }
     });
   }
@@ -502,7 +466,9 @@ export class CommunityComponent implements OnInit {
   }
 
   backToDashboard(): void {
-    void this.router.navigate(['/dashboard']);
+    void this.router.navigate(['/dashboard/member'], {
+      queryParams: { from: 'community', communityId: this.memberCommunity()?.churchId ?? this.route.snapshot.queryParamMap.get('communityId') }
+    });
   }
 
   logout(): void {

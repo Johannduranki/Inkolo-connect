@@ -45,7 +45,7 @@
   <section class="community-workspace-banner" aria-labelledby="community-active-heading">
     <div class="community-workspace-top">
       <div class="community-workspace-switcher" aria-label="Workspace navigation">
-        <a class="more-services-button" href="/dashboard/member?from=community">
+        <a class="more-services-button" [href]="'/dashboard/member?from=community&amp;communityId=' + (memberCommunity()?.churchId || '')">
           More Services
           <span aria-hidden="true">→</span>
         </a>
@@ -83,8 +83,8 @@
             </span>
             <span class="community-wallet-face community-wallet-back">
               <small>AVAILABLE BALANCE</small>
-              <strong>850.00 Izaka</strong>
-              <span>Recent: Community payment +250.00 Izaka</span>
+              <strong>Open My Wallet</strong>
+              <span>View your verified balance and transactions in My Wallet.</span>
             </span>
           </span>
         </button>
@@ -139,7 +139,7 @@
 
   <section class="church-selector">
     <div>
-      <p>KZNCC CHURCH DIRECTORY</p>
+      <p>COMMUNITY DIRECTORY</p>
       <h2>{{ communityHeading() === 'My Community' ? 'Choose your primary church' : communityHeading() }}</h2>
       @if (memberCommunity()) {
         <span>This is your confirmed community. A member cannot change it from this dashboard.</span>
@@ -182,19 +182,21 @@
 
   <section class="church-hero">
     <div class="hero-overlay"></div>
-    <div class="church-mark" aria-hidden="true">✝</div>
+    @if (!isTradingCommunity()) {
+      <div class="church-mark" aria-hidden="true">✝</div>
+    }
     <div class="hero-content">
       <p>MY COMMUNITY</p>
       <h1>{{ communityHeading() === 'My Community' ? church.name : communityHeading() }}</h1>
-      <span>{{ church.denomination }}</span>
+      <span>{{ isTradingCommunity() ? 'Supporting traders and small businesses with training, funding opportunities and community services.' : church.denomination }}</span>
     </div>
   </section>
 
   <section class="verse-card">
     <span class="quote-mark">“</span>
-    <small>DAILY SCRIPTURE · DAY {{ dailyScripture().day }} OF 360</small>
-    <blockquote>“{{ dailyScripture().text }}”</blockquote>
-    <cite>{{ dailyScripture().reference }}</cite>
+    <small>{{ isTradingCommunity() ? 'DAILY TRADER INSIGHT' : 'DAILY SCRIPTURE' }} · DAY {{ dailyScripture().day }} OF 360</small>
+    <blockquote>“{{ isTradingCommunity() ? traderInsight() : dailyScripture().text }}”</blockquote>
+    <cite>{{ isTradingCommunity() ? 'Duranki Trader Connect' : dailyScripture().reference }}</cite>
   </section>
 
   <section class="community-updates">
@@ -350,123 +352,7 @@
     </div>
   </section>
 
-  <div class="community-layout">
-    <div class="main-column">
-      <section class="next-mass">
-        <div class="section-label">
-          <span class="pulse"></span>
-          NEXT SERVICE
-        </div>
-        <div class="mass-content">
-          <div class="mass-date">
-            <span>14</span>
-            <strong>JUN</strong>
-          </div>
-          <div class="mass-details">
-            <p>{{ church.nextMass.date }}</p>
-            <h2>{{ church.nextMass.type }}</h2>
-            <div class="mass-facts">
-              <span>
-                <b>Time</b>
-                {{ church.nextMass.time }}
-              </span>
-              <span>
-                <b>Venue</b>
-                {{ church.nextMass.location }}
-              </span>
-              <span>
-                <b>Address</b>
-                {{ church.nextMass.address }}
-              </span>
-            </div>
-          </div>
-        </div>
-        <div class="map-placeholder">
-          <span class="map-pin">●</span>
-          <div>
-            <strong>{{ church.nextMass.location }}</strong>
-            <p>{{ church.nextMass.address }}</p>
-          </div>
-          <button type="button">View directions</button>
-        </div>
-      </section>
-
-      <section class="events-section">
-        <div class="section-heading">
-          <div>
-            <p>COMMUNITY CALENDAR</p>
-            <h2>Upcoming events</h2>
-          </div>
-          <button type="button">View calendar</button>
-        </div>
-
-        <div class="event-list">
-          @for (event of events; track event.title) {
-            <article class="event-card">
-              <div class="event-date">
-                <strong>{{ event.day }}</strong>
-                <span>{{ event.month }}</span>
-              </div>
-              <div>
-                <h3>{{ event.title }}</h3>
-                <p>{{ event.description }}</p>
-                <div class="event-meta">
-                  <span>{{ event.time }}</span>
-                  <span>{{ event.location }}</span>
-                </div>
-              </div>
-            </article>
-          }
-        </div>
-      </section>
-    </div>
-
-    <aside class="community-sidebar">
-      <section class="pastor-card">
-        <div class="pastor-photo">
-          <span>TM</span>
-        </div>
-        <p>SERVICE LEADER</p>
-        <h2>{{ church.pastor.name }}</h2>
-        <span>{{ church.pastor.role }}</span>
-        <blockquote>{{ church.pastor.message }}</blockquote>
-        <button type="button">Send a message</button>
-      </section>
-
-      <section class="contact-card">
-        <p>CHURCH INFORMATION</p>
-        <h2>Get in touch</h2>
-        <dl>
-          <div>
-            <dt>Location</dt>
-            <dd>{{ church.address }}</dd>
-          </div>
-          <div>
-            <dt>Phone</dt>
-            <dd>{{ church.phone }}</dd>
-          </div>
-          <div>
-            <dt>Email</dt>
-            <dd>{{ church.email }}</dd>
-          </div>
-        </dl>
-      </section>
-
-      <section class="friends-card">
-        <div>
-          <p>COMMUNITY FRIENDS</p>
-          <h2>Stay connected</h2>
-        </div>
-        <div class="friend-avatars">
-          <span>NM</span>
-          <span>TK</span>
-          <span>LS</span>
-          <span>+12</span>
-        </div>
-        <button type="button">View community friends</button>
-      </section>
-    </aside>
-  </div>
+  <section class="community-configuration-status"><h2>Community information</h2><p>Events and contact information are not configured yet.</p></section>
   @if (profileOpen()) {
     <app-profile-modal
       [memberId]="user()?.id || 0"

@@ -1,11 +1,26 @@
 import express from 'express';
+import { listingChanges, listingCreation, ownedListing } from './listing-security.js';
+import { acknowledgeReferral } from './referral-security.js';
+import { moneyCents, transferBalances } from './wallet-security.js';
+import { validateGlobalRoleChange } from './role-security.js';
+import { validateUploadedFiles } from './upload-security.js';
+import { platformAdmin } from './tenant-access.js';
+import { canAccessProviderDocument, providerUploadScope, providerWorkspace, saveProviderGrant } from './provider-security.js';
 import multer from 'multer';
 import path from 'node:path';
 import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { createPlatformId, readPlatformState, updatePlatformState } from './platform-store.js';
+import { createPlatformId, readPlatformState as defaultReadState, updatePlatformState as defaultUpdateState } from './platform-store.js';
 import { resetUserServiceData } from './user-reset.js';
 import { getPool } from './database.js';
+import { editAdminProfile, profileVersion } from './admin-profile.js';
+import { userContributions } from './user-contributions.js';
+import { selectMemberCommunity } from './community-selection.js';
+import { resolveCommunityConfiguration } from '../../frontend/public/tenant-service-policy.js';
+import {communityPeerIds,requireCommunityPeer,participantMessage} from './community-messaging-security.js';
+import {conversationListing,writableConversation} from './conversation-security.js';
+import {activeRideUser,rideLocation,rideOfferInput,visibleRideOffers,requestableLift,rideRequestView,visibleRideRequests} from './ride-security.js';
+import { createAccountingRouter } from './accounting-api.js';
 
 const cleanPhone = (value) => {
   const digits = String(value ?? '').replace(/\D/g, '');
@@ -13,6 +28,18 @@ const cleanPhone = (value) => {
 };
 
 const currentUserId = (req) => String(req.auth.sub);
+const requireCurrentAdmin = (state, actorId) => {
+  const actor = state.users.find(user => String(user.id) === String(actorId));
+  if (!platformAdmin(actor)) throw Object.assign(Error('Platform administrator access is required.'), { status: 403 });
+  return actor;
+};
+const agreementFor = (state, agreementId, actorId) => {
+  const actor = state.users.find(user => String(user.id) === String(actorId));
+  if (actor?.status !== 'active') return undefined;
+  return (state.legalAcceptances || []).find(agreement => agreement.id === agreementId &&
+    (String(agreement.userId) === String(actorId) || platformAdmin(actor)));
+};
+const downloadPart = value => String(value ?? '').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80) || 'record';
 const conversationKey = (first, second) => [String(first), String(second)].sort().join(':');
 const reportServiceNames = {
   'build-up-balance': 'Buy and Sell',
@@ -89,14 +116,15 @@ function publicUser(user) {
   };
 }
 
-export function createPlatformRouter({ requireAuth, databaseAvailable = false }) {
+export function createPlatformRouter({ requireAuth, databaseAvailable = false, additionalSubscriptions = () => [], readPlatformState = defaultReadState, updatePlatformState = defaultUpdateState }) {
   const router = express.Router();
   router.use(requireAuth);
+  router.use('/accounting', createAccountingRouter({ databaseAvailable,readState:readPlatformState,updateState:updatePlatformState }));
   const requireAdminUser = (req, res, next) => {
     const user = readPlatformState().users.find(
       ({ id }) => String(id) === currentUserId(req)
     );
-    if (!user?.roles.includes('Admin User')) {
+      if (!platformAdmin(user)) {
       return res.status(403).json({ message: 'Duranki Admin access is required.' });
     }
     return next();
@@ -105,8 +133,8 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     const user = readPlatformState().users.find(
       ({ id }) => String(id) === currentUserId(req)
     );
-    if (!user?.roles.includes('KZNCC Admin')) {
-      return res.status(403).json({ message: 'KZNCC Admin access is required.' });
+    if (!platformAdmin(user)) {
+      return res.status(403).json({ message: 'Global account administration requires Platform Admin. Use tenant staff administration for scoped access.' });
     }
     return next();
   };
@@ -115,7 +143,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
       ({ id }) => String(id) === currentUserId(req)
     );
     if (
-      !user?.roles.some((role) =>
+      !platformAdmin(user) && !user?.roles.some((role) =>
         ['Service Provider Admin', 'Service Provider User'].includes(role)
       )
     ) {
@@ -125,7 +153,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     }
     return next();
   };
-  const createUser = (roles, body) => {
+  const createUser = async (roles, body, actorId) => {
     const firstName = String(body?.firstName ?? '').trim();
     const lastName = String(body?.lastName ?? '').trim();
     const telephoneNumber = cleanPhone(body?.telephoneNumber);
@@ -137,7 +165,10 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
       return { error: 'A user with this telephone number already exists.' };
     }
     return {
-      user: updatePlatformState((state) => {
+      user: await updatePlatformState((state) => {
+        const actor = requireCurrentAdmin(state, actorId);
+        const currentRoles = validateGlobalRoleChange(actor, null, roles);
+        if(state.users.some(user=>cleanPhone(user.telephoneNumber)===telephoneNumber))throw Object.assign(Error('A user with this telephone number already exists.'),{status:409});
         const id = Math.max(0, ...state.users.map((user) => Number(user.id))) + 1;
         const created = {
           id,
@@ -145,7 +176,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
           lastName,
           telephoneNumber,
           email,
-          roles: [...new Set(roles)],
+          roles: currentRoles,
           status: 'active'
         };
         state.users.push(created);
@@ -160,14 +191,18 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
           emergencyContactName: '',
           emergencyContactNumber: ''
         });
+        (state.securityAudit ??= []).push({ action: 'user.created', actorId: String(actorId), targetId: String(id), roles: [...currentRoles], at: new Date().toISOString() });
         return created;
       })
     };
   };
-  const removeUser = (userId) =>
-    updatePlatformState((state) => {
+  const removeUser = async (userId, actorId, kznccOnly = false) =>
+    await updatePlatformState((state) => {
+      requireCurrentAdmin(state, actorId);
+      if (String(userId) === String(actorId)) throw Object.assign(Error('You cannot remove your own admin account.'), { status: 400 });
       const index = state.users.findIndex(({ id }) => String(id) === String(userId));
       if (index < 0) return null;
+      if (kznccOnly && !state.users[index].roles?.some(role => ['KZNCC User', 'KZNCC Admin'].includes(role))) return null;
       const [removed] = state.users.splice(index, 1);
       state.profiles = state.profiles.filter(
         ({ userId: profileUserId }) => String(profileUserId) !== String(userId)
@@ -177,6 +212,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
           String(ownerUserId) !== String(userId) &&
           String(contactUserId) !== String(userId)
       );
+      (state.securityAudit ??= []).push({ action: 'user.removed', actorId: String(actorId), targetId: String(userId), at: new Date().toISOString() });
       return removed;
     });
   const businessServices = new Set([
@@ -204,7 +240,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     );
   });
 
-  router.post('/businesses', (req, res) => {
+  router.post('/businesses', async (req, res) => {
     const businessName = String(req.body?.businessName ?? '').trim();
     const telephone = cleanPhone(req.body?.telephone);
     const area = String(req.body?.area ?? '').trim();
@@ -224,7 +260,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
           'Enter the business name, 10-digit telephone number, area, description and at least one service.'
       });
     }
-    const business = updatePlatformState((state) => {
+    const business = await updatePlatformState((state) => {
       state.businessProfiles ??= [];
       const created = {
         id: createPlatformId('business'),
@@ -245,7 +281,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     return res.status(201).json(business);
   });
 
-  router.post('/businesses/:businessId/bulk', (req, res) => {
+  router.post('/businesses/:businessId/bulk', async (req, res) => {
     const service = String(req.body?.service ?? '');
     const records = Array.isArray(req.body?.records) ? req.body.records.slice(0, 100) : [];
     const state = readPlatformState();
@@ -260,7 +296,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
       return res.status(400).json({ message: 'Add at least one bulk record.' });
     }
 
-    const createdRecords = updatePlatformState((platformState) => {
+    const createdRecords = await updatePlatformState((platformState) => {
       const created = [];
       for (const record of records) {
         if (service === 'BUY_SELL') {
@@ -363,7 +399,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     res.json(profile ?? null);
   });
 
-  router.put('/profile', (req, res) => {
+  router.put('/profile', async (req, res) => {
     const userId = Number(req.auth.sub);
     const allowedFields = [
       'profilePhoto',
@@ -376,7 +412,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
       'emergencyContactName',
       'emergencyContactNumber'
     ];
-    const profile = updatePlatformState((state) => {
+    const profile = await updatePlatformState((state) => {
       const existing = state.profiles.find((item) => item.userId === userId);
       const updates = Object.fromEntries(
         allowedFields.map((field) => [field, String(req.body?.[field] ?? '').trim()])
@@ -398,10 +434,15 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
   });
 
   router.get('/admin/users', requireAdminUser, (req, res) => {
-    res.json(readPlatformState().users.map(publicUser));
+    const state=readPlatformState();
+    res.json(state.users.map(user=>({...publicUser(user),status:user.status,importReview:user.importReview||[],communities:state.memberCommunities.filter(m=>String(m.memberId)===String(user.id)).map(m=>({id:m.communityId||m.churchId,name:m.communityName||m.churchName,tenantId:m.tenantId}))})));
+  });
+  router.get('/admin/import-directory',requireAdminUser,(req,res)=>{
+    const state=readPlatformState();
+    res.json({imported:!!state.coreImport,users:state.users.length,communities:(state.importedCommunities||[]).map(c=>({...c,users:state.memberCommunities.filter(m=>m.communityId===c.id).length}))});
   });
 
-  router.get('/admin/users/:userId/profile', requireAdminUser, (req, res) => {
+  router.get('/admin/users/:userId/profile', requireAdminUser, async (req, res) => {
     const state = readPlatformState();
     const user = state.users.find(
       ({ id }) => String(id) === req.params.userId
@@ -417,9 +458,24 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     );
     return res.json({
       ...publicUser(user),
+      status:user.status,
+      importReview:user.importReview||[],
+      sourceUserId:user.sourceUserId||null,
+      updatedAt:user.updatedAt||null,
+      version:profileVersion(user,profile),
+      communities:(state.memberCommunities||[]).filter(m=>String(m.memberId)===req.params.userId),
+      ...userContributions([...(state.serviceSubscriptions||[]),...await additionalSubscriptions(user.id)],user.id,reportServiceNames),
       profile: profile ?? null,
       community: community ?? null
     });
+  });
+
+  router.put('/admin/users/:userId/profile',requireAdminUser,async (req,res,next)=>{
+    if(databaseAvailable)return res.status(503).json({message:'Profile editing for SQL-backed accounts is not configured.'});
+    try{
+      const result=await updatePlatformState(state=>editAdminProfile(state,req.params.userId,req.body||{},currentUserId(req)));
+      return res.json(result);
+    }catch(error){if(error.status)return res.status(error.status).json({message:error.message});return next(error);}
   });
 
   router.get('/admin/analytics', requireAdminUser, (_req, res) => {
@@ -577,21 +633,22 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     }
   );
 
-  router.post('/admin/users', requireAdminUser, (req, res) => {
-    const roles = Array.isArray(req.body?.roles) && req.body.roles.length
-      ? req.body.roles.map(String)
-      : ['Member'];
-    const result = createUser(roles, req.body);
+  router.post('/admin/users', requireAdminUser, async (req, res) => {
+    let roles;
+    try { roles = validateGlobalRoleChange(readPlatformState().users.find(u => String(u.id) === currentUserId(req)), null, req.body?.roles ?? ['Member']); }
+    catch (error) { return res.status(error.status).json({ message: error.message }); }
+    const result = await createUser(roles, req.body, currentUserId(req));
     if (result.error) return res.status(400).json({ message: result.error });
     return res.status(201).json(publicUser(result.user));
   });
 
-  router.delete('/admin/users/:userId', requireAdminUser, (req, res) => {
+  router.delete('/admin/users/:userId', requireAdminUser, async (req, res) => {
     if (req.params.userId === currentUserId(req)) {
       return res.status(400).json({ message: 'You cannot remove your own admin account.' });
     }
-    const removed = removeUser(req.params.userId);
+    const removed = await removeUser(req.params.userId, currentUserId(req));
     if (!removed) return res.status(404).json({ message: 'User not found.' });
+    await req.app.locals.sessions?.revokeUser(removed.id);
     return res.status(204).end();
   });
 
@@ -608,7 +665,8 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
         }
         const summary = await resetUserServiceData(
           req.params.userId,
-          databaseAvailable
+          databaseAvailable,
+          {actorId:currentUserId(req),mode:'admin',readState:readPlatformState,updateState:updatePlatformState}
         );
         return res.json(summary);
       } catch (error) {
@@ -617,19 +675,22 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     }
   );
 
-  router.put('/admin/users/:userId/roles', requireAdminUser, (req, res) => {
-    const roles = Array.isArray(req.body?.roles)
-      ? [...new Set(req.body.roles.map((role) => String(role)))]
-      : [];
-    if (!roles.length) {
-      return res.status(400).json({ message: 'Assign at least one role.' });
-    }
-    const user = updatePlatformState((state) => {
+  router.put('/admin/users/:userId/roles', requireAdminUser, async (req, res) => {
+    let roles;
+    try { roles = validateGlobalRoleChange(readPlatformState().users.find(u => String(u.id) === currentUserId(req)), req.params.userId, req.body?.roles); }
+    catch (error) { return res.status(error.status).json({ message: error.message }); }
+    const user = await updatePlatformState((state) => {
+      roles=validateGlobalRoleChange(state.users.find(u=>String(u.id)===currentUserId(req)),req.params.userId,req.body?.roles);
       const found = state.users.find(({ id }) => String(id) === req.params.userId);
-      if (found) found.roles = roles;
+      if (found) {
+        state.securityAudit ??= [];
+        state.securityAudit.push({ action: 'user.roles.changed', actorId: currentUserId(req), targetId: String(found.id), before: found.roles, after: roles, at: new Date().toISOString() });
+        found.roles = roles;
+      }
       return found;
     });
     if (!user) return res.status(404).json({ message: 'User not found.' });
+    await req.app.locals.sessions?.revokeUser(user.id);
     return res.json(publicUser(user));
   });
 
@@ -643,17 +704,17 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     );
   });
 
-  router.post('/kzncc-admin/users', requireKznccAdmin, (req, res) => {
+  router.post('/kzncc-admin/users', requireKznccAdmin, async (req, res) => {
     const requestedRole = String(req.body?.role ?? 'KZNCC User');
     if (!['KZNCC User', 'KZNCC Admin'].includes(requestedRole)) {
       return res.status(400).json({ message: 'Choose KZNCC User or KZNCC Admin.' });
     }
-    const result = createUser(['Member', requestedRole], req.body);
+    const result = await createUser(['Member', requestedRole], req.body, currentUserId(req));
     if (result.error) return res.status(400).json({ message: result.error });
     return res.status(201).json(publicUser(result.user));
   });
 
-  router.delete('/kzncc-admin/users/:userId', requireKznccAdmin, (req, res) => {
+  router.delete('/kzncc-admin/users/:userId', requireKznccAdmin, async (req, res) => {
     if (req.params.userId === currentUserId(req)) {
       return res.status(400).json({ message: 'You cannot remove your own KZNCC Admin account.' });
     }
@@ -663,7 +724,9 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     if (!target?.roles.some((role) => ['KZNCC User', 'KZNCC Admin'].includes(role))) {
       return res.status(404).json({ message: 'KZNCC user not found.' });
     }
-    removeUser(req.params.userId);
+    const removed = await removeUser(req.params.userId, currentUserId(req), true);
+    if (!removed) return res.status(404).json({ message: 'KZNCC user not found.' });
+    await req.app.locals.sessions?.revokeUser(removed.id);
     return res.status(204).end();
   });
 
@@ -712,8 +775,10 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     requireServiceProvider,
     (req, res) => {
       const serviceProviderId = String(req.query.serviceProviderId ?? 'sp-001');
-      const documents = (readPlatformState().memberDocuments ?? [])
-        .filter((document) => document.serviceProviderId === serviceProviderId)
+      const state = readPlatformState();
+      const actor = state.users.find(user => String(user.id) === currentUserId(req));
+      const documents = (state.memberDocuments ?? [])
+        .filter((document) => document.serviceProviderId === serviceProviderId && canAccessProviderDocument(state, actor, document))
         .sort((first, second) =>
           String(second.uploadedAt).localeCompare(String(first.uploadedAt))
         );
@@ -721,11 +786,18 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     }
   );
 
+  router.get('/service-provider/workspace', requireServiceProvider, (req, res) => {
+    const state = readPlatformState();
+    const actor = state.users.find(user => String(user.id) === currentUserId(req));
+    res.set('Cache-Control', 'no-store').json(providerWorkspace(state, actor));
+  });
+
   router.post(
     '/service-provider/documents',
     requireServiceProvider,
     memberDocumentUpload.single('file'),
-    (req, res) => {
+    validateUploadedFiles,
+    async (req, res) => {
       const memberId = String(req.body?.memberId ?? '').trim();
       const serviceId = String(req.body?.serviceId ?? '').trim();
       if (!req.file || !memberId || !serviceId) {
@@ -739,16 +811,28 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
       const uploader = state.users.find(
         ({ id }) => String(id) === currentUserId(req)
       );
+      let documentScope;
+      try { documentScope = providerUploadScope(state, uploader, req.body); }
+      catch (error) {
+        if (existsSync(req.file.path)) unlinkSync(req.file.path);
+        return res.status(error.status || 400).json({ message: error.message });
+      }
       if (!member) {
         if (existsSync(req.file.path)) unlinkSync(req.file.path);
         return res.status(404).json({ message: 'Member not found.' });
       }
-      const document = updatePlatformState((platformState) => {
+      const document = await updatePlatformState((platformState) => {
+        // Uploads may wait for the storage queue; authorize against its current snapshot.
+        try { documentScope = providerUploadScope(platformState, uploader, req.body); }
+        catch (error) {
+          if (existsSync(req.file.path)) unlinkSync(req.file.path);
+          throw error;
+        }
         platformState.memberDocuments ??= [];
         const created = {
           id: createPlatformId('document'),
           memberId,
-          serviceProviderId: String(req.body?.serviceProviderId ?? 'sp-001'),
+          ...documentScope,
           serviceId,
           policyNumber: String(
             req.body?.policyNumber ?? `POL-${Date.now()}`
@@ -774,11 +858,19 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
   router.get('/admin/churches', requireAdminUser, (_req, res) => {
     res.json(readPlatformState().churches);
   });
+  router.get('/admin/provider-grants', requireAdminUser, (_req, res) => res.json(readPlatformState().providerAccessGrants || []));
+  router.post('/admin/provider-grants', requireAdminUser, async (req, res, next) => {
+    try {
+      const actor = readPlatformState().users.find(user => String(user.id) === currentUserId(req));
+      const grant = await updatePlatformState(state => saveProviderGrant(state, actor, req.body));
+      return res.json(grant);
+    } catch (error) { if (error.status) return res.status(error.status).json({ message: error.message }); return next(error); }
+  });
 
   router.put(
     '/admin/churches/:churchId/branding',
     requireAdminUser,
-    (req, res) => {
+    async (req, res) => {
       const colorPattern = /^#[0-9a-f]{6}$/i;
       const branding = {
         logoUrl: String(req.body?.logoUrl ?? ''),
@@ -798,12 +890,14 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
           message: 'Choose a valid community logo and colour scheme.'
         });
       }
-      const church = updatePlatformState((state) => {
+      const church = await updatePlatformState((state) => {
+        requireCurrentAdmin(state, currentUserId(req));
         const selected = state.churches.find(
           ({ id }) => String(id) === req.params.churchId
         );
         if (!selected) return null;
         selected.branding = branding;
+        (state.securityAudit ??= []).push({ action: 'community.branding.changed', actorId: currentUserId(req), targetId: String(selected.id), at: new Date().toISOString() });
         return selected;
       });
       if (!church) {
@@ -817,14 +911,16 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     '/admin/churches/:churchId/logo',
     requireAdminUser,
     communityLogoUpload.single('logo'),
-    (req, res) => {
+    validateUploadedFiles,
+    async (req, res) => {
       if (!req.file) {
         return res.status(400).json({
           message: 'Choose a PNG, JPG or WEBP community logo up to 5 MB.'
         });
       }
       const logoUrl = `/uploads/community-logos/${req.file.filename}`;
-      const church = updatePlatformState((state) => {
+      const church = await updatePlatformState((state) => {
+        requireCurrentAdmin(state, currentUserId(req));
         const selected = state.churches.find(
           ({ id }) => String(id) === req.params.churchId
         );
@@ -837,6 +933,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
           backgroundColor: '#f2f8ff'
         };
         selected.branding.logoUrl = logoUrl;
+        (state.securityAudit ??= []).push({ action: 'community.logo.changed', actorId: currentUserId(req), targetId: String(selected.id), at: new Date().toISOString() });
         return selected;
       });
       if (!church) {
@@ -847,47 +944,38 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
   );
 
   router.get('/agreements/:agreementId/document', (req, res) => {
-    const state = readPlatformState();
-    const user = state.users.find(({ id }) => String(id) === currentUserId(req));
-    const agreement = (state.legalAcceptances ?? []).find(
-      ({ id }) => id === req.params.agreementId
-    );
-    if (
-      !agreement ||
-      (String(agreement.userId) !== currentUserId(req) &&
-        !user?.roles.includes('Admin User'))
-    ) {
+    const agreement = agreementFor(readPlatformState(), req.params.agreementId, currentUserId(req));
+    if (!agreement) {
       return res.status(404).json({ message: 'Agreement not found.' });
     }
     res
       .status(200)
-      .type(agreement.documentMimeType)
+      .type('text/html')
+      .set({
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+        'Referrer-Policy': 'no-referrer',
+        'Content-Security-Policy': "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'"
+      })
       .set(
         'Content-Disposition',
-        `inline; filename="${agreement.serviceCode}-terms-${agreement.documentVersion}.html"`
+        `inline; filename="${downloadPart(agreement.serviceCode)}-terms-${downloadPart(agreement.documentVersion)}.html"`
       )
       .send(agreement.documentSnapshot);
   });
 
   router.get('/agreements/:agreementId/evidence', (req, res) => {
-    const state = readPlatformState();
-    const user = state.users.find(({ id }) => String(id) === currentUserId(req));
-    const agreement = (state.legalAcceptances ?? []).find(
-      ({ id }) => id === req.params.agreementId
-    );
-    if (
-      !agreement ||
-      (String(agreement.userId) !== currentUserId(req) &&
-        !user?.roles.includes('Admin User'))
-    ) {
+    const agreement = agreementFor(readPlatformState(), req.params.agreementId, currentUserId(req));
+    if (!agreement) {
       return res.status(404).json({ message: 'Agreement not found.' });
     }
     res
       .status(200)
       .type('application/json')
+      .set({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': "sandbox; default-src 'none'; frame-ancestors 'none'" })
       .set(
         'Content-Disposition',
-        `attachment; filename="${agreement.serviceCode}-acceptance-${agreement.id}.json"`
+        `attachment; filename="${downloadPart(agreement.serviceCode)}-acceptance-${downloadPart(agreement.id)}.json"`
       )
       .send(JSON.stringify({
         evidenceType: 'DURANKI_ELECTRONIC_ACCEPTANCE',
@@ -909,14 +997,27 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     );
   });
 
+  router.get('/community/me/all',(req,res)=>res.json(readPlatformState().memberCommunities.filter(m=>String(m.memberId)===currentUserId(req))));
   router.get('/community/me', (req, res) => {
-    const membership = readPlatformState().memberCommunities.find(
-      ({ memberId }) => memberId === currentUserId(req)
+    const communityId = req.query.communityId;
+    if (communityId !== undefined && (typeof communityId !== 'string' || !communityId.trim())) {
+      return res.status(400).json({ message: 'Invalid community selection.' });
+    }
+    const membership = selectMemberCommunity(
+      readPlatformState().memberCommunities, currentUserId(req), communityId
     );
-    res.json(membership ?? null);
+    if (communityId && !membership) {
+      return res.status(403).json({ message: 'You are not registered in the selected community.' });
+    }
+    const policy = readPlatformState().cycleServiceAvailability;
+    const configuration = membership ? resolveCommunityConfiguration(membership, policy?.communities, policy?.tenants) : null;
+    res.json(membership ? { ...membership, serviceConfiguration: configuration ? {
+      id: configuration.id, tenantId: configuration.tenantId,
+      serviceCodes: configuration.serviceCodes
+    } : null } : null);
   });
 
-  router.put('/community/me', (req, res) => {
+  router.put('/community/me', async (req, res) => {
     const { churchId, branchId } = req.body ?? {};
     const state = readPlatformState();
     const existingMembership = state.memberCommunities.find(
@@ -949,7 +1050,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     if (branchId && !branch) {
       return res.status(400).json({ message: 'Choose an active branch for this church.' });
     }
-    const membership = updatePlatformState((draft) => {
+    const membership = await updatePlatformState((draft) => {
       const saved = {
         memberId: currentUserId(req),
         churchId: church.id,
@@ -966,15 +1067,8 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
   router.get('/community/members', (req, res) => {
     const query = String(req.query.query ?? '').trim().toLowerCase();
     const state = readPlatformState();
-    const membership = state.memberCommunities.find(
-      ({ memberId }) => memberId === currentUserId(req)
-    );
-    if (!membership || query.length < 2) return res.json([]);
-    const communityUserIds = new Set(
-      state.memberCommunities
-        .filter(({ churchId }) => churchId === membership.churchId)
-        .map(({ memberId }) => memberId)
-    );
+    const communityUserIds = communityPeerIds(state,currentUserId(req),req.query.communityId);
+    if (query.length < 2 || query.length > 100) return res.json([]);
     const normalizedPhoneQuery = cleanPhone(query);
     const results = state.users
       .filter(
@@ -982,30 +1076,28 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
           String(user.id) !== currentUserId(req) &&
           communityUserIds.has(String(user.id)) &&
           (`${user.firstName} ${user.lastName}`.toLowerCase().includes(query) ||
-            cleanPhone(user.telephoneNumber).includes(normalizedPhoneQuery))
+            (normalizedPhoneQuery.length>=2&&cleanPhone(user.telephoneNumber).includes(normalizedPhoneQuery)))
       )
+      .slice(0,50)
       .map(publicUser);
     return res.json(results);
   });
 
   router.get('/community/contacts', (req, res) => {
     const state = readPlatformState();
+    const peers = communityPeerIds(state,currentUserId(req),req.query.communityId);
     const ids = new Set(
       state.contacts
         .filter(({ ownerUserId }) => ownerUserId === currentUserId(req))
         .map(({ contactUserId }) => contactUserId)
     );
-    res.json(state.users.filter(({ id }) => ids.has(String(id))).map(publicUser));
+    res.json(state.users.filter(({ id }) => ids.has(String(id))&&peers.has(String(id))).map(publicUser));
   });
 
-  router.post('/community/contacts', (req, res) => {
+  router.post('/community/contacts', async (req, res) => {
     const contactUserId = String(req.body?.contactUserId ?? '');
-    const state = readPlatformState();
-    const contact = state.users.find(({ id }) => String(id) === contactUserId);
-    if (!contact || contactUserId === currentUserId(req)) {
-      return res.status(400).json({ message: 'Choose another community member.' });
-    }
-    updatePlatformState((draft) => {
+    const contact = await updatePlatformState((draft) => {
+      const peer = requireCommunityPeer(draft,currentUserId(req),contactUserId,req.body?.communityId);
       const exists = draft.contacts.some(
         (item) =>
           item.ownerUserId === currentUserId(req) &&
@@ -1018,29 +1110,29 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
           createdAt: new Date().toISOString()
         });
       }
+      return publicUser(peer);
     });
-    return res.status(201).json(publicUser(contact));
+    return res.status(201).json(contact);
   });
 
   router.get('/community/conversations/:otherUserId', (req, res) => {
+    const state=readPlatformState();
+    requireCommunityPeer(state,currentUserId(req),req.params.otherUserId,req.query.communityId);
     const key = conversationKey(currentUserId(req), req.params.otherUserId);
     res.json(
-      readPlatformState().directMessages
-        .filter(({ conversationId }) => conversationId === key)
+      state.directMessages
+        .filter(message => message.conversationId === key&&participantMessage(message,currentUserId(req),req.params.otherUserId))
         .sort((a, b) => a.sentAt.localeCompare(b.sentAt))
     );
   });
 
-  router.post('/community/conversations/:otherUserId', (req, res) => {
+  router.post('/community/conversations/:otherUserId', async (req, res) => {
     const text = String(req.body?.text ?? '').trim();
     if (!text || text.length > 1000) {
       return res.status(400).json({ message: 'Enter a message up to 1,000 characters.' });
     }
-    const recipient = readPlatformState().users.find(
-      ({ id }) => String(id) === req.params.otherUserId
-    );
-    if (!recipient) return res.status(404).json({ message: 'Member not found.' });
-    const message = updatePlatformState((state) => {
+    const message = await updatePlatformState((state) => {
+      requireCommunityPeer(state,currentUserId(req),req.params.otherUserId,req.body?.communityId);
       const created = {
         id: createPlatformId('msg'),
         conversationId: conversationKey(currentUserId(req), req.params.otherUserId),
@@ -1071,46 +1163,32 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
   });
 
   router.post('/wallet/top-up', (req, res) => {
-    const amount = Number(req.body?.amount);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      return res.status(400).json({ message: 'Enter a valid top-up amount.' });
-    }
-    const result = updatePlatformState((state) => {
-      const wallet = state.wallets.find(
-        ({ ownerType, ownerId }) =>
-          ownerType === 'MEMBER' && ownerId === currentUserId(req)
-      );
-      if (!wallet) return null;
-      wallet.balance += amount;
-      wallet.availableBalance += amount;
-      const transaction = {
-        id: createPlatformId('tx'),
-        walletId: wallet.id,
-        transactionType: 'TOP_UP',
-        amount,
-        direction: 'IN',
-        description: 'Cycle card top-up',
-        reference: `CYCLE-${Date.now()}`,
-        status: 'SUCCESSFUL',
-        createdAt: new Date().toISOString()
-      };
-      state.walletTransactions.push(transaction);
-      return { wallet, transaction };
-    });
-    if (!result) return res.status(404).json({ message: 'Wallet not found.' });
-    return res.status(201).json(result);
+    return res.status(409).json({message:'Start a secure Cycle Pay top-up in My payments. Wallet credits require a verified provider notification.',checkoutUrl:'/payments/cycle?purpose=wallet-top-up'});
   });
 
-  router.post('/wallet/transfer', (req, res) => {
-    const amount = Number(req.body?.amount);
+  router.post('/wallet/transfer', async (req, res) => {
+    if(readPlatformState().cycleWalletReview?.[currentUserId(req)])return res.status(409).json({message:'Wallet payments are on hold pending review of a Cycle refund or dispute.'});
+    const amount = req.body?.amount;
     const telephoneNumber = cleanPhone(req.body?.recipientTelephoneNumber);
-    if (!Number.isFinite(amount) || amount <= 0) {
+    const requestKey=req.get('Idempotency-Key')||req.body?.idempotencyKey;
+    if(typeof requestKey!=='string'||!/^[a-zA-Z0-9-]{16,100}$/.test(requestKey))return res.status(400).json({message:'Refresh the page before submitting a transfer. A payment request key is required.'});
+    if (moneyCents(amount) === null || amount <= 0) {
       return res.status(400).json({ message: 'Enter a valid transfer amount.' });
     }
-    const result = updatePlatformState((state) => {
-      const recipient = state.users.find(
-        (user) => cleanPhone(user.telephoneNumber) === telephoneNumber
+    const result = await updatePlatformState((state) => {
+      if(state.cycleWalletReview?.[currentUserId(req)])return {error:'Wallet payments are on hold pending review.'};
+      const prior=(state.walletTransferRequests||[]).find(r=>r.userId===currentUserId(req)&&r.key===requestKey);
+      if(prior){
+        if(prior.recipientTelephoneNumber!==telephoneNumber||prior.amountCents!==moneyCents(amount))throw Object.assign(Error('This payment request key was already used for different transfer details.'),{status:409});
+        return {...prior.result,replayed:true};
+      }
+      const recipients = state.users.filter(
+        user => user.status === 'active' && telephoneNumber && cleanPhone(user.telephoneNumber) === telephoneNumber
       );
+      const sender = state.users.find(user => String(user.id) === currentUserId(req) && user.status === 'active');
+      if (!sender || recipients.length !== 1) return { error: 'An active, unambiguous member wallet is required.' };
+      const recipient = recipients[0];
+      if (state.cycleWalletReview?.[String(recipient.id)]) return { error: 'Recipient wallet is on hold pending review.' };
       const senderWallet = state.wallets.find(
         ({ ownerType, ownerId }) =>
           ownerType === 'MEMBER' && ownerId === currentUserId(req)
@@ -1123,12 +1201,9 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
         : undefined;
       if (!recipient || !senderWallet || !recipientWallet) return { error: 'Member wallet not found.' };
       if (recipientWallet.id === senderWallet.id) return { error: 'You cannot transfer to yourself.' };
-      if (senderWallet.availableBalance < amount) return { error: 'Insufficient wallet balance.' };
-      senderWallet.balance -= amount;
-      senderWallet.availableBalance -= amount;
-      recipientWallet.balance += amount;
-      recipientWallet.availableBalance += amount;
-      const reference = `MEMBER-${Date.now()}`;
+      const balances = transferBalances(senderWallet, recipientWallet, amount);
+      [senderWallet.balance, senderWallet.availableBalance, recipientWallet.balance, recipientWallet.availableBalance] = balances;
+      const reference = `MEMBER-${randomUUID()}`;
       state.walletTransactions.push(
         {
           id: createPlatformId('tx'),
@@ -1153,13 +1228,17 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
           createdAt: new Date().toISOString()
         }
       );
-      return { reference, recipientName: `${recipient.firstName} ${recipient.lastName}` };
+      const result={ reference, recipientName: `${recipient.firstName} ${recipient.lastName}` };
+      (state.walletTransferRequests??=[]).push({userId:currentUserId(req),key:requestKey,recipientTelephoneNumber:telephoneNumber,amountCents:moneyCents(amount),result,at:new Date().toISOString()});
+      return result;
     });
     if (result.error) return res.status(400).json({ message: result.error });
     return res.status(201).json(result);
   });
 
-  router.post('/wallet/cash-out', (req, res) => {
+  router.post('/wallet/cash-out', async (req, res) => {
+    if(readPlatformState().cycleWalletReview?.[currentUserId(req)])return res.status(409).json({message:'Wallet payments are on hold pending review of a Cycle refund or dispute.'});
+    if (readPlatformState().realDataOnly) return res.status(503).json({ message: 'Cash-outs are unavailable until a payout provider is connected and verified.' });
     const amount = Number(req.body?.amount);
     const accountHolder = String(req.body?.accountHolder ?? '').trim();
     const accountNumber = String(req.body?.accountNumber ?? '').replace(/\D/g, '');
@@ -1171,7 +1250,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     ) {
       return res.status(400).json({ message: 'Enter valid African Bank cash-out details.' });
     }
-    const result = updatePlatformState((state) => {
+    const result = await updatePlatformState((state) => {
       const wallet = state.wallets.find(
         ({ ownerType, ownerId }) =>
           ownerType === 'MEMBER' && ownerId === currentUserId(req)
@@ -1225,7 +1304,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     );
   });
 
-  router.post('/referrals', (req, res) => {
+  router.post('/referrals', async (req, res) => {
     const current = readPlatformState().users.find(
       ({ id }) => String(id) === currentUserId(req)
     );
@@ -1236,7 +1315,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     if (!current || !referred) {
       return res.status(400).json({ message: 'The referred member was not found.' });
     }
-    const referral = updatePlatformState((state) => {
+    const referral = await updatePlatformState((state) => {
       const created = {
         id: createPlatformId('ref'),
         referrerName: `${current.firstName} ${current.lastName}`,
@@ -1252,17 +1331,9 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     return res.status(201).json(referral);
   });
 
-  router.patch('/referrals/:id', (req, res) => {
-    const status = req.body?.accepted ? 'ACCEPTED' : 'DECLINED';
-    const referral = updatePlatformState((state) => {
-      const found = state.referrals.find(({ id }) => id === req.params.id);
-      if (found) {
-        found.status = status;
-        found.acknowledgedAt = new Date().toISOString();
-      }
-      return found;
-    });
-    if (!referral) return res.status(404).json({ message: 'Referral not found.' });
+  router.patch('/referrals/:id', async (req, res) => {
+    const referral = await updatePlatformState(state =>
+      acknowledgeReferral(state, currentUserId(req), req.params.id, req.body?.accepted));
     return res.json(referral);
   });
 
@@ -1270,7 +1341,8 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     res.json(readPlatformState().marketplaceListings);
   });
 
-  router.post('/marketplace/listings', (req, res) => {
+  router.post('/marketplace/listings', async (req, res) => {
+    const editable = listingCreation('marketplace',req.body);
     const platformState = readPlatformState();
     const current = platformState.users.find(
       ({ id }) => String(id) === currentUserId(req)
@@ -1286,9 +1358,9 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     if (!title || !Number.isFinite(price) || price < 0) {
       return res.status(400).json({ message: 'Enter an item title and valid price.' });
     }
-    const listing = updatePlatformState((state) => {
+    const listing = await updatePlatformState((state) => {
       const created = {
-        ...req.body,
+        ...editable,
         id: createPlatformId('listing'),
         title,
         price,
@@ -1307,30 +1379,24 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     return res.status(201).json(listing);
   });
 
-  router.patch('/marketplace/listings/:id', (req, res) => {
-    const listing = updatePlatformState((state) => {
-      const found = state.marketplaceListings.find(({ id }) => id === req.params.id);
-      if (found && found.sellerUserId === currentUserId(req)) {
-        Object.assign(found, req.body);
-      }
+  router.patch('/marketplace/listings/:id', async (req, res) => {
+    let changes;
+    try { changes = listingChanges('marketplace', req.body); }
+    catch { return res.status(400).json({ message: 'Invalid listing changes.' }); }
+    const listing = await updatePlatformState((state) => {
+      const found = ownedListing(state.marketplaceListings, req.params.id, 'sellerUserId', currentUserId(req));
+      if (found) Object.assign(found, changes);
       return found;
     });
     if (!listing) return res.status(404).json({ message: 'Listing not found.' });
     return res.json(listing);
   });
 
-  router.post('/marketplace/listings/:id/conversations', (req, res) => {
-    const state = readPlatformState();
-    const listing = state.marketplaceListings.find(({ id }) => id === req.params.id);
-    if (!listing) return res.status(404).json({ message: 'Listing not found.' });
-
+  router.post('/marketplace/listings/:id/conversations', async (req, res) => {
     const buyerUserId = currentUserId(req);
-    const sellerUserId = String(listing.sellerUserId);
-    if (buyerUserId === sellerUserId) {
-      return res.status(400).json({ message: 'You cannot start a seller chat on your own listing.' });
-    }
-
-    const conversation = updatePlatformState((platformState) => {
+    const conversation = await updatePlatformState((platformState) => {
+      const listing = conversationListing(platformState, 'marketplace', req.params.id, buyerUserId);
+      const sellerUserId = String(listing.sellerUserId);
       const existing = platformState.marketplaceConversations.find(
         (item) =>
           item.listingId === listing.id &&
@@ -1405,7 +1471,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     );
   });
 
-  router.post('/marketplace/conversations/:id/messages', (req, res) => {
+  router.post('/marketplace/conversations/:id/messages', async (req, res) => {
     const state = readPlatformState();
     const conversation = state.marketplaceConversations.find(({ id }) => id === req.params.id);
     if (!conversation) return res.status(404).json({ message: 'Conversation not found.' });
@@ -1426,7 +1492,8 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
       return res.status(400).json({ message: 'Enter a valid message up to 2,000 characters.' });
     }
 
-    const message = updatePlatformState((platformState) => {
+    const message = await updatePlatformState((platformState) => {
+      writableConversation(platformState,'marketplace',conversation.id,senderUserId);
       const created = {
         id: createPlatformId('marketplace-message'),
         conversationId: conversation.id,
@@ -1444,13 +1511,12 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     return res.status(201).json(message);
   });
 
-  router.get('/rides/available', (_req, res) => {
-    res.json(
-      (readPlatformState().availableLifts ?? [])
-        .filter((lift) => lift.available && Number(lift.distanceKm) <= 10)
-        .sort((first, second) => first.distanceKm - second.distanceKm)
-    );
+  router.use('/rides', (req,res,next) => {
+    activeRideUser(readPlatformState(),currentUserId(req));
+    res.set('Cache-Control','no-store');
+    next();
   });
+  router.get('/rides/available', (req, res) => res.json(visibleRideOffers(readPlatformState(),currentUserId(req),req.query.communityId)));
 
   router.get('/rides/offers/mine', (req, res) => {
     const offer = (readPlatformState().availableLifts ?? []).find(
@@ -1459,36 +1525,12 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     return res.json(offer ?? null);
   });
 
-  router.post('/rides/offers', (req, res) => {
-    const state = readPlatformState();
-    const driver = state.users.find(({ id }) => String(id) === currentUserId(req));
-    const latitude = Number(req.body?.latitude);
-    const longitude = Number(req.body?.longitude);
-    const vehicle = String(req.body?.vehicle ?? '').trim();
-    const registrationNumber = String(req.body?.registrationNumber ?? '').trim();
-    const destination = String(req.body?.destination ?? '').trim();
-    const departureTime = String(req.body?.departureTime ?? '').trim();
-    const seatsAvailable = Math.max(1, Math.min(8, Number(req.body?.seatsAvailable) || 1));
-    const business = ownedBusiness(
-      state,
-      req,
-      req.body?.businessProfileId,
-      'CATCH_A_RIDE'
-    );
-    if (
-      !driver ||
-      !Number.isFinite(latitude) ||
-      !Number.isFinite(longitude) ||
-      !vehicle ||
-      !registrationNumber ||
-      !destination ||
-      !departureTime
-    ) {
-      return res.status(400).json({
-        message: 'Share your location and complete the vehicle and trip details.'
-      });
-    }
-    const offer = updatePlatformState((platformState) => {
+  router.post('/rides/offers', async (req, res) => {
+    const input = rideOfferInput(req.body);
+    const offer = await updatePlatformState((platformState) => {
+      const driver = activeRideUser(platformState,currentUserId(req));
+      const business = ownedBusiness(platformState,req,req.body?.businessProfileId,'CATCH_A_RIDE');
+      if(req.body?.businessProfileId&&!business)throw Object.assign(Error('Active owned ride business required.'),{status:403});
       platformState.availableLifts ??= [];
       const existing = platformState.availableLifts.find(
         ({ driverUserId }) => String(driverUserId) === currentUserId(req)
@@ -1498,16 +1540,10 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
         driverName:
           business?.businessName ?? `${driver.firstName} ${driver.lastName}`,
         driverTelephone: business?.telephone ?? driver.telephoneNumber,
-        vehicle,
-        registrationNumber,
-        seatsAvailable,
+        ...input,
         rating: existing?.rating ?? 5,
         distanceKm: existing?.distanceKm ?? 2,
         directionDegrees: existing?.directionDegrees ?? 90,
-        destination,
-        departureTime,
-        latitude,
-        longitude,
         businessProfileId: business?.id,
         businessName: business?.businessName,
         available: true,
@@ -1524,13 +1560,15 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     return res.status(201).json(offer);
   });
 
-  router.patch('/rides/offers/mine', (req, res) => {
-    const offer = updatePlatformState((state) => {
+  router.patch('/rides/offers/mine', async (req, res) => {
+    if(typeof req.body?.available!=='boolean')return res.status(400).json({message:'Choose a valid availability setting.'});
+    const offer = await updatePlatformState((state) => {
+      activeRideUser(state,currentUserId(req));
       const existing = (state.availableLifts ?? []).find(
         ({ driverUserId }) => String(driverUserId) === currentUserId(req)
       );
       if (!existing) return null;
-      existing.available = Boolean(req.body?.available);
+      existing.available = req.body.available;
       existing.updatedAt = new Date().toISOString();
       return existing;
     });
@@ -1539,40 +1577,17 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
       : res.status(404).json({ message: 'No lift offer was found.' });
   });
 
-  router.get('/rides/requests', (req, res) => {
-    const userId = currentUserId(req);
-    const requests = readPlatformState().rideRequests ?? [];
-    res.json({
-      outgoing: requests
-        .filter(({ passengerUserId }) => String(passengerUserId) === userId)
-        .sort((first, second) => second.requestedAt.localeCompare(first.requestedAt)),
-      incoming: requests
-        .filter(({ driverUserId }) => String(driverUserId) === userId)
-        .sort((first, second) => second.requestedAt.localeCompare(first.requestedAt))
-    });
-  });
+  router.get('/rides/requests', (req, res) => res.json(visibleRideRequests(readPlatformState(),currentUserId(req))));
 
-  router.post('/rides/requests', (req, res) => {
-    const state = readPlatformState();
-    const lift = (state.availableLifts ?? []).find(
-      ({ id, available }) => id === String(req.body?.liftId) && available
-    );
-    const passenger = state.users.find(
-      ({ id }) => String(id) === currentUserId(req)
-    );
-    const latitude = Number(req.body?.latitude);
-    const longitude = Number(req.body?.longitude);
-    if (!lift || !passenger || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      return res.status(400).json({
-        message: 'Choose an available lift and share a valid pickup location.'
-      });
-    }
-    if (String(lift.driverUserId) === currentUserId(req)) {
-      return res.status(400).json({ message: 'You cannot request your own lift.' });
-    }
+  router.post('/rides/requests', async (req, res) => {
+    const {latitude,longitude}=rideLocation(req.body);
+    if(typeof req.body?.liftId!=='string'||req.body.liftId.length>200)return res.status(400).json({message:'Choose a valid lift.'});
 
-    const created = updatePlatformState((platformState) => {
+    const created = await updatePlatformState((platformState) => {
+      const {passenger,lift}=requestableLift(platformState,currentUserId(req),req.body.liftId,req.body.communityId);
       platformState.rideRequests ??= [];
+      const pending=platformState.rideRequests.find(request=>request.liftId===lift.id&&String(request.passengerUserId)===currentUserId(req)&&request.status==='PENDING');
+      if(pending)return pending;
       const request = {
         id: createPlatformId('ride-request'),
         liftId: lift.id,
@@ -1591,16 +1606,17 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
       platformState.rideRequests.unshift(request);
       return request;
     });
-    return res.status(201).json(created);
+    return res.status(201).json(rideRequestView(created,currentUserId(req)));
   });
 
-  router.patch('/rides/requests/:requestId', (req, res) => {
+  router.patch('/rides/requests/:requestId', async (req, res) => {
     const requestedStatus = String(req.body?.status ?? '');
     if (!['ACCEPTED', 'DECLINED', 'CANCELLED'].includes(requestedStatus)) {
       return res.status(400).json({ message: 'Choose a valid ride request action.' });
     }
 
-    const updated = updatePlatformState((state) => {
+    const updated = await updatePlatformState((state) => {
+      activeRideUser(state,currentUserId(req));
       const request = (state.rideRequests ?? []).find(
         ({ id }) => id === req.params.requestId
       );
@@ -1614,6 +1630,11 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
       ) {
         return null;
       }
+      if(requestedStatus!=='CANCELLED')requireCommunityPeer(state,userId,request.passengerUserId);
+      if(requestedStatus==='ACCEPTED') {
+        const lift=(state.availableLifts||[]).find(lift=>lift.id===request.liftId&&String(lift.driverUserId)===userId&&lift.available===true);
+        if(!lift)throw Object.assign(Error('This lift is no longer available.'),{status:409});
+      }
       request.status = requestedStatus;
       request.driverMessage =
         requestedStatus === 'ACCEPTED' ? 'On my way' : undefined;
@@ -1622,7 +1643,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     });
 
     return updated
-      ? res.json(updated)
+      ? res.json(rideRequestView(updated,currentUserId(req)))
       : res.status(403).json({ message: 'This ride request cannot be updated.' });
   });
 
@@ -1630,7 +1651,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     res.json(readPlatformState().propertyListings ?? []);
   });
 
-  router.post('/properties/listings', (req, res) => {
+  router.post('/properties/listings', async (req, res) => {
     const state = readPlatformState();
     const current = state.users.find(({ id }) => String(id) === currentUserId(req));
     const business = ownedBusiness(
@@ -1670,7 +1691,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
       });
     }
 
-    const listing = updatePlatformState((platformState) => {
+    const listing = await updatePlatformState((platformState) => {
       const created = {
         ...req.body,
         id: createPlatformId('property'),
@@ -1700,7 +1721,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     return res.status(201).json(listing);
   });
 
-  router.patch('/properties/listings/:id', (req, res) => {
+  router.patch('/properties/listings/:id', async (req, res) => {
     const allowedStatuses = new Set([
       'AVAILABLE',
       'UNDER_OFFER',
@@ -1708,9 +1729,9 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
       'SOLD',
       'WITHDRAWN'
     ]);
-    const listing = updatePlatformState((state) => {
+    const listing = await updatePlatformState((state) => {
       const found = (state.propertyListings ?? []).find(
-        ({ id }) => id === req.params.id
+        ({ id, ownerUserId }) => id === req.params.id && String(ownerUserId) === currentUserId(req)
       );
       if (
         found &&
@@ -1725,22 +1746,11 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     return res.json(listing);
   });
 
-  router.post('/properties/listings/:id/conversations', (req, res) => {
-    const state = readPlatformState();
-    const listing = (state.propertyListings ?? []).find(
-      ({ id }) => id === req.params.id
-    );
-    if (!listing) return res.status(404).json({ message: 'Property listing not found.' });
-
+  router.post('/properties/listings/:id/conversations', async (req, res) => {
     const interestedUserId = currentUserId(req);
-    const ownerUserId = String(listing.ownerUserId);
-    if (interestedUserId === ownerUserId) {
-      return res.status(400).json({
-        message: 'You cannot start an enquiry on your own property listing.'
-      });
-    }
-
-    const conversation = updatePlatformState((platformState) => {
+    const conversation = await updatePlatformState((platformState) => {
+      const listing = conversationListing(platformState, 'property', req.params.id, interestedUserId);
+      const ownerUserId = String(listing.ownerUserId);
       platformState.propertyConversations ??= [];
       const existing = platformState.propertyConversations.find(
         (item) =>
@@ -1821,7 +1831,7 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     );
   });
 
-  router.post('/properties/conversations/:id/messages', (req, res) => {
+  router.post('/properties/conversations/:id/messages', async (req, res) => {
     const state = readPlatformState();
     const conversation = (state.propertyConversations ?? []).find(
       ({ id }) => id === req.params.id
@@ -1845,7 +1855,8 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
         message: 'Enter a valid message up to 2,000 characters.'
       });
     }
-    const message = updatePlatformState((platformState) => {
+    const message = await updatePlatformState((platformState) => {
+      writableConversation(platformState,'property',conversation.id,senderUserId);
       const created = {
         id: createPlatformId('property-message'),
         conversationId: conversation.id,
@@ -1864,7 +1875,8 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     res.json(readPlatformState().jobListings);
   });
 
-  router.post('/jobs', (req, res) => {
+  router.post('/jobs', async (req, res) => {
+    const editable = listingCreation('job',req.body);
     const platformState = readPlatformState();
     const current = platformState.users.find(
       ({ id }) => String(id) === currentUserId(req)
@@ -1877,9 +1889,9 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     );
     const title = String(req.body?.title ?? '').trim();
     if (!title) return res.status(400).json({ message: 'Enter a job title.' });
-    const job = updatePlatformState((state) => {
+    const job = await updatePlatformState((state) => {
       const created = {
-        ...req.body,
+        ...editable,
         id: createPlatformId('job'),
         title,
         listedByUserId: currentUserId(req),
@@ -1897,12 +1909,13 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false })
     return res.status(201).json(job);
   });
 
-  router.patch('/jobs/:id', (req, res) => {
-    const job = updatePlatformState((state) => {
-      const found = state.jobListings.find(({ id }) => id === req.params.id);
-      if (found && found.listedByUserId === currentUserId(req)) {
-        Object.assign(found, req.body);
-      }
+  router.patch('/jobs/:id', async (req, res) => {
+    let changes;
+    try { changes = listingChanges('job', req.body); }
+    catch { return res.status(400).json({ message: 'Invalid listing changes.' }); }
+    const job = await updatePlatformState((state) => {
+      const found = ownedListing(state.jobListings, req.params.id, 'listedByUserId', currentUserId(req));
+      if (found) Object.assign(found, changes);
       return found;
     });
     if (!job) return res.status(404).json({ message: 'Job listing not found.' });
