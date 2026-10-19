@@ -1,0 +1,331 @@
+<main class="login-page">
+  <section class="brand-panel" aria-label="Duranki introduction">
+    <div class="brand-photo-bubbles" aria-hidden="true">
+      <span class="photo-bubble face-1"></span>
+      <span class="photo-bubble face-2"></span>
+      <span class="photo-bubble face-3"></span>
+      <span class="photo-bubble face-4"></span>
+      <span class="photo-bubble face-5"></span>
+      <span class="photo-bubble face-6"></span>
+      <span class="photo-bubble face-7"></span>
+      <span class="photo-bubble face-8"></span>
+      <span class="photo-bubble face-9"></span>
+      <span class="photo-bubble face-10"></span>
+      <span class="photo-bubble face-11"></span>
+      <span class="photo-bubble face-12"></span>
+      <span class="photo-bubble face-13"></span>
+      <span class="photo-bubble face-14"></span>
+      <span class="photo-bubble face-15"></span>
+      <span class="photo-bubble face-16"></span>
+    </div>
+    <div class="brand-center">
+      <div class="logo-frame">
+        <img class="inkolo-logo" src="/duranki-up-logo-transparent.png" alt="Duranki">
+      </div>
+      <p class="brand-slogan">Your Gateway to Financial Freedom and Inclusion</p>
+    </div>
+    <p class="support">Need help? Contact your platform administrator.</p>
+  </section>
+
+  <section class="form-panel">
+    <form class="login-card" (submit)="submit(); $event.preventDefault()" novalidate>
+      <div class="mobile-brand">
+        <img class="inkolo-logo mobile" src="/duranki-up-logo-transparent.png" alt="Duranki">
+      </div>
+
+      <p class="eyebrow dark">ACCOUNT ACCESS</p>
+      <h2>{{ mode() === 'register' ? 'Create your account' : 'Tell us who you are' }}</h2>
+      <p class="form-intro">
+        @if (mode() === 'register') {
+          Register as an Duranki member using your name, surname and telephone number.
+        } @else {
+          Sign in with one telephone number and password, then switch between your assigned dashboards.
+        }
+      </p>
+
+      <div class="access-mode-switcher" aria-label="Choose account access method">
+        <button
+          type="button"
+          [class.active]="mode() === 'login'"
+          (click)="setMode('login')"
+        >
+          Member login
+        </button>
+        <button
+          type="button"
+          [class.active]="mode() === 'register'"
+          (click)="setMode('register')"
+        >
+          Register
+        </button>
+      </div>
+
+      @if (mode() === 'register') {
+        <section class="identity-panel" aria-labelledby="identity-heading">
+          <div class="identity-heading">
+            <div>
+              <p id="identity-heading">Identity verification</p>
+              <strong>{{ isMobileDevice() ? 'Scan your ID card' : 'Upload an ID document' }}</strong>
+            </div>
+            <span>{{ isMobileDevice() ? 'Phone detected' : 'Computer detected' }}</span>
+          </div>
+
+          <p class="identity-copy">
+            @if (isMobileDevice()) {
+              Use your phone camera to upload your ID card for verification.
+            } @else {
+              Upload a photo or PDF of the ID document for verification.
+            }
+          </p>
+
+          <div class="identity-actions">
+            @if (isMobileDevice()) {
+              <label class="scan-button">
+                {{ idOcrBusy() ? 'Reading ID...' : 'Scan ID card' }}
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  (change)="uploadIdDocument($event)"
+                  [disabled]="idOcrBusy()"
+                >
+              </label>
+            } @else {
+              <label class="scan-button">
+                {{ idOcrBusy() ? 'Reading ID...' : 'Upload ID' }}
+                <input
+                  type="file"
+                  accept="image/*"
+                  (change)="uploadIdDocument($event)"
+                  [disabled]="idOcrBusy()"
+                >
+              </label>
+            }
+          </div>
+
+          @if (idScanPreview()) {
+            <img class="identity-preview" [src]="idScanPreview()" alt="Uploaded ID preview">
+          }
+
+          @if (idScanStatus()) {
+            <p class="scan-status">{{ idScanStatus() }}</p>
+          }
+
+          <div class="identity-fields">
+            <label>
+              <span>Name</span>
+              <input
+                type="text"
+                autocomplete="given-name"
+                [formControl]="firstName"
+                placeholder="e.g. Jeremy"
+              >
+            </label>
+            <label>
+              <span>Surname</span>
+              <input
+                type="text"
+                autocomplete="family-name"
+                [formControl]="lastName"
+                placeholder="e.g. Shabalala"
+              >
+            </label>
+            <label>
+              <span>ID number</span>
+              <input
+                type="text"
+                inputmode="numeric"
+                [formControl]="idNumber"
+                placeholder="e.g. 9001015009087"
+              >
+            </label>
+            <label>
+              <span>Date of birth</span>
+              <input type="date" [formControl]="dateOfBirth">
+            </label>
+            <label>
+              <span>Gender</span>
+              <input type="text" [formControl]="gender" placeholder="e.g. Female">
+            </label>
+          </div>
+
+          @if (idNumber.touched && idNumber.invalid) {
+            <p class="error" role="alert">Enter a valid ID number using numbers only.</p>
+          }
+          @if (
+            (firstName.touched && firstName.invalid) ||
+            (lastName.touched && lastName.invalid)
+          ) {
+            <p class="error" role="alert">Enter your name and surname.</p>
+          }
+        </section>
+      }
+
+      <label for="telephoneNumber">Telephone number</label>
+      <input
+        id="telephoneNumber"
+        type="tel"
+        inputmode="tel"
+        autocomplete="tel"
+        [formControl]="telephoneNumber"
+        placeholder="e.g. 0712345678"
+        aria-describedby="telephone-help"
+      >
+      <p id="telephone-help" class="field-help">
+        @if (mode() === 'register') {
+          This number becomes your secure Duranki login.
+        } @else {
+          The selected user's registered number is filled automatically.
+        }
+      </p>
+
+      @if (telephoneNumber.touched && telephoneNumber.invalid) {
+        <p class="error" role="alert">Enter a valid telephone number.</p>
+      }
+
+      <label for="password">Password</label>
+      <input
+        id="password"
+        type="password"
+        autocomplete="current-password"
+        [formControl]="password"
+        placeholder="Enter your password"
+      >
+      <p class="field-help">
+        @if (mode() === 'register') {
+          Use at least 4 characters. This PIN or password belongs to your phone-number login.
+        } @else {
+          Use the PIN or password assigned to your telephone-number login.
+        }
+      </p>
+
+      @if (password.touched && password.invalid) {
+        <p class="error" role="alert">Enter a PIN or password of at least 4 characters.</p>
+      }
+
+      @if (mode() === 'register' && existingRegistrationUser(); as registeredUser) {
+        <section class="existing-registration-panel" aria-label="Existing Duranki registration">
+          <div>
+            <p>Existing account found</p>
+            <strong>{{ registeredUser.firstName }} {{ registeredUser.lastName }}</strong>
+            <span>This phone number already has a Duranki account. You can add another community to the same login.</span>
+          </div>
+
+          <div class="registered-community-list">
+            <span>Already registered communities</span>
+            @if (activeCommunities().length > 0) {
+              @for (community of activeCommunities(); track community.churchId + '-' + (community.branchId ?? 'main')) {
+                <strong>
+                  {{ community.churchName }}{{ community.branchName ? ' - ' + community.branchName : '' }}
+                </strong>
+              }
+            } @else {
+              <strong>No community is linked yet.</strong>
+            }
+          </div>
+
+          <label>
+            <span>Register to another community</span>
+            <select [formControl]="selectedAdditionalCommunityId">
+              <option value="">Choose community</option>
+              @for (community of availableCommunities(); track community.id) {
+                <option [value]="community.id">
+                  {{ community.tenantName ? community.tenantName + ' - ' : '' }}{{ community.name }}
+                </option>
+              }
+            </select>
+          </label>
+
+          @if (availableCommunities().length === 0) {
+            <p class="field-help">This account is already registered to every available community.</p>
+          }
+        </section>
+      }
+
+      @if (mode() === 'register') {
+        <section class="privacy-policy-panel" aria-label="Duranki privacy policy">
+          <div class="privacy-policy-heading">
+            <p>Privacy & consent</p>
+            <strong>Duranki Privacy Policy</strong>
+            <span>Please read the policy before creating your account.</span>
+          </div>
+
+          <button
+            class="privacy-policy-open"
+            type="button"
+            (click)="openPrivacyPolicy()"
+          >
+            Open Privacy Policy
+          </button>
+
+          <label class="privacy-acceptance">
+            <input type="checkbox" [formControl]="privacyAccepted">
+            <span>I have read and accept the Duranki Privacy Policy.</span>
+          </label>
+
+          @if (privacyAccepted.touched && privacyAccepted.invalid) {
+            <p class="error" role="alert">You must accept the Privacy Policy before registering.</p>
+          }
+        </section>
+      }
+
+      @if (errorMessage()) {
+        <p class="error" role="alert">{{ errorMessage() }}</p>
+      }
+
+      @if (registrationNotice()) {
+        <p class="registration-notice">{{ registrationNotice() }}</p>
+      }
+
+      <button type="submit" [disabled]="loading() || idOcrBusy()">
+        {{
+          idOcrBusy()
+            ? 'Reading ID...'
+            : loading()
+            ? (mode() === 'register' ? 'Creating account...' : 'Signing in...')
+            : (mode() === 'register' && existingRegistrationUser()
+              ? 'Add community and continue'
+              : (mode() === 'register' ? 'Register and continue' : 'Continue'))
+        }}
+      </button>
+
+      <p class="privacy">
+        @if (mode() === 'register') {
+          Your account will be created with the Member role. Additional roles can only be assigned by an administrator.
+        } @else {
+          Your telephone number is transmitted securely and is not stored in your browser.
+        }
+      </p>
+    </form>
+  </section>
+
+  @if (privacyPolicyOpen()) {
+    <div
+      class="privacy-modal-backdrop"
+      role="presentation"
+      (click)="closePrivacyPolicy()"
+    >
+      <section
+        class="privacy-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="privacy-modal-heading"
+        (click)="$event.stopPropagation()"
+      >
+        <header>
+          <div>
+            <p>Duranki legal</p>
+            <h3 id="privacy-modal-heading">Privacy Policy</h3>
+          </div>
+          <button type="button" class="privacy-modal-close" aria-label="Close Privacy Policy" (click)="closePrivacyPolicy()">
+            Close
+          </button>
+        </header>
+        <iframe
+          title="Duranki Privacy Policy"
+          src="/duranki-privacy-policy.txt"
+        ></iframe>
+      </section>
+    </div>
+  }
+</main>

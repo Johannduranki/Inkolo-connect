@@ -1,0 +1,17 @@
+FROM node:22-alpine
+
+ENV NODE_ENV=production
+WORKDIR /app
+
+COPY package.json ./
+COPY backend/package*.json backend/
+RUN npm --prefix backend ci --omit=dev
+
+COPY backend backend
+COPY frontend/dist frontend/dist
+COPY scripts/local-demo-server.mjs scripts/local-demo-server.mjs
+COPY scripts/docker-demo.mjs scripts/docker-demo.mjs
+
+EXPOSE 4200
+
+CMD ["node", "scripts/docker-demo.mjs"]
