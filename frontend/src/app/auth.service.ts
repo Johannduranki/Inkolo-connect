@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
+import { environment } from '../environments/environment';
 import { RoleService, type UserRole } from './core/services/role.service';
 
 export interface User {
@@ -43,7 +44,7 @@ interface LoginResponse {
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly roles = inject(RoleService);
-  private readonly apiUrl = '/api';
+  private readonly apiUrl = environment.apiUrl;
   private readonly tokenKey = 'duranki_access_token';
   private inMemoryToken: string | null = null;
 

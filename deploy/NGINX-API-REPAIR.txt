@@ -1,0 +1,83 @@
+Duranki API routing: operator handover
+
+Confirmed from source
+- AuthService sends POST /api/auth/login; Express defines that exact route.
+- Both Angular environment builds now use /api. No runtime injection is needed
+  for browser same-origin requests. The development CLI proxy remains unchanged.
+- Other browser services use relative /api paths. The native mobile LAN URL and
+  Netlify-specific interceptor are separate deployments, not used on this host.
+- Root docker-compose.yml defines durankidemo_backend, PORT=3001, and external
+  network webnet. Host port 4001 is not the internal Docker port.
+- deploy/compose.yml is a separate deployment topology (app:3000); do not mix it
+  with the existing durankidemo topology or replace the running Compose stack.
+- No live Nginx container configuration is stored in this repository. The
+  approximate configuration supplied by the operator already preserves /api.
+
+Evidence and limits
+Public /api/health and /api/auth/me returned HTML 404 responses, unlike the
+expected API JSON. This indicates an upstream/vhost/routing mismatch, but does
+not prove which active server rule caused it. Do not claim a confirmed trailing
+slash fault without inspecting nginx -T. Rebuilding Angular alone cannot repair
+an independently managed Nginx configuration.
+
+1. Inspect on the server, read-only (replace NGINX with its actual container name):
+   docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Ports}}'
+   docker inspect --format '{{json .NetworkSettings.Networks}}' NGINX durankidemo_backend durankidemo_frontend
+   docker exec NGINX nginx -T
+   docker exec durankidemo_backend node -e "fetch('http://127.0.0.1:3001/api/health').then(async r=>console.log(r.status,await r.text())).catch(e=>{console.error(e.message);process.exitCode=1})"
+   docker exec NGINX wget -S -O - http://durankidemo_backend:3001/api/health
+   If wget is not installed, use an existing HTTP diagnostic tool in that
+   container. Do not install tools or change networking as part of diagnosis.
+   Keep nginx -T output private; share only redacted relevant server/location
+   blocks. Do not share full docker inspect output or container environments.
+
+2. Interpret the evidence:
+   - Direct backend health fails: inspect backend startup logs privately first.
+   - Direct backend works, Nginx cannot connect: verify actual shared network,
+     DNS name and port. Network changes need the server operator's approval.
+   - Both work but public API fails: locate the active server_name/listen block,
+     duplicate vhosts, regex locations, rewrites and proxy_pass URI suffixes.
+     Test the actual public hostname, not only the default localhost vhost.
+
+3. After identifying the active config, back up its mounted host config and
+   includes OUTSIDE the frontend document root. Record permissions and paths.
+   Incorporate nginx-api-location.conf in the matching server block, replacing
+   any existing /api/ location. Leave location / pointing at Apache unchanged.
+   Preserve TLS, other hostnames, limits and unrelated proxy configuration.
+   No trailing slash after :3001: Express expects the /api prefix.
+   ^~ prevents a generic regex location from taking precedence for API paths.
+   Do not turn API errors into index.html, add wildcard CORS or expose port3001.
+   Validate: docker exec NGINX nginx -t
+   Only if validation passes: docker exec NGINX nginx -s reload
+   Persist changes in the existing host-mounted config, not an ephemeral layer.
+   Rollback: restore that config backup, nginx -t, then nginx -s reload.
+
+4. Verify without real credentials:
+   curl -i http://app-dev.duranki.network/api/health
+   curl -i http://app-dev.duranki.network/api/auth/me
+   Expect JSON health and an anonymous denial, not HTML 404 or Angular HTML.
+   One empty login probe should return JSON validation error, not 404:
+   curl -i -H 'Content-Type: application/json' -H 'Origin: http://app-dev.duranki.network' --data '{}' http://app-dev.duranki.network/api/auth/login
+   The current Express middleware explicitly allowlists Origin even on
+   same-origin requests. If this probe returns 403, set FRONTEND_ORIGINS in the
+   server-managed backend environment to the actual approved origins, including
+   http://app-dev.duranki.network for this development host and the HTTPS origin
+   when enabled. Root Compose currently specifies localhost:8080; verify the
+   actual runtime value privately. Preserve other legitimate origins. Applying
+   an environment change requires a separately approved backend recreation;
+   verify durable backend data/uploads mounts and backups before that action.
+   Do not remove the allowlist or change trusted-proxy settings blindly.
+
+5. Check Apache SPA fallback for /login and /register, and backend-rendered
+   /two-factor and dashboard routes using FRONTEND-ROUTING.txt. API repair does
+   not automatically install those separate routes. Enable valid HTTPS before
+   submitting real passwords or ID documents.
+
+Security and deployment boundaries
+The tracked root Compose file contains embedded credentials. Treat them as
+exposed; Johann must rotate them in a coordinated maintenance plan and move
+them to server-managed secret configuration. Do not reset DB credentials or
+reinitialize volumes to fix this routing issue.
+This patch does not edit workflows, Compose, credentials, databases or live
+containers. GitHub deployment copies Angular assets; it does NOT install this
+Nginx include. An operator must apply it after confirming the diagnostics.
