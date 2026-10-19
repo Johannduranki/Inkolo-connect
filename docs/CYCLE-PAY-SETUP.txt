@@ -1,0 +1,84 @@
+CYCLE PAY / DURANKI
+Integration status: implemented foundation; live collection NOT activated.
+
+Dashboard: /dashboard/cycle (active Platform Admin with MFA)
+Member payment requests: /payments/cycle (only the signed-in member's requests)
+Notification endpoint: POST /api/cycle/notifications
+Provider: Cycle Pay. Merchant account: Duranki.
+Live hosted checkout: https://payment.cyclepay.net/pwv4/launch
+Sandbox hosted checkout: https://sandbox.cyclepay.net/pwv4/launch
+
+SECURITY ACTION REQUIRED
+The supplied screenshot contained live credentials. Ask Cycle to rotate the
+notification secret, paywall secret and API caller password. Do not put the
+replacement values into chat, source control, the frontend or this document.
+No credentials from the screenshot have been installed or committed.
+
+SERVER CONFIGURATION
+Set these in the server secret manager or protected backend environment file:
+  CYCLE_MODE=sandbox
+  CYCLE_ENABLED=false
+  CYCLE_LIVE_APPROVED=false
+  CYCLE_MERCHANT_ACCOUNT=Duranki
+  CYCLE_PAYWALL_SECRET=<sandbox paywall secret from Cycle>
+  CYCLE_NOTIFICATION_SECRET=<sandbox notification secret from Cycle>
+  CYCLE_PUBLIC_URL=https://<public Duranki domain>
+
+The public URL must be an origin with HTTPS and no path/query/credentials.
+Localhost is not a public callback endpoint. Provision HTTPS on the deployment
+server first. Restart the backend after environment changes.
+Hosted checkout does not use API caller credentials; those are needed for a
+separately implemented direct API/reconciliation integration.
+
+WHAT WORKS
+- Platform administrators can create uniquely referenced payment requests for
+  active members of an imported community. These do not charge cards.
+- Members can see only their own requests. Once checkout is enabled, the server
+  signs the stored amount and identity; the browser cannot substitute a price.
+- Card data is entered on Cycle's hosted payment page, not on Duranki.
+- Callback validation uses the exact raw request body and timing-safe HMAC
+  verification. Amount, currency, merchant and stored mode must match.
+- Provider IDs and event hashes have database uniqueness constraints. Only a
+  complete approved charge marks the request CHARGED. Repeated notifications
+  cannot create a second record. Other statuses are flagged for review.
+- Redirects and browser messages never mark a payment successful.
+- Dashboard totals separate sandbox and live records; exports contain displayed
+  records only (latest 500 loaded). Full totals are calculated by the database.
+- Secret values and full provider payloads are not returned or stored in the
+  reporting dashboard. cycle.sqlite contains requests, normalized events/audit.
+
+SANDBOX ACCEPTANCE
+1. Obtain separate sandbox credentials from Cycle and configure the HTTPS URL.
+2. Confirm with Cycle that notification id corresponds to the submitted chargeId
+   and verify the current callback transaction shape against their sandbox.
+3. Set CYCLE_ENABLED=true in sandbox only. Restart the backend.
+4. Create a disposable payment request for a staging member and community.
+5. As that member, open My payments and use Cycle's approved sandbox test cards.
+6. Verify pending, approved, declined, cancelled, refund and partial-payment
+   callbacks. Test invalid signatures, duplicate delivery and delayed callbacks.
+7. Reconcile the register against Cycle's merchant portal; confirm exact amounts,
+   references and callback retry handling. No real member payment is a test.
+
+REMAINING BEFORE FULL PLATFORM PAYMENT ROLLOUT
+Existing wallet top-ups, membership charges and service subscription payments
+are NOT automatically routed through this new register yet. Implement their
+authoritative invoice/price bindings and atomic, idempotent fulfillment before
+enabling those entry points. Do not treat CHARGED as wallet credit, activated
+subscription, reconciled bank settlement or stakeholder payout.
+Treasury allocations, accounting postings, refunds/chargebacks, recurring
+mandates, settlement reconciliation and provider status recovery remain to be
+integrated. This dashboard does not claim to make stakeholder payouts.
+Current deployment uses a local SQLite register; include it in tested backups
+and recovery. Multiple backend hosts need shared production storage/migration.
+
+LIVE ACTIVATION
+Only after sandbox acceptance, fulfillment integration and explicit release
+approval: install rotated live keys, set CYCLE_MODE=live and
+CYCLE_LIVE_APPROVED=true. Enable collection and restart. Validate a controlled
+payment with the account owner and verify settlement independently. Do not
+interpret configuration readiness as proof that Cycle has accepted a charge.
+
+OFFICIAL REFERENCES
+https://docs.cyclepay.africa/online-payments/hosted-payment-page
+https://docs.cyclepay.africa/online-payments/hosted-payment-page-reference
+https://docs.cyclepay.africa/online-payments/real-time-notifications

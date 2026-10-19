@@ -1,0 +1,184 @@
+DURANKI PLATFORM FUNCTIONAL AUDIT
+13 October 2026 | Local installation at localhost:4200
+
+RESULT: NOT READY FOR AN ALL-FUNCTIONS SIGN-OFF
+
+REPAIR UPDATE: 13 October 2026
+
+Implemented and checked:
+- Member links retain the exact communityId through More Services, wallet and
+  return links. Explicit other-community destinations are preserved. External
+  and admin links do not inherit community scope. Live ZUC -> More Services
+  keeps ZUC in the URL and heading, with a scoped return link.
+- Tenant/community admin selection now updates its URL; tenant select display
+  synchronizes to the URL instead of showing the first tenant by default.
+- Accounting snapshot API restored for authorized active platform accountants.
+  Employee costs, atomic CSV batches and unique short codes persist with audit
+  entries, amount validation and duplicate checks. Tenant staff are denied.
+- Browser-only Mark paid and Match entry no longer report false success.
+  Unimplemented posting/payment/reconciliation endpoints return explicit 503
+  responses without writing money movements or ledger entries.
+- Fake community wallet amounts and sample event/contact/pastor/friend panels
+  are replaced with status messages. Direct community messaging is retained.
+- Sample accounting asset total, fixed monthly growth, chart and close-progress
+  displays removed or masked as unavailable. Period says All recorded dates
+  because the existing ledger does not implement a working period filter.
+- Missing /dashboard/services/* routes now show an explicit not-connected page
+  and keep the session. These are NOT implemented service-admin dashboards.
+  Navigation labels distinguish them from working destinations.
+- Duplicate fallback Admin workspace selector removed when the real role
+  selector is present.
+
+Verification: 61 isolated tests passed, TypeScript no-emit check passed and
+served JavaScript syntax check passed. Live checks: scoped ZUC services,
+accounting load and readiness notice, missing-service status page. No live
+payments, employee imports or permission changes were submitted in this repair.
+
+Still outstanding (do not treat mitigations above as full implementation):
+- Authoritative community-scoped subscriptions/service configuration across
+  backend APIs; the navigation fix alone is not tenant-isolation certification.
+- Full accounting posting/invoice uploads, double-entry controls, verified bank
+  reconciliation and cash-flow statements. Employee cost entry is not payroll
+  processing. No provider settlements are enabled by these changes.
+- Trader Training APIs, assessments, funded milestones and payment enforcement.
+- Actual service-admin implementations for the 19 advertised catalogue routes.
+- Real community event/contact configuration and the remaining static artwork.
+- Editable source/served-bundle parity, SQL connection/migrations, production
+  configuration and isolated staging end-to-end coverage with provider sandboxes.
+
+The original audit below is retained as the pre-repair evidence.
+
+Scope
+Signed-in browser checks as the platform administrator, source and served-bundle
+inspection, and 56 isolated backend regression tests. No payments, messages,
+subscriptions, staff grants, profile edits or tenant activation were submitted.
+Real records were not deliberately changed. This is not a penetration test or
+a complete end-to-end test of every operation with every user role.
+
+PRIORITY FAULTS
+
+1. Community scope is lost when entering services.
+   Reproduced: select Member - ZUC Community, then More Services.
+   The destination is /dashboard/member?from=community, without communityId.
+   The page then shows Traders KZN and its trader services.
+   Community wallet/marketplace/jobs links also omit communityId in their hrefs.
+   This is separate from the role switcher itself, which passed direct tests.
+   Fix: preserve and validate community scope on every service entry and return
+   path; scope subscriptions and service availability on the backend as well.
+
+2. Service-administration destinations are not implemented in the served router.
+   All 19 advertised /dashboard/services/<code> destinations are absent from
+   the served Angular route table. Its wildcard destination is login.
+   Explicit login redirects observed for Marketplace, Jobs, Airtime, Utilities,
+   Grant Distribution, Trader Training, Internet and Insurance.
+   Payments, Wallet, Community Membership and Vuma Force were briefly observed
+   at their requested URLs; those transient results are NOT passes. Their routes
+   are absent too. The remaining catalogue destinations were checked statically.
+   A repeated-navigation run returned to login and required the user to sign in
+   again; the cause of that session interruption was not established.
+   Do not equate an advertised service or a successful HTML response with a
+   working service-admin dashboard.
+
+3. Accounting has no matching API implementation in the current backend.
+   Live message: Accounting data could not be loaded from the server.
+   The served client calls /api/platform/accounting and child endpoints for
+   employees, payments, invoices, ledger entries, reconciliation and scope codes.
+   No matching routes were found in the mounted platform API.
+   New journal entry opens and cancels, but posting was NOT tested or certified.
+   Live financial overview still displays sample assets/equity of R980,000 and
+   a fixed monthly increase while other totals are zero. Periods are fixed to
+   June-August 2026 and year-to-date, despite the October audit date.
+
+4. Sample community information is still presented as real.
+   Community wallet card shows 850.00 Izaka and a recent +250.00 payment, while
+   the actual wallet screen shows 0.00 and no transactions.
+   Traders KZN still displays a faith-community description, Sunday Mass,
+   June 2026 service details, a sample pastor and sample contact details.
+   The trader daily insight itself is correctly selected; ZUC shows scripture.
+   Do not trust these sample cards as financial or community records.
+
+5. Real payment connections are incomplete.
+   Wallet Top Up, Cash Out and Transfer buttons open their forms.
+   Top Up claims a Cycle checkout, but the backend explicitly returns 503 for
+   card top-ups in real-data mode until a provider is connected.
+   Cash-outs are similarly blocked pending a verified payout provider.
+   Treasury explicitly states that bank transfers are not connected and that
+   payment instructions must be processed through a bank separately.
+   No money was moved and no provider settlement was tested.
+
+6. Trader Training frontend/backend mismatch.
+   The served client calls /api/platform/trader-training/me and assessment
+   attempt endpoints. No corresponding mounted platform routes were found.
+   Training completion, grant approval and milestone payouts are NOT certified.
+
+7. Incomplete community utility controls.
+   View directions, View calendar, Send a message (pastor card), and View
+   community friends have no click bindings in the current source template.
+   Browser attempts did not establish a working destination or dialog. An open
+   native selector interfered with some late clicks, so the click-only result
+   is inconclusive; the missing implementation remains a source finding.
+
+8. Deployment and tenant registry gaps.
+   The editable Angular source and served compiled bundle contain different
+   feature sets. A source rebuild is not yet a safe replacement for the bundle.
+   Startup reports SQL access denied and falls back to the persistent local
+   store; health labels this persistent-demo. This is not SQL production proof.
+   The tenant staff workspace initially lists ZUC, Trader Connect and Inkolo.
+   Ingwe appears in the platform's browser-held tenant list but not yet in the
+   server-held staff registry. Register its workspace through the explicit
+   platform Users & Permissions action before assigning staff.
+   SQL-backed tenant staff management deliberately fails closed pending migration.
+
+PASSED LIVE READ-ONLY CHECKS
+
+- Platform Admin -> Member ZUC: URL, heading and selected option agree.
+- ZUC -> Member Traders KZN: URL, heading and selected option agree.
+- Traders KZN -> Member Inkolo Connect: same checks pass.
+- Switching back to ZUC passes.
+- Platform tenant selections: Ingwe Connect, Inkolo, Trader Connect and ZUC
+  each open their respective tenant heading and scoped community list.
+- Community-admin selections: ZUC, Traders KZN and Inkolo open their headings.
+- Top-left Choose community control opens ZUC's community-admin view.
+- Accounting -> Platform Admin return link works without signing out.
+- Treasury opens; Payment queue, Audit trail, Configuration and Staff access
+  controls expose their respective views. No records were submitted.
+- User directory loads 2,753 records; ZUC filter shows 250 matches.
+- Opening the owner's profile displays account, community, contribution and
+  review sections; Cancel closes without saving.
+- Tenant Users & Permissions opens; Add User opens the expected permission
+  form; Cancel works. ZUC and Trader Connect community lists stay scoped.
+- Heritage opens and correctly blocks tree creation when disabled for ZUC.
+  Enabling the service or creating family records was not part of this audit.
+- Wallet opens and reports zero balance/no transactions. Top Up, Cash Out and
+  Transfer forms open and close without submitting.
+- Platform presence displays one active user and 2,753 registered users.
+
+AUTOMATED VERIFICATION
+
+Command: node --test backend/test/*.test.js
+Result: 56 passed, 0 failed.
+Coverage includes community selection, switcher value mapping, MFA challenges,
+tenant staff scope/revocation, Heritage access and genealogy logic, Treasury
+receipt/payment lifecycle in fixtures, presence and profile validation.
+These tests do not cover the missing Accounting/Training integrations, every
+rendered button, live external providers or every production deployment path.
+
+NOT EXECUTED ON REAL DATA
+
+Tenant/community creation, activation or deletion; service enable/disable;
+subscription acceptance and billing; staff creation/grants/revocations; sending
+messages/invitations; invoice posting/uploads; payroll; financial transfers;
+bank reconciliation; training assessments and payouts; genealogy edits; account
+registration/ID OCR; real email delivery; device camera; production deployment.
+These need an isolated staging copy, disposable users, provider sandboxes and
+expected outcomes before an end-to-end sign-off.
+
+RECOMMENDED REPAIR ORDER
+
+1. Preserve selected community through services and enforce scope server-side.
+2. Restore source/bundle parity and the missing Accounting/Training APIs.
+3. Implement or explicitly disable unsupported service-dashboard destinations.
+4. Replace sample money and community content with verified data or empty states.
+5. Finish provider integrations and staged money-movement/reconciliation tests.
+6. Complete remaining controls and run member, tenant-admin and platform-admin
+   end-to-end tests with disposable fixtures before deployment approval.

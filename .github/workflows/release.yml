@@ -1,0 +1,93 @@
+name: Duranki approved release
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Approve deployment of this tested main-branch release
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: duranki-release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified from official tag
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4, verified from official tag
+        with:
+          node-version: '24'
+      - run: node scripts/release-preflight.mjs
+      - run: node tools/security-scan.mjs --history --check
+      - run: npm --prefix backend ci
+      - run: npm --prefix backend audit --audit-level=high
+      - run: node --test backend/test/*.test.js
+      - run: npm --prefix frontend ci
+      - run: npm --prefix frontend audit --audit-level=high
+      - run: npm --prefix frontend run build -- --output-path ../tmp/ci-security-build
+      - run: npm --prefix backend sbom --sbom-format cyclonedx > backend-sbom.json
+      - run: npm --prefix frontend sbom --sbom-format cyclonedx > frontend-sbom.json
+      - run: docker build -f Dockerfile.release -t duranki-verify .
+  publish:
+    # Production delivery has moved to Bitbucket; do not deploy from both hosts.
+    needs: verify
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.reference }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified from official tag
+      - name: Build and publish immutable release
+        id: image
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}:$GITHUB_SHA"
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker build -f Dockerfile.release -t "$IMAGE" .
+          docker push "$IMAGE"
+          REFERENCE=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE")
+          echo "reference=$REFERENCE" >> "$GITHUB_OUTPUT"
+  deploy:
+    needs: publish
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Deploy through verified SSH host
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_PORT: ${{ secrets.SERVER_SSH_PORT }}
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.SERVER_KNOWN_HOSTS }}
+          IMAGE: ${{ needs.publish.outputs.image }}
+        run: |
+          set -euo pipefail
+          [[ "$SERVER_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          [[ "$SERVER_USER" =~ ^[a-zA-Z_][a-zA-Z0-9_-]*$ ]]
+          SERVER_PORT=${SERVER_PORT:-22}
+          [[ "$SERVER_PORT" =~ ^[0-9]+$ ]]
+          [[ "$IMAGE" =~ ^ghcr.io/[a-z0-9._/-]+@sha256:[a-f0-9]{64}$ ]]
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          trap 'rm -f ~/.ssh/id_ed25519' EXIT
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=20 \
+            -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST" \
+            "bash /srv/duranki/deploy-release.sh '$IMAGE'"

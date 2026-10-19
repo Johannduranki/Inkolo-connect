@@ -1,0 +1,112 @@
+Duranki: approved releases to Johann Evans's server
+Prepared 6 October 2026. NOT deployed or connected yet.
+
+DECISION
+Production changes only when you approve a release, not every day and not on
+an ordinary code push. Tests run on pull requests and pushes to main.
+An approved workflow builds the frontend/backend image, publishes an immutable
+digest, then deploys it over verified SSH. No laptop files sync automatically.
+
+INFORMATION JOHANN MUST PROVIDE
+Operating system/version or hosting panel; CPU architecture; server address;
+SSH username/port and approved key setup; domain and DNS administrator;
+Docker Engine and Compose v2 availability; MySQL/MariaDB version and location;
+existing web server/reverse proxy; backup destination and recovery requirements.
+This template assumes Linux with Bash, flock and Docker Compose v2 supporting
+up --wait. Do not run it on a Windows/cPanel server without adapting it first.
+Never send passwords, private keys or database dumps in chat or commit them.
+
+GO-LIVE BLOCKERS: DO NOT SKIP
+1. backend/data/platform-store.json is tracked in Git. It contains runtime user
+   data. Back it up securely and remove it from Git tracking, without deleting
+   the local file. Review repository history/access for earlier exposure and
+   rotate affected credentials if necessary. .gitignore alone is not enough.
+2. Reconcile the Angular source with the older running compiled bundle. A
+   successful new build does not prove feature parity. Test every required
+   dashboard and login/MFA flow in staging before switching production.
+3. Migrate browser-local tenants, communities, colours and service configuration
+   into the authoritative backend. This includes the newly created Ingwe tenant.
+   Browser storage on the laptop will NOT move to the production domain.
+4. Resolve MySQL access and complete the production identity/storage adapters.
+   Heritage currently refuses MySQL mode; changing an environment flag alone
+   does not make all services production-ready. Reconcile imported identities,
+   memberships, subscription records, accounting and wallet data before launch.
+5. Review sensitive uploads, authorization, privacy, malware scanning, payments,
+   mail/SMS delivery, real-data totals and operational monitoring. No test
+   finance records or simulated user counters should be exposed as real data.
+6. Validate schema migrations on a restored staging database. The existing
+   migration runner requires review; this deployment does NOT run it or seeds.
+
+ONE-TIME SERVER SETUP (AFTER THE ABOVE)
+1. Provision Linux, Docker/Compose and a restricted deployment account. Docker
+   access is privileged: protect that account and its SSH key accordingly.
+2. Create /srv/duranki and copy deploy/compose.yml and deploy/deploy-release.sh
+   into it. Keep scripts LF-ended. Scripts/configuration are installed once and
+   updated deliberately; the pipeline only replaces the application image.
+3. Create /srv/duranki/data and uploads, writable by container UID/GID 1000.
+   Keep permissions restricted. Persist MFA encryption keys and SQLite data;
+   do not generate a fresh MFA key on each deployment.
+4. Create production.env on the server only, permission 600, with DB_HOST,
+   DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, ID_PEPPER, JWT_SECRET and HTTPS
+   FRONTEND_ORIGIN/FRONTEND_ORIGINS. Preserve existing encryption/hash secrets
+   when migrating accounts. Use a restricted application database account.
+   DB_HOST must be reachable FROM the container, not localhost for a host DB.
+   MySQL is separately managed; this Compose file does not provision it.
+5. Authenticate the server to private GHCR using a read:packages credential.
+   Keep the registry private. Do not put that token in the repository.
+6. Install /srv/duranki/backup-before-release, executable, as a tested hook.
+   It must back up MySQL and consistent SQLite/MFA/data/uploads to an encrypted
+   protected destination and exit nonzero on failure. Use online SQLite backup
+   APIs or stop writers; copying a live .sqlite file alone is not sufficient.
+   Test a restore. Configure retention and failure alerts. No fake/no-op hook.
+7. Point DNS to the server. Configure the existing reverse proxy with HTTPS
+   certificates and proxy to 127.0.0.1:3000. Expose only HTTPS/HTTP redirect and
+   restricted SSH, never the database or application port publicly. Configure
+   trusted proxy handling deliberately; test rate limits and secure cookies.
+8. Establish staging with separate data, keys, domain and no real payments or
+   invitations. Test sign-in, MFA, tenant isolation, files and all dashboards.
+9. After sign-off, create /srv/duranki/production-ready. This is an operator
+   approval marker, NOT an automatic security certificate.
+
+ONE-TIME GITHUB SETUP
+1. Review and commit ONLY application/deployment changes. Do not git add .
+   indiscriminately. Remove tracked private data and perform a secret scan.
+   Push the reviewed commit; nothing has been committed or pushed by this task.
+2. Protect main with pull requests and successful verify checks. Restrict who
+   can change workflow files or trigger production releases.
+3. Create environment production, restrict it to main, and require your review
+   if the repository plan supports required reviewers. Otherwise restrict write
+   access and treat your manual workflow trigger as release approval.
+4. Set production environment secrets SERVER_HOST, SERVER_USER,
+   SERVER_SSH_PORT, SERVER_SSH_KEY and SERVER_KNOWN_HOSTS. Obtain the SSH host
+   key/fingerprint independently from Johann; do not blindly trust ssh-keyscan.
+5. Leave repository variable PRODUCTION_READY unset/false until all go-live
+   checks are completed. Then set it to true. Legacy main.yml is retired and
+   cannot deploy. release.yml is the replacement workflow.
+
+EACH UPDATE
+1. Develop and test locally, review the changes and merge them to main.
+2. Check the automated verify job. Test the candidate's features in staging.
+3. When ready, open GitHub Actions > Duranki approved release > Run workflow.
+   Choose main and check Approve deployment. Review the exact commit SHA.
+4. Approve the production environment prompt if configured. The workflow will
+   test, build, publish, SSH to Johann's server, pull the image, run the backup
+   hook, replace the application and wait for health checks. No daily timer.
+5. Verify the public HTTPS domain, sign-in and critical workflows. Container
+   health checks test database connectivity/API/frontend, not full correctness.
+   GitHub reports success/failure; enable workflow notification preferences.
+
+ROLLBACK AND SCHEMA CHANGES
+The server records current-image, previous-image and releases.log. A failed
+health check attempts to restore the previous application image. First-release
+failure stops the app. Updates can cause a brief interruption; not zero downtime.
+After a bad functional release, Johann can redeploy the recorded prior digest:
+  bash /srv/duranki/deploy-release.sh "$(cat /srv/duranki/previous-image)"
+Rollback never restores/deletes the database automatically. Use additive,
+backward-compatible migrations before releasing dependent code; destructive
+schema changes require a separate maintenance plan and explicit approval.
+Keep old image digests available in GHCR. Do not prune rollback images blindly.
+
+REFERENCES
+https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/control-deployments
+https://docs.docker.com/reference/cli/docker/compose/up/

@@ -1,0 +1,67 @@
+Duranki deployment from Bitbucket - 6 October 2026
+
+This replaces the GitHub release instructions. Assumes Bitbucket Cloud.
+Bitbucket Data Center needs a different CI service/runner configuration.
+Nothing is connected, pushed or deployed yet. Existing production blockers
+in JOHANN-SERVER-SETUP.txt still apply; its GitHub-specific section is superseded.
+
+RELEASE FLOW
+Normal pushes and pull requests run backend tests and a fresh frontend build.
+To release: Pipelines > Run pipeline > branch main > custom pipeline
+approved-production-release. After verification succeeds, review the commit
+and click the manual production step. It builds one frontend/backend image,
+publishes its digest, connects over SSH, requires a successful server backup,
+deploys and checks health. Failed startup attempts an application rollback.
+There is no daily schedule and no automatic production update on a push.
+
+BITBUCKET SETUP
+1. Obtain repository admin/appropriate Pipelines and deployment access.
+2. Review and push the application and deployment files to the repository.
+   Do NOT push backend/data/platform-store.json, user data, passwords or keys.
+   The preflight currently blocks this tracked file until it is reviewed and
+   removed from Git tracking, preserving the local file and a secure backup.
+3. Enable Pipelines. Protect main; restrict production deployments to approved
+   operators and main using available deployment permissions. People able to
+   change pipeline scripts must be trusted with deployment credentials.
+4. Create the production deployment environment. Add these variables there:
+   PRODUCTION_READY=false until the full readiness checklist is signed off
+   REGISTRY_HOST (for example docker.io or a private registry hostname)
+   IMAGE_REPOSITORY (full lowercase host/namespace/image)
+   REGISTRY_USER
+   REGISTRY_PASSWORD (secured, write-scoped registry token)
+   SERVER_HOST, SERVER_USER, SERVER_SSH_PORT
+   SERVER_SSH_KEY_BASE64 (secured)
+   SERVER_KNOWN_HOSTS (verified independently with Johann)
+5. Keep the image registry private. Bitbucket does not need a GitHub repository;
+   use Docker Hub/private registry, or GHCR with separately configured tokens.
+6. Use a dedicated OpenSSH deployment key authorised by Johann, not a password
+   stored in YAML. A PuTTY .ppk is not directly accepted by this script. Johann
+   can generate a separate deployment key or export an authorised key through
+   PuTTYgen. Store its base64-encoded OpenSSH form as the secured variable.
+   Base64 is encoding, NOT encryption. Do not paste the key into chat or Git.
+7. Do not place production secrets in workspace/repository variables available
+   to ordinary branch or pull-request test jobs. No secrets are test artifacts.
+
+SERVER SETUP CHANGES
+Follow the Linux/Docker/HTTPS/database/backup steps in JOHANN-SERVER-SETUP.txt.
+Install the updated deploy-release.sh and compose.yml in /srv/duranki.
+Create /srv/duranki/image-repository containing EXACTLY IMAGE_REPOSITORY,
+without a tag or digest. This allowlists the registry/repository on the server.
+Configure server registry authentication using a separate read-only token.
+Verify server architecture matches the pipeline image architecture (currently
+Linux amd64); adapt the image build for ARM before attempting deployment.
+Johann must permit SSH from the chosen pipeline runner or provide an approved
+self-hosted runner/network path. Do not expose unrestricted administrative SSH.
+Keep LF line endings for Bash scripts. Keep Docker Compose up --wait support.
+After staging sign-off, create production-ready on the server and set the
+production deployment variable PRODUCTION_READY=true.
+
+PENDING BEFORE FIRST RELEASE
+Server address/access, domain/DNS, registry selection, database production
+adapters, browser-local tenant/community migration, MFA/data backups and a
+complete staging acceptance test. Container build and real server deployment
+have not been exercised locally because Docker/server access are unavailable.
+GitHub production publishing is disabled locally to prevent two deploy paths.
+
+Official manual pipeline documentation:
+https://support.atlassian.com/bitbucket-cloud/docs/pipeline-triggers/

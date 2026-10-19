@@ -1,0 +1,71 @@
+Duranki real-data cleanup - 13 October 2026
+
+STATUS: PARTIAL CLEANUP APPLIED. NOT A PRODUCTION-READINESS CERTIFICATION.
+
+Preserved
+- All 2,753 accounts and their profiles, unchanged from the backup.
+- All imported users, including Inkolo-only users, as explicitly requested.
+- Johan's superuser account, Maxime, existing credentials and MFA.
+- Trader Connect / Traders KZN and ZUC imported memberships.
+- Inkolo's imported community, plus Ingwe Connect as an empty tenant.
+- Existing service subscriptions, consent records, messages and wallet data
+  pending confirmation whether those locally created records were test activity.
+
+Applied to stored data
+- Removed 3 fixture churches, 3 fixture branches, 2 sample jobs, 4 sample lift
+  offers, 2 requests against those lift offers and 1 fixture-church membership.
+- Enabled realDataOnly and disabled fallback fixture users/seeding on load.
+- Card top-up and cash-out simulations now reject requests instead of implying
+  a real payment provider is connected. No actual bank integration was added.
+- Treasury and Heritage business tables were empty and left untouched.
+
+Applied to frontend source and existing served bundle
+- Removed Evolve and fictional default communities from admin navigation.
+- Kept four tenant defaults: Trader Connect, ZUC, Inkolo and empty Ingwe Connect.
+- Replaced fictional community totals with imported-directory member counts.
+- Removed generated online-user counts; presence tracking is marked unavailable.
+- Removed fixture accounting entries, loans, employees, invoices and opening
+  cash/assets; removed sample platform grant batches and training learner totals.
+- Removed sample community chats, announcements, events, wallet history,
+  provider members/billing cycles and KZNCC paid-service activity.
+- Mock-only church/Bishop/KZNCC financial summaries and simulated tithe/payout
+  methods now report that a connected financial ledger is required.
+- Browser tenant/community settings are archived locally before migration.
+  Unknown custom records are preserved rather than assumed to be mock data.
+
+Backups
+backend/data/backups/real-data-cleanup-2026-10-13T08-45-13.396Z/
+  Full backend data directory files, including MFA key/database and SQLite WAL.
+  The API was stopped before the snapshot and migration.
+tmp/ui-before-real-data-cleanup/
+  Frontend source and served-bundle backups.
+These backups contain private data. Never publish or commit them.
+
+Verification
+- 35 backend tests passed, including two new cleanup tests.
+- TypeScript check and a separate development build passed.
+- AST/VM checks verified four tenants, three imported communities, an empty
+  Ingwe tenant and removal of reviewed default scopes.
+- Exact comparison confirmed all users and profiles were preserved.
+- API health passed; login page rendered after reload.
+- Signed-in dashboard visual checks were not possible: browser was signed out.
+
+Still required before claiming ALL mock data has been removed
+- Resolve locally saved subscriptions/consents/messages/wallet test activity.
+- Audit remaining legacy member-service screens, including training programme
+  progress, grant records, Vuma/provider defaults and form-prefilled examples.
+  Programme/service configuration must not be confused with fabricated activity.
+- Reconcile restored Angular source with the older running compiled bundle.
+  Do not replace the running bundle with the verification build without checking
+  authentication and feature parity.
+- Accounting endpoints are not registered in the currently active platform-api;
+  empty accounting screens are not evidence of a functioning accounting backend.
+- Some settings remain browser-local; this is not a production multi-tenant
+  configuration store. The live storage adapter still reports persistent-demo,
+  although fixture seeding is disabled and the user records are real.
+
+Recovery
+Stop the API before restoring backend/data files from the matching backup.
+Restore the SQLite databases together with their matching WAL/SHM files and
+retain the matching MFA encryption key. Do not restore into a running process.
+The cleanup scripts are one-off migration tools, not a daily reset command.

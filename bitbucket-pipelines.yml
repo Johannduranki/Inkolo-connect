@@ -1,0 +1,51 @@
+image: node:24-bookworm
+
+clone:
+  depth: full
+
+definitions:
+  services:
+    docker:
+      memory: 4096
+  steps:
+    - step: &verify
+        name: Verify Duranki
+        max-time: 25
+        script:
+          - node scripts/release-preflight.mjs
+          - node tools/security-scan.mjs --history --check
+          - npm --prefix backend ci
+          - npm --prefix backend audit --audit-level=high
+          - node --test backend/test/*.test.js
+          - npm --prefix frontend ci
+          - npm --prefix frontend audit --audit-level=high
+          - npm --prefix backend sbom --sbom-format cyclonedx > backend-sbom.json
+          - npm --prefix frontend sbom --sbom-format cyclonedx > frontend-sbom.json
+          - npm --prefix frontend run build
+        artifacts:
+          - '*-sbom.json'
+
+pipelines:
+  default:
+    - step: *verify
+  branches:
+    main:
+      - step: *verify
+  pull-requests:
+    '**':
+      - step: *verify
+  custom:
+    approved-production-release:
+      - step: *verify
+      - step:
+          name: Approve and deploy to Johann's server
+          trigger: manual
+          deployment: production
+          image: docker:27-cli
+          size: 2x
+          max-time: 30
+          services:
+            - docker
+          script:
+            - apk add --no-cache bash openssh-client
+            - bash deploy/bitbucket-release.sh

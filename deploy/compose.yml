@@ -1,0 +1,27 @@
+name: duranki
+services:
+  app:
+    image: ${DURANKI_IMAGE:?Set an immutable release image}
+    restart: unless-stopped
+    init: true
+    env_file: /srv/duranki/production.env
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      ALLOW_DEMO_AUTH: 'false'
+      FORCE_DEMO_MODE: 'false'
+    ports:
+      - '127.0.0.1:3000:3000'
+    volumes:
+      - /srv/duranki/data:/app/backend/data
+      - /srv/duranki/uploads:/app/backend/uploads
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'

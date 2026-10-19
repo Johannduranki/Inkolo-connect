@@ -1,0 +1,23 @@
+FROM node:24-bookworm-slim AS build
+WORKDIR /app
+COPY package.json ./
+COPY frontend/package*.json frontend/
+RUN npm --prefix frontend ci
+COPY frontend frontend
+RUN npm --prefix frontend run build
+FROM node:24-bookworm-slim
+ENV NODE_ENV=production PORT=3000 ALLOW_DEMO_AUTH=false FORCE_DEMO_MODE=false LOG_DESTINATION=stdout
+WORKDIR /app
+COPY package.json ./
+COPY backend/package*.json backend/
+RUN npm --prefix backend ci --omit=dev
+COPY backend/src backend/src
+COPY frontend/public frontend/public
+COPY --from=build /app/frontend/dist frontend/dist
+COPY scripts/release-health.mjs scripts/release-health.mjs
+RUN mkdir -p backend/data backend/uploads && chown -R node:node backend/data backend/uploads
+WORKDIR /app/backend
+USER node
+EXPOSE 3000
+HEALTHCHECK --interval=15s --timeout=10s --start-period=45s --retries=4 CMD ["node", "../scripts/release-health.mjs"]
+CMD ["node", "src/server.js"]
