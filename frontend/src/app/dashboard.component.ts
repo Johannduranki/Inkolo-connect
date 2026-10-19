@@ -1073,9 +1073,8 @@ export class DashboardComponent implements OnInit {
     }
     if (service.code === 'vuma-fibre' && this.subscriptionFor(service.code)) {
       this.vumaFibreAccount.setValue(this.profiles.profile().telephoneNumber);
-      this.vumaMicroIspName.setValue(
-        `${this.profiles.profile().firstName} ${this.profiles.profile().lastName}`.trim()
-      );
+      const user = this.user();
+      this.vumaMicroIspName.setValue(user ? `${user.firstName} ${user.lastName}`.trim() : '');
       this.vumaMicroIspPhone.setValue(this.profiles.profile().telephoneNumber);
     }
     if (service.code === 'referral' && this.subscriptionFor('referral')) {
