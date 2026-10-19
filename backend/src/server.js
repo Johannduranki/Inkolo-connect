@@ -1,28 +1,36 @@
 import { createApp } from './app.js';
 import { getConfig } from './config.js';
 import { getPool } from './database.js';
+import { assertDatabaseReady } from './database-readiness.js';
+import { existsSync, readFileSync } from 'node:fs';
+import { logger, errorDetails, installFatalLogging } from './logger.js';
+
+installFatalLogging();
 
 const config = getConfig();
+async function start(databaseAvailable) {
+  const app=createApp({databaseAvailable});
+  await app.locals.storageReady;
+  app.listen(config.port,()=>logger.info('api_listening',{port:config.port}));
+}
 
 if (config.forceDemoMode && config.allowDemoAuth) {
-  console.warn('Starting with persistent demo storage by configuration.');
-  createApp({ databaseAvailable: false }).listen(config.port, () => {
-    console.log(`Duranki demo API listening on http://localhost:${config.port}`);
-  });
+  logger.warn('persistent_local_storage_enabled');
+  await start(false);
 } else {
   try {
     await getPool().query('SELECT 1');
-    createApp().listen(config.port, () => {
-      console.log(`Duranki API listening on http://localhost:${config.port}`);
-    });
+    const store = new URL('../data/platform-store.json', import.meta.url);
+    const localUsers = existsSync(store) ? JSON.parse(readFileSync(store, 'utf8')).users ?? [] : [];
+    await assertDatabaseReady(getPool(), localUsers);
+    await start(true);
   } catch (error) {
     if (config.allowDemoAuth) {
-      console.warn(`Database unavailable; starting in demo mode: ${error.message}`);
-      createApp({ databaseAvailable: false }).listen(config.port, () => {
-        console.log(`Duranki demo API listening on http://localhost:${config.port}`);
-      });
+      logger.warn('database_unavailable_local_fallback',errorDetails(error));
+      await start(false);
     } else {
-      console.error('Unable to start the API:', error.message);
+      logger.error('api_startup_failed',errorDetails(error));
+      logger.end();
       process.exitCode = 1;
     }
   }

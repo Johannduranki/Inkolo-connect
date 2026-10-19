@@ -8,6 +8,8 @@ const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
 const publicDirectory = path.resolve(moduleDirectory, '../../frontend/public');
 
 const serviceNames = {
+  'grant-distribution': 'Grant Distribution',
+  'trader-training': 'Trader Training',
   'build-up-balance': 'Buy & Sell',
   funeral: 'Funeral Services',
   community: 'My Community',
@@ -36,15 +38,16 @@ const archivedDocuments = {
   kzncc: 'kzncc-service-terms.html'
 };
 
+const htmlText = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 function genericTerms(serviceCode, planCode) {
-  const serviceName = serviceNames[serviceCode] ?? serviceCode;
+  const serviceName = htmlText(serviceNames[serviceCode] ?? serviceCode);
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>${serviceName} Terms</title></head>
 <body>
 <h1>${serviceName} Terms and Conditions</h1>
 <p>Version 1.0, effective 10 June 2026.</p>
 <p>Duranki (Pty) Ltd, registration number 2025/674136/07.</p>
-<p>The member requests activation of the ${serviceName} service under plan ${planCode}.</p>
+<p>The member requests activation of the ${serviceName} service under plan ${htmlText(planCode)}.</p>
 <p>The member confirms that the information supplied is accurate, agrees to applicable service fees,
 privacy processing, service rules, provider requirements, and electronic record keeping.</p>
 <p>The member understands that third-party provider services remain subject to provider approval,
@@ -103,8 +106,8 @@ export function createAcceptanceEvidence({
   };
 }
 
-export function saveDemoAcceptance(evidence) {
-  return updatePlatformState((state) => {
+export async function saveDemoAcceptance(evidence) {
+  return await updatePlatformState((state) => {
     state.legalAcceptances ??= [];
     state.legalAcceptances.push(evidence);
     return evidence;

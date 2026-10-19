@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import mysql from 'mysql2/promise';
+import { activeMigrationFiles, applySchemaMigration } from '../src/schema-migration.js';
 
 const databaseName = process.env.DB_NAME;
 
@@ -10,9 +11,7 @@ if (!/^[A-Za-z0-9_]+$/.test(databaseName ?? '')) {
 }
 
 const databaseDirectory = path.resolve('database');
-const migrationFiles = (await readdir(databaseDirectory))
-  .filter((file) => /^\d+.*\.sql$/.test(file))
-  .sort();
+const migrationFiles = activeMigrationFiles(await readdir(databaseDirectory));
 
 const connection = await mysql.createConnection({
   host: process.env.DB_HOST,
@@ -33,29 +32,13 @@ try {
   `);
 
   for (const file of migrationFiles) {
-    const [applied] = await connection.execute(
-      'SELECT filename FROM schema_migrations WHERE filename = ? LIMIT 1',
-      [file]
-    );
-    if (applied.length) continue;
-
     const source = await readFile(path.join(databaseDirectory, file), 'utf8');
-    const sql = source
-      .replaceAll('duranki_login', databaseName)
-      .replaceAll('ADD COLUMN IF NOT EXISTS', 'ADD COLUMN');
-
-    try {
-      await connection.query(sql);
-    } catch (error) {
-      if (error?.code !== 'ER_DUP_FIELDNAME') throw error;
-    }
-
-    await connection.execute(
-      'INSERT INTO schema_migrations (filename) VALUES (?)',
-      [file]
-    );
-    console.log(`Applied database migration ${file}`);
+    const sql = source.replaceAll('duranki_login', databaseName);
+    if (await applySchemaMigration(connection,file,sql)) console.log(`Applied database migration ${file}`);
   }
+} catch(error) {
+  console.error(JSON.stringify({status:'MIGRATION_FAILED',code:/^[A-Z_]+$/.test(error.code||'')?error.code:'UNKNOWN'}));
+  process.exitCode=1;
 } finally {
   await connection.end();
 }
