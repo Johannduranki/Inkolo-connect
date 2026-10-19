@@ -97,8 +97,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_SSH_PORT }}
           source: ${{ env.FRONTEND_ARCHIVE }}
-          target: ~/durankiDemo/
-          overwrite: true
+          target: /tmp/
 
       # 8. Test SSH connection
       - name: Test SSH connection to server
@@ -187,7 +186,7 @@ jobs:
             fi
 
             # Extract the uploaded Angular build
-            ARCHIVE="$HOME/durankiDemo/${{ env.FRONTEND_ARCHIVE }}"
+            ARCHIVE="/tmp/${{ env.FRONTEND_ARCHIVE }}"
             STAGING_DIR="/tmp/duranki-angular-dist"
 
             if [ ! -s "$ARCHIVE" ]; then
