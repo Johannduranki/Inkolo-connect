@@ -29,7 +29,7 @@ export function getConfig() {
   ];
 
   return {
-    port: Number(process.env.PORT || 3000),
+    port: Number(process.env.PORT || 3001),
     frontendOrigin,
     frontendOrigins: [...new Set(frontendOrigins)],
     database: {
