@@ -19,13 +19,85 @@ export class LoginComponent {
   private readonly destroyRef = inject(DestroyRef);
   readonly brandFaces = Array.from({ length: 16 }, (_, index) => index + 1);
   readonly existingAccount = signal(false);
+  readonly idNumber = new FormControl('', { nonNullable: true, validators: [Validators.pattern(/^(?:\d{13})?$/)] });
+  readonly dateOfBirth = new FormControl('', { nonNullable: true });
+  readonly gender = new FormControl('', { nonNullable: true, validators: [Validators.maxLength(32)] });
+  readonly privacyAccepted = new FormControl(false, { nonNullable: true, validators: [Validators.requiredTrue] });
+  readonly privacyPolicyOpen = signal(false);
+  readonly privacyPolicyText = signal('');
+  readonly idScanStatus = signal('');
+  readonly idScanPreview = signal('');
+  readonly idOcrBusy = signal(false);
+  readonly isMobileDevice = signal(/Android|iPhone|iPad/i.test(navigator.userAgent));
+  idDocument: File | null = null;
+  private scanVersion = 0;
   private lookupVersion = 0;
 
   constructor() {
+    this.destroyRef.onDestroy(() => this.clearDocument());
     this.telephoneNumber.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.lookupVersion++;
       this.existingAccount.set(false);
     });
+  }
+
+  clearDocument(): void {
+    this.scanVersion++;
+    if (this.idScanPreview()) URL.revokeObjectURL(this.idScanPreview());
+    this.idScanPreview.set('');
+    this.idDocument = null;
+    this.idOcrBusy.set(false);
+    this.idScanStatus.set('');
+  }
+
+  openPrivacyPolicy(): void {
+    this.privacyPolicyOpen.set(true);
+    this.privacyPolicyText.set('Loading privacy policy...');
+    this.http.get('/duranki-privacy-policy.txt', { responseType: 'text' })
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: text => this.privacyPolicyText.set(text),
+        error: () => this.privacyPolicyText.set('The privacy policy could not be loaded. Please try again before registering.')
+      });
+  }
+
+  async uploadIdDocument(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    this.clearDocument();
+    if (!['image/jpeg', 'image/png', 'application/pdf'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      this.idScanStatus.set('Choose a JPG, PNG or PDF up to 5 MB.');
+      return;
+    }
+    this.idDocument = file;
+    if (file.type === 'application/pdf') {
+      this.idScanStatus.set('PDF selected. It will be saved when you register. Enter the details below.');
+      return;
+    }
+    this.idScanPreview.set(URL.createObjectURL(file));
+    this.idOcrBusy.set(true);
+    this.idScanStatus.set('Reading ID on this device...');
+    const version = this.scanVersion;
+    try {
+      const { recognize } = await import('tesseract.js');
+      const result = await recognize(file, 'eng', {
+        workerPath: window.location.origin + '/tesseract/worker.min.js', corePath: window.location.origin + '/tesseract-core'
+      });
+      if (version !== this.scanVersion) return;
+      const text = result.data.text;
+      const number = text.match(/\b\d{13}\b/)?.[0];
+      const surname = text.match(/(?:Surname|Last name)\s*:?\s*([A-Za-z][A-Za-z '-]*)/i)?.[1]?.trim();
+      const names = text.match(/(?:First names?|Forenames?|Names)\s*:?\s*([A-Za-z][A-Za-z '-]*)/i)?.[1]?.trim();
+      if (number && !this.idNumber.value) this.idNumber.setValue(number);
+      if (surname && !this.lastName.value) this.lastName.setValue(surname);
+      if (names && !this.firstName.value) this.firstName.setValue(names);
+      this.idScanStatus.set('Check all details below. The document will be saved when you register and will need review.');
+    } catch {
+      if (version === this.scanVersion) this.idScanStatus.set('Automatic reading was unavailable. Enter the details below; your selected document will still be saved on registration.');
+    } finally {
+      if (version === this.scanVersion) this.idOcrBusy.set(false);
+    }
   }
 
   checkExistingAccount(): void {
@@ -66,6 +138,11 @@ export class LoginComponent {
     this.lastName.markAsUntouched();
     this.telephoneNumber.markAsUntouched();
     if (mode === 'register') {
+      this.clearDocument();
+      this.idNumber.reset('');
+      this.dateOfBirth.reset('');
+      this.gender.reset('');
+      this.privacyAccepted.reset(false);
       this.firstName.setValue('');
       this.lastName.setValue('');
       this.telephoneNumber.setValue('');
@@ -77,6 +154,12 @@ export class LoginComponent {
     this.firstName.markAsTouched();
     this.lastName.markAsTouched();
     this.telephoneNumber.markAsTouched();
+    if (this.mode() === 'register' && !this.existingAccount()) {
+      this.privacyAccepted.markAsTouched();
+      this.idNumber.markAsTouched();
+      if (this.privacyAccepted.invalid || this.idNumber.invalid || this.gender.invalid || this.idOcrBusy()) return;
+      if (this.password.value.length < 15) { this.errorMessage.set('Use a password of at least 15 characters.'); return; }
+    }
 
     if (
       (this.mode() === 'register' && !this.existingAccount() && (this.firstName.invalid || this.lastName.invalid || this.password.value.length < 15)) ||
@@ -88,13 +171,15 @@ export class LoginComponent {
     }
 
     this.loading.set(true);
-    const joiningCommunity = (this.mode() === 'register' && this.existingAccount()) || sessionStorage.getItem('duranki_join_after_login') === 'true';
+    const joiningCommunity = (this.mode() === 'register' && this.existingAccount()) || (this.mode() === 'login' && sessionStorage.getItem('duranki_join_after_login') === 'true');
     const request = this.mode() === 'register' && !joiningCommunity
       ? this.auth.register(
           this.telephoneNumber.value,
           this.firstName.value.trim(),
           this.lastName.value.trim(),
-          this.password.value
+          this.password.value,
+          { idNumber: this.idNumber.value, dateOfBirth: this.dateOfBirth.value, gender: this.gender.value,
+            privacyAccepted: this.privacyAccepted.value, idDocument: this.idDocument }
         )
       : this.auth.login(
           this.telephoneNumber.value,
@@ -116,6 +201,7 @@ export class LoginComponent {
           this.completeLogin(user);
         },
         error: (error: HttpErrorResponse) => {
+          if (error.status === 409 && error.error?.code === 'ACCOUNT_EXISTS') this.existingAccount.set(true);
           this.errorMessage.set(
             error.error?.message || 'We could not sign you in. Please try again.'
           );

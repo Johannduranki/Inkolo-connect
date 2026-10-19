@@ -13,16 +13,16 @@ function run(mode,mfaRequired=false){
   const calls=[];
   const loading=()=>false;loading.set=()=>{};
   const control=(value,invalid=false)=>({value,invalid,markAsTouched(){}});
-  const screen={mode:()=>mode,loading,errorMessage:{set(){}},firstName:control('',true),lastName:control('',true),
+  const screen={mode:()=>mode,existingAccount:()=>false,privacyAccepted:control(false,true),idNumber:control(''),gender:control(''),idOcrBusy:()=>false,loading,errorMessage:{set(){}},firstName:control('',true),lastName:control('',true),
     telephoneNumber:control('0000001004'),password:control('synthetic-password'),completeLogin:()=>calls.push('complete'),
     auth:{login:()=>{calls.push('login');return {pipe:()=>({subscribe:handlers=>handlers.next({user:{},mfaRequired})})};},register:()=>{calls.push('register');}}};
-  const fn=vm.runInNewContext(code+';Screen.prototype.submit',{finalize:fn=>fn,window:{location:{assign:url=>calls.push(url)}}});
+  const fn=vm.runInNewContext(code+';Screen.prototype.submit',{sessionStorage:{getItem:()=>null},finalize:fn=>fn,window:{location:{assign:url=>calls.push(url)}}});
   fn.call(screen);return calls;
 }
 test('source login has no account picker or hardcoded demo-user list',()=>{
   assert.doesNotMatch(source,/demoUsers|chooseDemoUser|DemoLoginUser/);
   assert.doesNotMatch(template,/demo-user-picker|Choose a registered user/);
-  assert.match(template,/@if \(mode\(\) === 'register'\) \{\s*<div class="name-fields">/);
+  assert.match(template,/@if \(mode\(\) === 'register' && !existingAccount\(\)\) \{\s*<section class="identity-panel"/);
 });
 test('returning users can sign in without resubmitting personal details',()=>{
   assert.deepEqual(run('login'),['login','complete']);assert.deepEqual(run('register'),[]);

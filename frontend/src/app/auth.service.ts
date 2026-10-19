@@ -77,15 +77,16 @@ export class AuthService {
     telephoneNumber: string,
     firstName: string,
     lastName: string,
-    password: string
+    password: string,
+    identity: { idNumber: string; dateOfBirth: string; gender: string; privacyAccepted: boolean; idDocument: File | null }
   ): Observable<LoginResponse> {
+    const body = new FormData();
+    for (const [key, value] of Object.entries({ telephoneNumber, firstName, lastName, password,
+      idNumber: identity.idNumber, dateOfBirth: identity.dateOfBirth, gender: identity.gender,
+      privacyAccepted: String(identity.privacyAccepted) })) body.append(key, value);
+    if (identity.idDocument) body.append('idDocument', identity.idDocument);
     return this.http
-      .post<LoginResponse>(`${this.apiUrl}/auth/register`, {
-        telephoneNumber,
-        firstName,
-        lastName,
-        password
-      })
+      .post<LoginResponse>(`${this.apiUrl}/auth/register`, body)
       .pipe(tap(({ accessToken }) => this.storeToken(accessToken)));
   }
 

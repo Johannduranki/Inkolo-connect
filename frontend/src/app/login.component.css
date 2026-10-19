@@ -662,3 +662,20 @@ button:disabled {
     display: grid;
   }
 }
+.privacy-modal-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+}
+.privacy-policy-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow-y: auto;
+  max-height: 65vh;
+  padding: 16px;
+  margin: 0;
+  font: inherit;
+  line-height: 1.6;
+}

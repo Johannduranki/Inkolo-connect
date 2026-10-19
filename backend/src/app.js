@@ -1,4 +1,5 @@
 import express from 'express';
+import { registrationDetails, ensureRegistrationStorage, saveSqlRegistrationDetails, savePlatformRegistrationDetails } from './registration-details.js';
 import { createWholesalerRouter } from './wholesaler-orders.js';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -389,6 +390,7 @@ export function createApp({ databaseAvailable = true } = {}) {
       legacyHeaders: false,
       message: { message: 'Too many registration attempts. Please try again later.' }
     }),
+    multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 9, fieldSize: 2048 } }).single('idDocument'),
     async (req, res, next) => {
       const firstName = String(req.body?.firstName ?? '').trim();
       const lastName = String(req.body?.lastName ?? '').trim();
@@ -408,6 +410,7 @@ export function createApp({ databaseAvailable = true } = {}) {
       }
 
       try {
+        const details = registrationDetails(req.body, req.file);
         const passwordHash = await hashPassword(req.body.password);
         let user;
 
@@ -424,6 +427,9 @@ export function createApp({ databaseAvailable = true } = {}) {
             });
           }
 
+          // Additive only, before the account transaction. A missing CREATE grant
+          // fails this registration without affecting existing accounts/services.
+          await ensureRegistrationStorage(pool);
           const connection = await pool.getConnection();
           try {
             await connection.beginTransaction();
@@ -446,11 +452,12 @@ export function createApp({ databaseAvailable = true } = {}) {
             );
             await connection.execute(
               `INSERT INTO member_profiles
-                (user_id, telephone_number, email, address, city, postal_code,
+                (user_id, telephone_number, id_number, email, address, city, postal_code,
                  emergency_contact_name, emergency_contact_number)
-               VALUES (?, ?, NULL, '', '', '', '', '')`,
-              [userId, telephoneNumber]
+               VALUES (?, ?, ?, NULL, '', '', '', '', '')`,
+              [userId, telephoneNumber, details.idNumber]
             );
+            await saveSqlRegistrationDetails(connection, userId, details, req.file);
             await connection.execute(
               `INSERT INTO wallets
                 (id, owner_type, owner_id, wallet_name, balance, available_balance,
@@ -506,7 +513,10 @@ export function createApp({ databaseAvailable = true } = {}) {
             state.users.push(created);
             state.profiles.push({
               userId: id,
-              idNumber: '',
+              idNumber: details.idNumber,
+              dateOfBirth: details.dateOfBirth,
+              gender: details.gender,
+              identityVerificationMethod: details.verificationMethod,
               telephoneNumber,
               email: '',
               address: '',
@@ -515,6 +525,7 @@ export function createApp({ databaseAvailable = true } = {}) {
               emergencyContactName: '',
               emergencyContactNumber: ''
             });
+            savePlatformRegistrationDetails(state, id, details, req.file);
             state.wallets.push({
               id: `member-${id}`,
               ownerType: 'MEMBER',
@@ -549,6 +560,42 @@ export function createApp({ databaseAvailable = true } = {}) {
       }
     }
   );
+
+  app.get('/api/auth/registration-details', requireAuth, async (req, res, next) => {
+    try {
+      let record;
+      if (databaseAvailable) {
+        const [[row]] = await getPool().execute('SELECT details FROM member_registration_details WHERE user_id=?', [req.auth.sub]);
+        record = row && JSON.parse(row.details);
+      } else {
+        record = readPlatformState().registrationDetails?.find(item => String(item.userId) === String(req.auth.sub))?.details;
+      }
+      return res.json(record ?? null);
+    } catch (error) {
+      if (error.code === 'ER_NO_SUCH_TABLE') return res.json(null);
+      return next(error);
+    }
+  });
+  app.get('/api/auth/registration-document', requireAuth, async (req, res, next) => {
+    try {
+      let details, bytes;
+      if (databaseAvailable) {
+        const [[row]] = await getPool().execute('SELECT details,document FROM member_registration_details WHERE user_id=?', [req.auth.sub]);
+        if (row) { details = JSON.parse(row.details); bytes = row.document; }
+      } else {
+        const row = readPlatformState().registrationDetails?.find(item => String(item.userId) === String(req.auth.sub));
+        details = row?.details;
+        if (row?.documentBase64) bytes = Buffer.from(row.documentBase64, 'base64');
+      }
+      if (!bytes || !details?.document) return res.sendStatus(404);
+      const extension = { 'application/pdf': 'pdf', 'image/png': 'png', 'image/jpeg': 'jpg' }[details.document.mimeType];
+      res.set('Content-Disposition', `attachment; filename="identity-document.${extension}"`);
+      return res.type(details.document.mimeType).send(bytes);
+    } catch (error) {
+      if (error.code === 'ER_NO_SUCH_TABLE') return res.sendStatus(404);
+      return next(error);
+    }
+  });
 
   app.post(
     '/api/auth/login',

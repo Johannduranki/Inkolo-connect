@@ -1,0 +1,39 @@
+Registration restoration
+
+No deployment workflow changes are required. The frontend build now includes
+identity entry, local image OCR, optional JPG/PNG/PDF selection and privacy consent.
+OCR is a convenience only; documents remain pending review, never auto-verified.
+The OCR language model may require an internet connection on first use; manual
+entry remains available when automatic reading fails.
+
+The API saves new-account details and the selected document in the same account
+transaction. It does not modify existing accounts or require returning members
+to resubmit identity details. Privacy consent includes a server timestamp and
+SHA-256 of the policy served with that release.
+
+For the migrated platform-document storage mode, registration evidence is saved
+inside the existing atomic platform record. No table change is needed.
+
+For relational users/member_profiles mode, the API checks for the new table
+member_registration_details before creating any account. If missing, it attempts
+CREATE TABLE IF NOT EXISTS (no ALTER, DROP, UPDATE or DELETE of existing data).
+If the application account lacks CREATE permission, the administrator should
+create this table in the application's existing database, using a privileged
+maintenance session. Do not broaden the runtime database account's permissions:
+
+CREATE TABLE IF NOT EXISTS member_registration_details (
+  user_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+  details LONGTEXT NOT NULL,
+  document LONGBLOB NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+Include this table (or the platform record in platform-document mode) in private
+database backups. The optional ID document is stored privately in the database,
+not Apache's webroot. Existing documents/accounts are not moved or removed.
+Only the authenticated owner can access /api/auth/registration-details and
+/api/auth/registration-document; a request cannot select a different user ID.
+
+The existing Apache routing and HTTPS prerequisites still apply. Confirm /api
+is proxied to the backend before testing registration on the deployed server.
+Do not submit real passwords or identity documents over plain HTTP.
