@@ -1,0 +1,24 @@
+(()=>{
+  const $=id=>document.getElementById(id),select=$('entity'),file=$('logo-file'),preview=$('logo-preview'),save=$('save-logo'),status=$('logo-status');
+  let rows=[],objectUrl='',busy=false;
+  const headers=()=>({Authorization:'Bearer '+(sessionStorage.getItem('duranki_access_token')||localStorage.getItem('duranki_access_token')||'')});
+  const selected=()=>rows.find(r=>r.kind+':'+r.id===select.value);
+  async function legacyRows(){
+    const response=await fetch('/api/platform/roles',{headers:headers(),cache:'no-store'});if(!response.ok)return;
+    const roles=await response.json();if(!roles.some(r=>['Platform Admin','DURANKI_ADMIN'].includes(r)))return;
+    for(const kind of ['tenant','community']){let items=[];try{items=JSON.parse(localStorage.getItem('duranki_platform_'+(kind==='tenant'?'tenants':'communities'))||'[]');}catch{}if(!Array.isArray(items))continue;
+      for(const item of items){if(item.id==='tenant-evolve'||item.tenantId==='tenant-evolve'||['archived','disabled','inactive'].includes(String(item.status).toLowerCase()))continue;
+        const existing=rows.find(r=>r.kind===kind&&(r.id===item.id||r.aliases?.includes(item.id)));
+        if(existing){existing.logoUrl ||= item.branding?.logoUrl||'';continue;}
+        rows.push({kind,id:item.id,name:item.name,tenantId:kind==='tenant'?item.id:item.tenantId,logoUrl:item.branding?.logoUrl||'',canEdit:true,revision:0,localOnly:true});
+      }
+    }
+  }
+  async function register(row){if(!row.localOnly)return;if(row.kind==='community'){const parent=rows.find(r=>r.kind==='tenant'&&r.id===row.tenantId);if(parent)await register(parent);}const response=await fetch('/api/branding/directory',{method:'POST',headers:{...headers(),'Content-Type':'application/json'},body:JSON.stringify({kind:row.kind,id:row.id,name:row.name,tenantId:row.tenantId})});if(!response.ok)throw Error('Could not register logo owner.');row.localOnly=false;}
+  function reset(){if(objectUrl)URL.revokeObjectURL(objectUrl);objectUrl='';file.value='';const row=selected();preview.hidden=!row?.logoUrl;preview.src=row?.logoUrl||'';save.disabled=true;file.disabled=!row?.canEdit;$('current-name').textContent=row?.name||'';status.textContent=row?(row.canEdit?'':'Read-only. Ask your tenant administrator for branding permission.'):'No registered tenants or communities available.';}
+  async function load(){try{const response=await fetch('/api/branding',{headers:headers(),cache:'no-store'});if(!response.ok)throw Error('Sign in to manage tenant and community logos.');rows=await response.json();await legacyRows();const before=select.value;select.replaceChildren();for(const row of rows){const option=document.createElement('option');option.value=row.kind+':'+row.id;option.textContent=(row.kind==='tenant'?'Tenant: ':'Community: ')+row.name;select.append(option);}const params=new URLSearchParams(location.search),id=params.get('communityId')||params.get('tenantId');const match=rows.find(r=>r.id===id||r.aliases?.includes(id));if(rows.some(r=>r.kind+':'+r.id===before))select.value=before;else if(match)select.value=match.kind+':'+match.id;reset();}catch(error){status.textContent=error.message;save.disabled=true;file.disabled=true;}}
+  select.onchange=reset;
+  file.onchange=async()=>{save.disabled=true;const image=file.files?.[0];if(!image)return;try{if(!['image/png','image/jpeg'].includes(image.type)||image.size>2*1024*1024)throw Error('Choose a PNG or JPG no larger than 2 MB.');const bitmap=await createImageBitmap(image);const valid=bitmap.width<=4096&&bitmap.height<=4096;bitmap.close();if(!valid)throw Error('Maximum image dimensions are 4096 x 4096 pixels.');if(file.files[0]!==image)return;if(objectUrl)URL.revokeObjectURL(objectUrl);objectUrl=URL.createObjectURL(image);preview.src=objectUrl;preview.hidden=false;status.textContent='Preview only. Logo has not been saved.';save.disabled=!selected()?.canEdit;}catch(error){file.value='';status.textContent=error.message;}};
+  $('branding-form').onsubmit=async event=>{event.preventDefault();if(busy)return;const row=selected(),image=file.files?.[0];if(!row?.canEdit||!image)return;busy=true;save.disabled=true;select.disabled=true;file.disabled=true;$('refresh-logos').disabled=true;try{await register(row);const body=new FormData();body.append('logo',image);body.append('revision',String(row.revision));const response=await fetch('/api/branding/'+row.kind+'/'+encodeURIComponent(row.id),{method:'PUT',headers:headers(),body});const result=await response.json();if(!response.ok)throw Error(result.message||'Could not save logo.');Object.assign(row,result);reset();status.textContent='Logo saved for '+row.name+'.';}catch(error){status.textContent=error.message;save.disabled=false;}finally{busy=false;select.disabled=false;file.disabled=!row.canEdit;$('refresh-logos').disabled=false;}};
+  $('refresh-logos').onclick=load;load();
+})();

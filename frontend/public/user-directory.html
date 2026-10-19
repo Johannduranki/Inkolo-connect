@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Duranki User Directory</title><link rel="stylesheet" href="/treasury.css"><script src="/user-directory.js" defer></script><style>
+#message{color:#31574b} .user-link{background:none;border:0;color:#126c61;padding:0;text-align:left;text-decoration:underline;cursor:pointer} dialog{width:min(820px,92vw);max-height:90vh;border:1px solid #bccdc8;border-radius:8px;padding:24px;overflow:auto}dialog::backdrop{background:#14282099}.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px} .profile-grid label{min-width:0}dialog h2{font-size:24px;margin-top:0}dialog h3{font-size:17px}dialog input{box-sizing:border-box;width:100%}.profile-actions{display:flex;justify-content:flex-end;gap:12px;margin-top:24px}#profile-error{color:#ad2727}#profile-details{overflow-wrap:anywhere}@media(max-width:600px){.profile-grid{grid-template-columns:1fr}dialog{padding:16px}}
+</style></head>
+<body><header><strong>Duranki | User directory</strong><nav><a href="/dashboard/platform-admin">Platform dashboard</a> <a href="/dashboard/heritage">Heritage / Family Tree</a> <a href="/login">Sign in</a></nav></header>
+<main><h1>User directory</h1><p id="message" role="status">Loading users...</p>
+<label>Search <input id="search" type="search" placeholder="Name or telephone"></label>
+<label>Community <select id="community"><option value="">All communities</option></select></label>
+<label>Status <select id="status"><option value="">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="review">Needs review</option></select></label>
+<div style="overflow-x:auto"><table><thead><tr><th>Name</th><th>Telephone</th><th>Email</th><th>Communities</th><th>Status</th><th>Review</th></tr></thead><tbody id="users"></tbody></table></div>
+<p><button id="previous" aria-label="Previous page">Previous</button> <span id="page"></span> <button id="next" aria-label="Next page">Next</button></p>
+</main><dialog id="profile-dialog" aria-labelledby="profile-title"><h2 id="profile-title">User profile</h2><p id="profile-error" role="alert"></p><form id="profile-form"><div class="profile-grid">
+<label>First names<input name="firstName" required maxlength="150"></label><label>Surname<input name="lastName" required maxlength="150"></label>
+<label>Telephone number<input name="telephoneNumber" type="tel" required maxlength="20"></label><label>Email<input name="email" type="email" maxlength="150"></label>
+<label>Address<input name="address" maxlength="500"></label><label>City / town<input name="city" maxlength="150"></label>
+<label>Postal code<input name="postalCode" maxlength="20"></label><label>Emergency contact name<input name="emergencyContactName" maxlength="150"></label>
+<label>Emergency contact number<input name="emergencyContactNumber" type="tel" maxlength="30"></label></div>
+<section id="profile-details"></section><div class="profile-actions"><button type="button" id="profile-close">Cancel</button><button type="submit" id="profile-save">Save changes</button></div></form></dialog></body></html>

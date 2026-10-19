@@ -1,0 +1,25 @@
+(()=>{
+  const $=id=>document.getElementById(id);let report=null,version=0,communities=[];
+  function syncScope(){
+    const selected=communities.find(c=>c.id===$('community').value),url=new URL(location.href);
+    for(const [key,value] of [['communityId',selected?.id],['tenantId',selected?.tenantId]]){
+      if(value)url.searchParams.set(key,value);else url.searchParams.delete(key);
+    }
+    history.replaceState(history.state,'',url.pathname+url.search+url.hash);
+    document.querySelectorAll('[data-cycle-payments]').forEach(link=>{link.href='/payments/cycle'+url.search;});
+  }
+  const money=(c,currency)=>c==null?'Not recorded':currency+' '+(c/100).toFixed(2);
+  const node=(tag,text)=>{const n=document.createElement(tag);n.textContent=text;return n;};
+  async function api(query=''){const token=sessionStorage.getItem('duranki_access_token')||localStorage.getItem('duranki_access_token');const r=await fetch('/api/community-reports'+query,{headers:{Authorization:'Bearer '+token},cache:'no-store'});const data=await r.json().catch(()=>({}));if(!r.ok)throw Error(data.message||'Sign in with community reporting permission.');return data;}
+  function table(id,rows){$(id).replaceChildren(...rows.map(values=>{const tr=document.createElement('tr');tr.append(...values.map(v=>node('td',v??'Not recorded')));return tr;}));}
+  function memberRows(){const q=$('search').value.toLowerCase(),status=$('status').value;return report.members.filter(m=>(m.name+' '+m.id).toLowerCase().includes(q)).flatMap(m=>(m.services.length?m.services:[{}]).filter(s=>!status||s.status===status).map(s=>[m.name,m.id,m.status,s.name||'No community-scoped subscription',s.status||'Not recorded',s.reason||'Not recorded',money(s.amountCents,s.currency),s.billingCycle||'Not recorded']));}
+  function paymentRows(){return report.payments.map(p=>[p.userId,p.source,p.status,money(p.amountCents,p.currency),p.date,p.reference]);}
+  function drawMembers(){if(!report)return;const rows=memberRows();table('members',rows);$('count').textContent=rows.length+' matching member/service rows';}
+  function csv(rows,name){const cell=v=>'"'+String(v??'').replace(/^[\s]*[=+@-]/,m=>"'"+m).replaceAll('"','""')+'"';const url=URL.createObjectURL(new Blob(['\uFEFF'+rows.map(r=>r.map(cell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=name+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  async function load(){const current=++version;report=null;$('report').hidden=true;$('notice').textContent='Loading report...';try{const data=await api('?'+new URLSearchParams({communityId:$('community').value,from:$('from').value,to:$('to').value}));if(current!==version)return;report=data;$('generated').textContent=data.community.name+' | Generated '+new Date(data.generatedAt).toLocaleString();$('summary').replaceChildren();for(const [key,label]of [['members','Members'],['activeMembers','Active accounts'],['activeServices','Active service records'],['terminatedForNonpayment','Non-payment suspensions / terminations'],['unallocatedServices','Subscriptions missing community']]){const group=document.createElement('div');group.append(node('dt',label),node('dd',data.summary[key]));$('summary').append(group);} $('totals').replaceChildren(...(data.totals.length?data.totals.map(t=>node('p',`${t.source} | ${t.status}: ${money(t.amountCents,t.currency)} (${t.count} records)`)):[node('p','No payment records for this community and period.')]));table('payments',paymentRows());drawMembers();$('notes').replaceChildren(...data.notes.map(n=>node('li',n)));$('notice').textContent='';$('report').hidden=false;}catch(e){if(current===version)$('notice').textContent=e.message;}}
+  $('filters').onsubmit=e=>{e.preventDefault();load();};$('community').onchange=()=>{syncScope();load();};$('search').oninput=drawMembers;$('status').onchange=drawMembers;
+  $('export-members').onclick=()=>report&&csv([['Member','Member ID','Account','Service','Status','Reason','Contribution','Billing cycle'],...memberRows()],'community-members');
+  $('export-payments').onclick=()=>report&&csv([['Member ID','Source','Status','Amount','Date','Reference'],...paymentRows()],'community-payments');
+  $('to').value=new Date().toISOString().slice(0,10);
+  api().then(data=>{const query=new URLSearchParams(location.search),tenant=query.get('tenantId');communities=data.communities.filter(c=>!tenant||c.tenantId===tenant);for(const c of communities){const option=node('option',c.name);option.value=c.id;$('community').append(option);}const requested=query.get('communityId');const selected=communities.find(c=>[c.id,...(c.aliases||[])].includes(requested));if(selected)$('community').value=selected.id;syncScope();if($('community').value)load();else $('notice').textContent='No communities available with your reporting permissions.';}).catch(e=>$('notice').textContent=e.message);
+})();

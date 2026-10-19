@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tenant &amp; Community Logos | Duranki</title><link rel="stylesheet" href="/cycle.css"></head>
+<body><header><img src="/duranki-up-logo.png" alt="Duranki"><strong>Tenant &amp; Community Logos</strong><a href="/dashboard/platform-admin">Platform Admin</a><a href="/dashboard/tenant">Tenant workspace</a></header>
+<main><h1>Tenant &amp; Community Logos</h1><form id="branding-form">
+<label>Tenant or community<select id="entity" required aria-label="Tenant or community"></select></label>
+<p id="current-name"></p><img id="logo-preview" width="180" height="180" alt="Logo preview" hidden style="object-fit:contain;background:white;border:1px solid #cbd5df;border-radius:6px">
+<label>Logo image (PNG or JPG, maximum 2 MB)<input type="file" id="logo-file" accept="image/png,image/jpeg" required></label>
+<div class="actions"><button id="save-logo" type="submit" disabled>Save logo</button><button id="refresh-logos" type="button">Refresh</button></div>
+<p id="logo-status" role="status">Loading...</p></form></main><script src="/branding.js" defer></script></body></html>

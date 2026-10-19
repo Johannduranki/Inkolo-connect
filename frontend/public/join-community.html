@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Join a community | Duranki</title><link rel="stylesheet" href="/two-factor.css"></head>
+<body><header class="security-header"><div class="brand"><img src="/duranki-up-logo.png" width="76" height="52" alt="Duranki"><span>Duranki<span class="brand-caption">Community membership</span></span></div><a href="/dashboard/member">Dashboard</a></header>
+<main class="security-main"><article class="auth-panel"><h1>Join a community</h1>
+<p>You are already registered. Do you want to register as a community member?</p>
+<p id="roles"></p><p id="status" role="status" aria-live="polite">Loading your communities...</p>
+<form id="join-form" hidden><label for="community">Choose a community</label><select id="community" required style="width:100%;min-height:48px;margin:12px 0 20px;padding:10px;font:inherit"></select>
+<p>Your existing roles and memberships will be kept. Membership fees and service subscriptions remain separate.</p>
+<button id="join" type="submit" class="primary-button">Register as a community member</button></form>
+<p><a id="open" hidden>Open community</a></p><p><a id="signin" href="/login" hidden>Sign in to continue</a></p>
+<p><a id="return" href="/dashboard/member">Back to dashboard</a></p></article></main><script src="/join-community.js" defer></script></body></html>

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cycle Pay | Duranki</title><link rel="stylesheet" href="/cycle.css"><link rel="stylesheet" href="/cycle-billing.css"><script src="/cycle.js" defer></script><script src="/cycle-billing-ui.js" defer></script></head>
+<body><header><img src="/duranki-up-logo.png" alt="Duranki"><strong>Cycle Pay</strong><nav><a data-platform-admin-return="true" href="/dashboard/platform-admin">Platform Admin</a><a href="/dashboard/member">My dashboard</a><a href="/payments/cycle">My payments</a></nav></header>
+<main><div class="heading"><div><p class="eyebrow">DURANKI PAYMENTS</p><h1 id="title">Cycle Pay</h1></div><button id="refresh" type="button">Refresh</button></div>
+<p id="notice" role="status">Loading payment records...</p>
+<section id="billing" hidden>
+  <div class="billing-tabs" role="group" aria-label="Payment type"><button id="subscription-tab" type="button">Service subscriptions</button><button id="wallet-tab" type="button">Top up wallet</button></div>
+  <p id="billing-notice" role="status"></p>
+  <form id="billing-form">
+    <div class="fields"><label>Community<select id="billing-community" required></select></label>
+    <label id="service-field">Service<select id="billing-service" required></select></label>
+    <label id="amount-field" hidden>Top-up amount (ZAR)<input id="billing-amount" type="number" min="1" max="100000" step="0.01" inputmode="decimal"></label></div>
+    <p id="billing-price"></p><p id="billing-readiness"></p>
+    <label class="billing-consent"><input id="billing-consent" type="checkbox" required><span id="billing-terms"></span></label>
+    <button id="billing-submit" type="submit">Continue to Cycle Pay</button>
+  </form>
+  <h2>My subscriptions</h2><div id="billing-subscriptions"></div>
+</section>
+<section id="admin" hidden>
+  <div class="summary"><div><span>Provider-confirmed charges</span><strong id="charged">Unavailable</strong></div><div><span>Pending requests</span><strong id="pending">Unavailable</strong></div><div><span>Needs review</span><strong id="review">Unavailable</strong></div></div>
+  <section class="configuration"><h2>Provider configuration</h2><dl id="configuration"></dl><ul id="blockers"></ul><p>Verified live subscription and wallet payments are allocated automatically. Sandbox payments never credit real wallets. Generic invoices and stakeholder settlements require reconciliation.</p></section>
+  <details><summary>Create payment request</summary><form id="create"><div class="fields"><label>Member ID<input name="userId" required maxlength="100"></label><label>Community<select name="communityId" id="communities" required></select></label><label>Amount (ZAR)<input name="amount" type="number" min="0.01" max="1000000" step="0.01" required></label><label>Unique invoice / payment reference<input name="reference" required maxlength="200"></label><label class="wide">Description<input name="description" required maxlength="200"></label></div><p>This requests payment from the member. It does not charge a card or activate a service.</p><button type="submit">Create request</button></form></details>
+</section>
+<section id="register" hidden><div class="register-heading"><h2 id="register-title">Payment register</h2><button id="export" type="button">Export displayed records</button></div><div class="filters"><label>Status<select id="status-filter"><option value="">All statuses</option><option value="PENDING">Pending</option><option value="CHARGED">Provider confirmed</option><option value="REVIEW">Needs review</option></select></label><label>Search<input id="search" type="search" placeholder="Reference, member or community"></label></div><p id="count"></p><div class="table-wrap"><table><thead><tr><th>Reference</th><th>Member</th><th>Tenant / community</th><th>Amount</th><th>Mode</th><th>Status</th><th>Created</th><th>Action</th></tr></thead><tbody id="rows"></tbody></table></div><p id="empty" hidden>No payment requests found.</p></section>
+<p id="member-note" hidden>Card details are entered on Cycle's hosted checkout. Your payment remains pending until Duranki receives a verified notification from Cycle.</p>
+</main></body></html>
