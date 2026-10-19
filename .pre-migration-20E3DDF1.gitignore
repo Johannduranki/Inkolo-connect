@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.angular/
+.env
+.npmrc
+coverage/
+*.log
+*.msi
+backend/uploads/
+backend/data/*.json
+work/
+outputs/
+tmp/
+.netlify/
+*.zip
+frontend/pnpm-workspace.yaml

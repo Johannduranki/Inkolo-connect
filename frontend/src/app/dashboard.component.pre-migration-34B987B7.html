@@ -1,0 +1,2981 @@
+<main
+  class="dashboard-shell"
+  [class.community-service-entry]="communityServiceEntry()"
+>
+  @if (communityServiceEntry()) {
+    <iframe
+      class="community-service-background"
+      src="/community"
+      title="My Community dashboard background"
+      aria-hidden="true"
+      tabindex="-1"
+    ></iframe>
+  }
+  <header class="topbar">
+    <div class="header-brand-group">
+      <a class="brand" href="/dashboard" aria-label="Duranki dashboard">
+        <img class="header-logo" src="/duranki-up-logo.png" alt="Duranki">
+      </a>
+      <span class="top-powered-by">Powered by Duranki</span>
+    </div>
+
+    <span aria-hidden="true"></span>
+
+    <div class="account">
+      @if (user()) {
+        <app-role-switcher
+          [userFullName]="user()!.firstName + ' ' + user()!.lastName"
+        ></app-role-switcher>
+        <div class="monthly-subscription-total" aria-label="Total monthly subscription fee">
+          <span>Monthly subscriptions</span>
+          <strong>{{ monthlySubscriptionTotal() }}</strong>
+        </div>
+        <span class="avatar" aria-hidden="true">
+          @if (profiles.profile().profilePhoto) {
+            <img [src]="profiles.profile().profilePhoto" alt="">
+          } @else {
+            {{ user()!.firstName.charAt(0) }}{{ user()!.lastName.charAt(0) }}
+          }
+        </span>
+      }
+      <button class="profile-button" type="button" (click)="profileOpen.set(true)">My Profile</button>
+      <button
+        class="reset-services"
+        type="button"
+        [disabled]="resetLoading()"
+        (click)="resetServices()"
+      >
+        {{ resetLoading() ? 'Resetting...' : 'Reset' }}
+      </button>
+      <button class="sign-out" type="button" (click)="logout()">Sign out</button>
+    </div>
+  </header>
+
+  <section class="subscribed-banner" aria-labelledby="subscribed-heading">
+      <div class="subscribed-heading">
+        <div>
+          <p class="eyebrow">YOUR ACTIVE ECOSYSTEM</p>
+          <h2 id="subscribed-heading">My active services</h2>
+        </div>
+        <span>{{ subscribedServices().length }} active</span>
+      </div>
+
+      @if (subscribedServices().length > 0) {
+      <div class="subscribed-list">
+        @for (service of subscribedServices(); track service.code) {
+          <article class="subscribed-service" [style.--accent]="service.accent">
+            <div class="subscribed-logo">
+              <img [src]="service.image" [alt]="service.name">
+            </div>
+            <div class="subscribed-copy">
+              <span>{{ service.tag }}</span>
+              <h3>{{ serviceDisplayName(service) }}</h3>
+              @if (service.application) {
+                <p>Application submitted for review</p>
+              } @else {
+                <p>{{ subscriptionFor(service.code)?.planLabel }}</p>
+                <strong class="active-service-price">{{ subscriptionPrice(service) }}</strong>
+              }
+            </div>
+            <button type="button" (click)="openService(service)">
+              Open
+              <span aria-hidden="true">→</span>
+            </button>
+          </article>
+        }
+      </div>
+      } @else {
+        <p class="no-active-services">Subscribe to a service below and it will appear here.</p>
+      }
+
+      @if (subscriptionFor('community')) {
+        <div class="workspace-switcher wallet-community-link" aria-label="Community navigation">
+          <a href="/community">{{ communityHeading() }}</a>
+        </div>
+      }
+      @if (subscriptionFor('wallet')) {
+        <div class="wallet-actions" aria-label="Wallet actions">
+          <button type="button" (click)="openWalletAction('topup')">Top Up</button>
+          <button type="button" (click)="openWalletAction('cashout')">Cash Out</button>
+          <button type="button" (click)="openWalletAction('transfer')">Transfer</button>
+        </div>
+        <button
+          class="wallet-bank-card banner-wallet"
+          [class.flipped]="walletOpen()"
+          type="button"
+          (click)="toggleWalletCard()"
+          [attr.aria-label]="walletOpen() ? 'Show wallet card front' : 'Show wallet balance and transactions'"
+        >
+          <span class="wallet-card-inner">
+            <span class="wallet-card-face wallet-card-front">
+              <span class="bank-card-top">
+                <span class="wallet-card-brand">
+                  @if (walletBrandLogo()) {
+                    <img class="wallet-custom-logo" [src]="walletBrandLogo()" [alt]="walletBrandTeam()">
+                  } @else {
+                    <img src="/duranki-up-logo.png" alt="Duranki">
+                  }
+                </span>
+                <b>DURANKI WALLET</b>
+              </span>
+              <span class="bank-card-chip" aria-hidden="true"></span>
+              <strong>•••• •••• •••• 2086</strong>
+              <span class="bank-card-bottom">
+                <small>{{ user()?.firstName }} {{ user()?.lastName }}</small>
+                <small>View balance →</small>
+              </span>
+            </span>
+            <span class="wallet-card-face wallet-card-back">
+              <span class="wallet-back-heading">
+                <small>AVAILABLE BALANCE</small>
+                <strong>{{ walletBalance().toFixed(2) }} Izaka</strong>
+              </span>
+              <span class="wallet-back-transactions">
+                @for (transaction of walletTransactions().slice(0, 2); track $index) {
+                  <span>
+                    <small>{{ transaction.description }}</small>
+                    <b [class.credit]="transaction.amount >= 0">
+                      {{ transaction.amount > 0 ? '+' : '' }}{{ transaction.amount.toFixed(2) }} Izaka
+                    </b>
+                  </span>
+                }
+              </span>
+              <small class="flip-hint">← Card front</small>
+            </span>
+          </span>
+        </button>
+        <button class="wallet-brand-button" type="button" (click)="openWalletBranding()">
+          Change wallet logo
+        </button>
+      }
+  </section>
+
+  <section class="hero">
+    <div>
+      <p class="eyebrow">YOUR DURANKI ECOSYSTEM</p>
+      <h1 class="welcome-line">
+        @if (user()) {
+          Hi, {{ user()!.firstName }} {{ user()!.lastName }}
+        } @else {
+          Hi
+        }
+      </h1>
+      <p class="hero-copy">
+        Everything you need, connected in one place. Choose a service to get started.
+      </p>
+    </div>
+
+    @if (subscriptionFor('wallet')) {
+      <button
+        class="wallet-bank-card"
+        [class.flipped]="walletOpen()"
+        type="button"
+        (click)="toggleWalletCard()"
+        [attr.aria-label]="walletOpen() ? 'Show wallet card front' : 'Show wallet balance and transactions'"
+      >
+        <span class="wallet-card-inner">
+          <span class="wallet-card-face wallet-card-front">
+              <span class="bank-card-top">
+                <span class="wallet-card-brand">
+                  @if (walletBrandLogo()) {
+                    <img class="wallet-custom-logo" [src]="walletBrandLogo()" [alt]="walletBrandTeam()">
+                  } @else {
+                    <img src="/duranki-up-logo.png" alt="Duranki">
+                  }
+                </span>
+              <b>DURANKI WALLET</b>
+            </span>
+            <span class="bank-card-chip" aria-hidden="true"></span>
+            <strong>•••• •••• •••• 2086</strong>
+            <span class="bank-card-bottom">
+              <small>{{ user()?.firstName }} {{ user()?.lastName }}</small>
+              <small>View balance →</small>
+            </span>
+          </span>
+          <span class="wallet-card-face wallet-card-back">
+            <span class="wallet-back-heading">
+              <small>AVAILABLE BALANCE</small>
+              <strong>{{ walletBalance().toFixed(2) }} Izaka</strong>
+            </span>
+            <span class="wallet-back-transactions">
+              @for (transaction of walletTransactions().slice(0, 2); track $index) {
+                <span>
+                  <small>{{ transaction.description }}</small>
+                  <b [class.credit]="transaction.amount >= 0">
+                    {{ transaction.amount > 0 ? '+' : '' }}{{ transaction.amount.toFixed(2) }} Izaka
+                  </b>
+                </span>
+              }
+            </span>
+            <small class="flip-hint">← Card front</small>
+          </span>
+        </span>
+      </button>
+    }
+  </section>
+
+  @if (dashboardAccessLimited()) {
+    <section class="membership-lock-panel" aria-labelledby="membership-lock-title">
+      <div>
+        <p class="eyebrow">MEMBERSHIP REQUIRED</p>
+        <h2 id="membership-lock-title">Community access fee is unpaid</h2>
+        <p>
+          Your tenant or community requires an active Community Membership fee before
+          full dashboard services are unlocked.
+        </p>
+        @if (communityMembershipNotice()) {
+          <strong>{{ communityMembershipNotice() }}</strong>
+        }
+      </div>
+      <button
+        type="button"
+        (click)="openCommunityMembership()"
+      >
+        Pay membership
+      </button>
+    </section>
+  }
+
+  <div class="dashboard-content">
+    <section class="services-section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">EXPLORE</p>
+          <h2>Duranki services</h2>
+        </div>
+        <span>{{ availableServices().length }} services available</span>
+      </div>
+
+      <div class="service-grid">
+        @for (service of availableServices(); track service.name) {
+          <article
+            class="service-card"
+            [style.--accent]="service.accent"
+          >
+            <div class="image-wrap">
+              <span class="service-tag">{{ service.tag }}</span>
+              <img [src]="service.image" [alt]="service.name">
+            </div>
+            <button
+              class="image-subscribe-button"
+              type="button"
+              (click)="openService(service)"
+            >
+              {{
+                subscriptionFor(service.code)
+                  ? 'Open'
+                  : service.application
+                    ? 'Apply now'
+                    : 'Subscribe'
+              }}
+            </button>
+            <div class="service-content">
+              <h3>{{ serviceDisplayName(service) }}</h3>
+              <p>{{ service.description }}</p>
+              <button
+                type="button"
+                [class.subscribed]="subscriptionFor(service.code)"
+                (click)="openService(service)"
+              >
+                @if (service.availability === 'coming-soon') {
+                  Coming soon
+                } @else if (service.application && stepUpApplicationStatus()) {
+                  Application submitted
+                } @else if (service.application) {
+                  Apply now
+                } @else if (subscriptionFor(service.code)) {
+                  Open
+                } @else {
+                  Subscribe
+                }
+                <span aria-hidden="true">→</span>
+              </button>
+            </div>
+          </article>
+        }
+      </div>
+
+      @if (availableServices().length === 0) {
+        <div class="all-subscribed">
+          <span>✓</span>
+          <h3>All services are active</h3>
+          <p>Your subscribed services are available in the banner above.</p>
+        </div>
+      }
+    </section>
+
+    <div class="right-rail">
+      <aside class="announcements" aria-labelledby="announcement-title">
+        <div class="announcement-heading">
+          <div>
+            <p class="eyebrow">STAY INFORMED</p>
+            <h2 id="announcement-title">Community announcements</h2>
+          </div>
+          <span class="live-dot" aria-label="New announcements"></span>
+        </div>
+
+        <div class="announcement-list">
+          @for (announcement of announcements; track announcement.title) {
+            <article
+              class="announcement-card"
+              [class.featured]="announcement.featured"
+            >
+              <div class="announcement-meta">
+                <span>{{ announcement.category }}</span>
+                <time>{{ announcement.date }}</time>
+              </div>
+              <h3>{{ announcement.title }}</h3>
+              <p>{{ announcement.summary }}</p>
+            </article>
+          }
+        </div>
+
+        <button class="all-announcements" type="button">
+          View all announcements
+          <span aria-hidden="true">→</span>
+        </button>
+      </aside>
+
+      <aside class="community-chat" aria-labelledby="chat-title">
+        <div class="chat-heading">
+          <div>
+            <span class="online-dot" aria-hidden="true"></span>
+            <div>
+              <h2 id="chat-title">Community chat</h2>
+              <p>Members online now</p>
+            </div>
+          </div>
+          <button type="button" aria-label="Chat options">•••</button>
+        </div>
+
+        <div class="chat-channel">
+          <span>#</span>
+          General community
+        </div>
+
+        <div class="message-list" aria-live="polite">
+          @for (chat of chatMessages(); track $index) {
+            <article class="chat-message" [class.mine]="chat.mine">
+              <span class="chat-avatar">{{ chat.initials }}</span>
+              <div>
+                <div class="message-meta">
+                  <strong>{{ chat.mine ? 'You' : chat.author }}</strong>
+                  <time>{{ chat.time }}</time>
+                </div>
+                <p>{{ chat.message }}</p>
+              </div>
+            </article>
+          }
+        </div>
+
+        <form
+          class="chat-composer"
+          (submit)="sendMessage(); $event.preventDefault()"
+        >
+          <input
+            type="text"
+            [formControl]="chatMessage"
+            placeholder="Write a message..."
+            aria-label="Community chat message"
+            maxlength="500"
+          >
+          <button
+            type="submit"
+            [disabled]="!chatMessage.value.trim()"
+            aria-label="Send message"
+          >
+            ↑
+          </button>
+        </form>
+        <p class="chat-note">Be kind and keep conversations community-friendly.</p>
+      </aside>
+    </div>
+  </div>
+
+  <section class="coming-soon">
+    <div class="coming-icon">+</div>
+    <div>
+      <p class="eyebrow">THE ECOSYSTEM IS GROWING</p>
+      <h2>More services are on the way.</h2>
+      <p>New Duranki services will appear here as they become available.</p>
+    </div>
+  </section>
+
+  <footer>
+    <span>Duranki Platform</span>
+    <span>One account. A growing ecosystem.</span>
+  </footer>
+
+  @if (selectedService(); as service) {
+    <div class="modal-backdrop" (click)="closeSubscription()">
+      <section
+        class="subscription-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="subscription-title"
+        (click)="$event.stopPropagation()"
+      >
+        <button
+          class="modal-close"
+          type="button"
+          aria-label="Close subscription"
+          (click)="closeSubscription()"
+        >
+          ×
+        </button>
+
+        <div class="modal-service">
+          <img [src]="service.image" [alt]="service.name">
+          <div>
+            <p class="eyebrow">SERVICE SUBSCRIPTION</p>
+            <h2 id="subscription-title">{{ service.name }}</h2>
+            <p>{{ service.billingNote }}</p>
+          </div>
+        </div>
+
+        @if (hasServiceTerms(service) && !subscriptionFor(service.code)) {
+          <section class="buy-sell-terms-panel" aria-labelledby="buy-sell-terms-heading">
+            <div class="buy-sell-terms-heading">
+              <div>
+                <p class="eyebrow">REQUIRED AGREEMENT</p>
+                <h3 id="buy-sell-terms-heading">
+                  {{ serviceTermsTitle(service) }} Terms and Conditions
+                </h3>
+              </div>
+              <a
+                [href]="'/' + serviceTermsSlug(service) + '.docx'"
+                target="_blank"
+                rel="noopener"
+              >
+                Open Word document
+              </a>
+            </div>
+            <p>
+              Read the complete terms below before activating
+              {{ serviceTermsTitle(service) }}.
+            </p>
+            <iframe
+              class="buy-sell-terms-frame"
+              [src]="serviceTermsUrl(service)"
+              [title]="serviceTermsTitle(service) + ' Service Terms and Conditions'"
+            ></iframe>
+          </section>
+        }
+
+        @if (isActiveFuneralView(service)) {
+          <section class="active-funeral-summary">
+            <div class="active-funeral-heading">
+              <span class="active-policy-check" aria-hidden="true">✓</span>
+              <div>
+                <p class="eyebrow">YOUR ACTIVE COVER</p>
+                <h3>Funeral Services subscriptions</h3>
+                <p>Your selected funeral cover options are active.</p>
+              </div>
+            </div>
+
+            <div class="active-funeral-plans">
+              @for (plan of activeFuneralPlans(); track plan.code) {
+                <article>
+                  @if (plan.image) {
+                    <img [src]="plan.image" [alt]="plan.name">
+                  }
+                  <div>
+                    <small>{{ plan.provider || 'Duranki' }}</small>
+                    <strong>{{ plan.name }}</strong>
+                    <span>{{ plan.description }}</span>
+                  </div>
+                  <b>{{ plan.price }}</b>
+                </article>
+              }
+            </div>
+
+            @if (activeFuneralPlans().length === 0) {
+              <p class="subscription-error">
+                Your Funeral Services subscription is active. Plan details are being updated.
+              </p>
+            }
+
+            @if (hasActiveAfricanBankFuneral()) {
+              <div class="plan-notice">
+                <strong>African Bank card collection</strong>
+                <p>
+                  You can collect your African Bank card at your closest African Bank
+                  branch or at your church reception.
+                </p>
+              </div>
+            }
+
+            <a
+              class="accepted-terms-link"
+              href="/funeral-services-terms.html"
+              target="_blank"
+              rel="noopener"
+            >View accepted Funeral Services terms and conditions</a>
+          </section>
+        } @else if (isActiveReferralView(service)) {
+          <section class="referral-workspace">
+            <div class="referral-heading">
+              <div>
+                <p class="eyebrow">REFER & ACKNOWLEDGE</p>
+                <h3>Your referral network</h3>
+                <p>Both members must confirm who referred whom before the referral is accepted.</p>
+              </div>
+              <span>{{ referralOutgoing().length }} sent</span>
+            </div>
+
+            <div class="referral-form">
+              <label>
+                <span>Name</span>
+                <input type="text" [formControl]="referralFirstName" placeholder="Name">
+              </label>
+              <label>
+                <span>Surname</span>
+                <input type="text" [formControl]="referralLastName" placeholder="Surname">
+              </label>
+              <label>
+                <span>Cellphone number</span>
+                <input
+                  type="tel"
+                  inputmode="tel"
+                  [formControl]="referralTelephone"
+                  placeholder="e.g. 0725550184"
+                >
+              </label>
+              <button type="button" (click)="submitReferral()">Send referral request</button>
+            </div>
+
+            @if (referralNotice()) {
+              <p class="referral-notice" role="status">{{ referralNotice() }}</p>
+            }
+
+            <div class="referral-columns">
+              <section>
+                <h4>People you referred</h4>
+                @if (referralOutgoing().length > 0) {
+                  @for (referral of referralOutgoing(); track referral.id) {
+                    <article>
+                      <div>
+                        <strong>{{ referral.referredName }}</strong>
+                        <small>{{ referral.referredPhone }}</small>
+                      </div>
+                      <span [class.accepted]="referral.status === 'ACCEPTED'">
+                        {{ referral.status }}
+                      </span>
+                    </article>
+                  }
+                } @else {
+                  <p>No referral requests sent yet.</p>
+                }
+              </section>
+
+              <section>
+                <h4>Who referred you</h4>
+                @if (referralIncoming().length > 0) {
+                  @for (referral of referralIncoming(); track referral.id) {
+                    <article class="incoming-referral">
+                      <div>
+                        <strong>{{ referral.referrerName }}</strong>
+                        <small>says they referred you</small>
+                      </div>
+                      @if (referral.status === 'PENDING') {
+                        <div class="referral-decisions">
+                          <button type="button" (click)="acknowledgeReferral(referral, true)">
+                            Acknowledge
+                          </button>
+                          <button type="button" (click)="acknowledgeReferral(referral, false)">
+                            Decline
+                          </button>
+                        </div>
+                      } @else {
+                        <span [class.accepted]="referral.status === 'ACCEPTED'">
+                          {{ referral.status }}
+                        </span>
+                      }
+                    </article>
+                  }
+                } @else {
+                  <p>No referral requests received yet.</p>
+                }
+              </section>
+            </div>
+          </section>
+        } @else if (isActiveWalletView(service)) {
+          <section class="wallet-workspace" aria-labelledby="wallet-workspace-title">
+            <div class="wallet-workspace-heading">
+              <div>
+                <p class="eyebrow">DURANKI WALLET</p>
+                <h3 id="wallet-workspace-title">Wallet activity</h3>
+                <p>Review money received, money spent and your upcoming monthly payments.</p>
+              </div>
+              <span>Active</span>
+            </div>
+
+            <div class="wallet-summary-grid">
+              <article class="wallet-summary-card balance">
+                <small>Available balance</small>
+                <strong>{{ walletBalance() | number:'1.2-2' }} Izaka</strong>
+              </article>
+              <article class="wallet-summary-card received">
+                <small>Money received</small>
+                <strong>+{{ walletMoneyReceived() | number:'1.2-2' }} Izaka</strong>
+              </article>
+              <article class="wallet-summary-card spent">
+                <small>Money spent</small>
+                <strong>-{{ walletMoneySpent() | number:'1.2-2' }} Izaka</strong>
+              </article>
+              <article class="wallet-summary-card upcoming">
+                <small>Upcoming spending</small>
+                <strong>{{ upcomingWalletSpendingTotal() | number:'1.2-2' }} Izaka</strong>
+              </article>
+            </div>
+
+            <div class="wallet-workspace-actions" aria-label="Wallet actions">
+              <button type="button" (click)="openWalletAction('topup')">Top Up</button>
+              <button type="button" (click)="openWalletAction('cashout')">Cash Out</button>
+              <button type="button" (click)="openWalletAction('transfer')">Transfer</button>
+              <button type="button" class="wallet-brand-inside" (click)="openWalletBranding()">
+                Change wallet logo
+              </button>
+            </div>
+
+            <div class="wallet-activity-columns">
+              <section class="wallet-ledger">
+                <div class="wallet-section-heading">
+                  <div>
+                    <p class="eyebrow">TRANSACTIONS</p>
+                    <h4>All wallet transactions</h4>
+                  </div>
+                  <span>{{ walletTransactions().length }}</span>
+                </div>
+
+                @if (walletTransactions().length > 0) {
+                  <div class="wallet-ledger-list">
+                    @for (transaction of walletTransactions(); track $index) {
+                      <article>
+                        <span
+                          class="wallet-transaction-icon"
+                          [class.received]="transaction.amount > 0"
+                          [class.spent]="transaction.amount < 0"
+                        >
+                          {{ transaction.amount > 0 ? '↓' : transaction.amount < 0 ? '↑' : '•' }}
+                        </span>
+                        <div>
+                          <strong>{{ transaction.description }}</strong>
+                          <small>{{ transaction.date }}</small>
+                        </div>
+                        <span
+                          class="wallet-transaction-amount"
+                          [class.received]="transaction.amount > 0"
+                          [class.spent]="transaction.amount < 0"
+                        >
+                          <small>
+                            {{ transaction.amount > 0 ? 'Received' : transaction.amount < 0 ? 'Spent' : 'Activity' }}
+                          </small>
+                          <b>
+                            {{ transaction.amount > 0 ? '+' : '' }}{{ transaction.amount | number:'1.2-2' }}
+                            Izaka
+                          </b>
+                        </span>
+                      </article>
+                    }
+                  </div>
+                } @else {
+                  <p class="wallet-empty-state">No wallet transactions yet.</p>
+                }
+              </section>
+
+              <section class="wallet-upcoming">
+                <div class="wallet-section-heading">
+                  <div>
+                    <p class="eyebrow">UPCOMING</p>
+                    <h4>Expected monthly spending</h4>
+                  </div>
+                </div>
+                <p class="wallet-collection-date">
+                  Next collection: <strong>{{ nextSubscriptionCollectionDate() }}</strong>
+                </p>
+
+                @if (upcomingWalletSpending().length > 0) {
+                  <div class="wallet-upcoming-list">
+                    @for (spending of upcomingWalletSpending(); track spending.serviceCode) {
+                      <article>
+                        <div>
+                          <strong>{{ spending.serviceName }}</strong>
+                          <small>{{ spending.planName }}</small>
+                        </div>
+                        <b>{{ spending.amount | number:'1.2-2' }} Izaka</b>
+                      </article>
+                    }
+                  </div>
+                  <div class="wallet-upcoming-total">
+                    <span>Expected total</span>
+                    <strong>{{ upcomingWalletSpendingTotal() | number:'1.2-2' }} Izaka</strong>
+                  </div>
+                } @else {
+                  <p class="wallet-empty-state">You have no paid monthly services due.</p>
+                }
+              </section>
+            </div>
+          </section>
+        } @else if (isActiveCatchRideView(service)) {
+          <section class="ride-workspace" aria-labelledby="ride-workspace-title">
+            <div class="ride-heading">
+              <div>
+                <p class="eyebrow">CATCH A LIFT</p>
+                <h3 id="ride-workspace-title">Travel with your community</h3>
+                <p>
+                  Catch a nearby lift or make your own vehicle available to members.
+                </p>
+              </div>
+              <div class="business-heading-actions">
+                <button type="button" class="business-tools-button" (click)="openBusinessCenter('CATCH_A_RIDE')">
+                  Register transport business
+                </button>
+                <button type="button" [disabled]="rideLocationLoading()" (click)="locateMemberForRides()">
+                  {{ rideLocationLoading() ? 'Finding location...' : 'Refresh my location' }}
+                </button>
+              </div>
+            </div>
+
+            <div class="ride-mode-selector" aria-label="Choose Catch a Lift mode">
+              <button
+                type="button"
+                [class.active]="rideMode() === 'catch'"
+                (click)="setRideMode('catch')"
+              >
+                Catch a Lift
+                <small>Find drivers within 10 km</small>
+              </button>
+              <button
+                type="button"
+                [class.active]="rideMode() === 'give'"
+                (click)="setRideMode('give')"
+              >
+                Give a Lift
+                <small>Activate your vehicle on the map</small>
+              </button>
+            </div>
+
+            @if (rideMode() === 'give') {
+              <section class="give-lift-panel">
+                <div>
+                  <p class="eyebrow">DRIVER MODE</p>
+                  <h4>Make my lift available</h4>
+                  <p>
+                    Your current location is shown to nearby members only while
+                    your lift is active.
+                  </p>
+                </div>
+                <div class="give-lift-grid">
+                  <label>
+                    <span>Vehicle</span>
+                    <input [formControl]="liftVehicle" placeholder="e.g. White Toyota Corolla">
+                  </label>
+                  <label>
+                    <span>Registration number</span>
+                    <input [formControl]="liftRegistration" placeholder="Vehicle registration">
+                  </label>
+                  <label>
+                    <span>Seats available</span>
+                    <input type="number" min="1" max="8" [formControl]="liftSeats">
+                  </label>
+                  <label>
+                    <span>Destination</span>
+                    <input [formControl]="liftDestination" placeholder="Where are you going?">
+                  </label>
+                  <label>
+                    <span>Departure</span>
+                    <input [formControl]="liftDeparture" placeholder="e.g. Leaving in 20 minutes">
+                  </label>
+                  @if (businessesFor('CATCH_A_RIDE').length) {
+                    <label>
+                      <span>Offer lift as</span>
+                      <select [formControl]="liftBusinessId">
+                        <option value="">My personal profile</option>
+                        @for (business of businessesFor('CATCH_A_RIDE'); track business.id) {
+                          <option [value]="business.id">{{ business.businessName }}</option>
+                        }
+                      </select>
+                    </label>
+                  }
+                </div>
+                <div class="give-lift-status">
+                  @if (myLiftOffer()?.available) {
+                    <strong>Live on the map</strong>
+                    <span>Nearby members can ask you for a lift.</span>
+                    <button type="button" class="ride-cancel" (click)="deactivateMyLift()">
+                      Stop offering lift
+                    </button>
+                  } @else {
+                    <strong>Not visible yet</strong>
+                    <span>Activate your location when you are ready to drive.</span>
+                    <button type="button" class="ride-request" (click)="publishMyLift()">
+                      Activate my location
+                    </button>
+                  }
+                </div>
+              </section>
+            } @else {
+              @if (rideLocationError()) {
+                <p class="ride-location-warning">{{ rideLocationError() }}</p>
+              }
+
+              <div class="ride-map-layout">
+              <div class="ride-map" aria-label="Nearby available lifts map">
+                @if (rideMapEmbedUrl(); as mapUrl) {
+                  <iframe
+                    class="ride-map-background"
+                    [src]="mapUrl"
+                    title="Map around your current location"
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                  ></iframe>
+                }
+                <span class="ride-radius ride-radius-10"><small>10 km</small></span>
+                <span class="ride-radius ride-radius-5"><small>5 km</small></span>
+                <span class="ride-member-marker" title="Your current location"><b>YOU</b></span>
+                @for (lift of availableLifts(); track lift.id) {
+                  <button
+                    class="ride-driver-marker"
+                    type="button"
+                    [class.selected]="selectedLift()?.id === lift.id"
+                    [ngStyle]="rideMarkerStyle(lift)"
+                    [attr.aria-label]="'View ' + lift.driverName + ', ' + lift.distanceKm + ' kilometres away'"
+                    (click)="selectLift(lift)"
+                  >
+                    <span>{{ lift.driverName.charAt(0) }}</span>
+                    <small>{{ lift.distanceKm }} km</small>
+                  </button>
+                }
+                <div class="ride-map-road road-one"></div>
+                <div class="ride-map-road road-two"></div>
+                <div class="ride-map-label label-one">Community Road</div>
+                <div class="ride-map-label label-two">Church Street</div>
+              </div>
+
+              <aside class="ride-nearby-list">
+                <h4>Closest drivers</h4>
+                @for (lift of availableLifts(); track lift.id) {
+                  <button
+                    type="button"
+                    [class.selected]="selectedLift()?.id === lift.id"
+                    (click)="selectLift(lift)"
+                  >
+                    <span class="ride-driver-avatar">{{ lift.driverName.charAt(0) }}</span>
+                    <span>
+                      <strong>{{ lift.driverName }}</strong>
+                      <small>{{ lift.vehicle }} · {{ lift.distanceKm }} km away</small>
+                    </span>
+                    <b>{{ lift.rating }} ★</b>
+                  </button>
+                } @empty {
+                  <p>No available lifts were found within 10 km.</p>
+                }
+              </aside>
+              </div>
+
+              @if (selectedLift(); as lift) {
+                <section class="ride-driver-detail">
+                <div class="ride-driver-profile">
+                  <span>{{ lift.driverName.charAt(0) }}</span>
+                  <div>
+                    <p class="eyebrow">SELECTED DRIVER</p>
+                    <h4>{{ lift.driverName }}</h4>
+                    <small>{{ lift.rating }} ★ · {{ lift.distanceKm }} km away</small>
+                  </div>
+                </div>
+                <dl>
+                  <div><dt>Vehicle</dt><dd>{{ lift.vehicle }}</dd></div>
+                  <div><dt>Registration</dt><dd>{{ lift.registrationNumber }}</dd></div>
+                  <div><dt>Seats available</dt><dd>{{ lift.seatsAvailable }}</dd></div>
+                  <div><dt>Going to</dt><dd>{{ lift.destination }}</dd></div>
+                  <div><dt>Departure</dt><dd>{{ lift.departureTime }}</dd></div>
+                </dl>
+                <div class="ride-detail-actions">
+                  <button type="button" class="ride-cancel" (click)="cancelLiftSelection()">Cancel</button>
+                  <button type="button" class="ride-request" (click)="requestSelectedLift()">Ask for lift</button>
+                </div>
+                </section>
+              }
+            }
+
+            @if (rideNotice()) {
+              <p class="ride-notice" role="status">{{ rideNotice() }}</p>
+            }
+
+            <div class="ride-request-columns">
+              <section>
+                <h4>My lift requests</h4>
+                @for (request of outgoingRideRequests(); track request.id) {
+                  <article>
+                    <div>
+                      <strong>{{ request.driverName }}</strong>
+                      <small>{{ request.vehicle }} · {{ request.pickupLabel }}</small>
+                    </div>
+                    <span [class.accepted]="request.status === 'ACCEPTED'">
+                      {{ request.driverMessage || request.status }}
+                    </span>
+                    @if (request.status === 'PENDING') {
+                      <button type="button" (click)="cancelRideRequest(request)">Cancel</button>
+                    }
+                  </article>
+                } @empty {
+                  <p>You have not requested a lift yet.</p>
+                }
+              </section>
+
+              <section>
+                <h4>Requests for my lift</h4>
+                @for (request of incomingRideRequests(); track request.id) {
+                  <article>
+                    <div>
+                      <strong>{{ request.passengerName }}</strong>
+                      <small>{{ request.passengerTelephone }} · Shared pickup location</small>
+                    </div>
+                    @if (request.status === 'PENDING') {
+                      <div>
+                        <button type="button" (click)="respondToRideRequest(request, false)">Decline</button>
+                        <button type="button" (click)="respondToRideRequest(request, true)">Accept</button>
+                      </div>
+                    } @else {
+                      <span [class.accepted]="request.status === 'ACCEPTED'">
+                        {{ request.driverMessage || request.status }}
+                      </span>
+                    }
+                  </article>
+                } @empty {
+                  <p>No members have requested your lift.</p>
+                }
+              </section>
+            </div>
+          </section>
+        } @else if (isActiveEduUView(service)) {
+          <section class="eduu-coming-soon" aria-labelledby="eduu-coming-soon-title">
+            <img src="/service-education.png" alt="" aria-hidden="true">
+            <div>
+              <p class="eyebrow">EDUU LEARNING SERVICES</p>
+              <h3 id="eduu-coming-soon-title">Coming soon</h3>
+              <p>
+                Your EduU subscription is active. Courses, learning resources and
+                education opportunities will be available here soon.
+              </p>
+            </div>
+          </section>
+        } @else if (isActiveGrantDistributionView(service)) {
+          <section class="grant-distribution-workspace" aria-labelledby="grant-distribution-title">
+            <div class="trader-training-heading">
+              <img src="/trader-connect-logo.png" alt="" aria-hidden="true">
+              <div>
+                <p class="eyebrow">MY GRANT DISTRIBUTION</p>
+                <h3 id="grant-distribution-title">{{ memberGrantRecord.programmeName }}</h3>
+                <p>
+                  {{ user()?.firstName }} {{ user()?.lastName }} ·
+                  {{ grantDistributionProgramme.community }} ·
+                  {{ memberGrantRecord.applicationReference }}
+                </p>
+              </div>
+            </div>
+
+            <div class="trader-training-summary">
+              <article>
+                <span>Application status</span>
+                <strong>{{ memberGrantRecord.applicationStatus }}</strong>
+              </article>
+              <article>
+                <span>Approved for me</span>
+                <strong>{{ memberGrantRecord.approvedAmount | currency:'ZAR' }}</strong>
+              </article>
+              <article>
+                <span>Paid to my wallet</span>
+                <strong>{{ memberGrantRecord.paidAmount | currency:'ZAR' }}</strong>
+              </article>
+              <article>
+                <span>Still outstanding</span>
+                <strong>{{ memberGrantOutstanding() | currency:'ZAR' }}</strong>
+              </article>
+            </div>
+
+            <section class="trader-training-config grant-member-record">
+              <h4>My grant record</h4>
+              <dl>
+                <div><dt>Payment status</dt><dd>{{ memberGrantRecord.paymentStatus }}</dd></div>
+                <div><dt>Payment reference</dt><dd>{{ memberGrantRecord.paymentReference }}</dd></div>
+                <div><dt>Reconciliation</dt><dd>{{ memberGrantRecord.reconciliationStatus }}</dd></div>
+                <div><dt>Last updated</dt><dd>{{ memberGrantRecord.lastUpdated }}</dd></div>
+              </dl>
+            </section>
+
+            <article class="grant-next-step">
+              <span>Next step</span>
+              <p>{{ memberGrantRecord.nextStep }}</p>
+            </article>
+
+            <div class="grant-action-grid member-grant-actions">
+              <button type="button">View wallet payout</button>
+              <button type="button">Upload proof</button>
+              <button type="button">Contact grant admin</button>
+            </div>
+          </section>
+        } @else if (isActiveTraderTrainingView(service)) {
+          <section class="trader-training-workspace" aria-labelledby="trader-training-title">
+            @if (activeTraderTraining(); as programme) {
+              <div class="trader-training-heading">
+                <img src="/trader-connect-logo.png" alt="" aria-hidden="true">
+                <div>
+                  <p class="eyebrow">TRADER TRAINING</p>
+                  <h3 id="trader-training-title">{{ programme.programmeName }}</h3>
+                  <p>
+                    {{ programme.programmeDescription }} · {{ programme.programmeStatus }} ·
+                    {{ programme.unlockRule }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="trader-training-summary">
+                <article>
+                  <span>Total Grant Allocation</span>
+                  <strong>{{ programme.totalGrantAmount | currency:'ZAR' }}</strong>
+                </article>
+                <article>
+                  <span>Funding Released</span>
+                  <strong>{{ programme.receivedAmount | currency:'ZAR' }}</strong>
+                </article>
+                <article>
+                  <span>Funding Remaining</span>
+                  <strong>{{ programme.remainingAmount | currency:'ZAR' }}</strong>
+                </article>
+                <article>
+                  <span>Training Progress</span>
+                  <strong>{{ traderTrainingCompletedModules() }} of {{ programme.modules.length }}</strong>
+                </article>
+              </div>
+
+              <div class="trader-training-progress">
+                <progress [value]="traderTrainingProgress()" max="100"></progress>
+                <span>{{ traderTrainingProgress() }}% complete · {{ traderTrainingAttemptTotal() }} assessment attempts recorded</span>
+              </div>
+
+              <section class="trader-training-config">
+                <h4>Programme configuration</h4>
+                <dl>
+                  <div><dt>Funding organisation</dt><dd>{{ programme.fundingOrganisation }}</dd></div>
+                  <div><dt>Pass requirement</dt><dd>{{ programme.defaultPassPercentage }}%</dd></div>
+                  <div><dt>Initial funding</dt><dd>{{ programme.initialFundingOnApproval ? (programme.initialFundingAmount | currency:'ZAR') : 'No upfront payment' }}</dd></div>
+                  <div><dt>Beneficiary limit</dt><dd>{{ programme.maximumBeneficiaries }}</dd></div>
+                </dl>
+              </section>
+
+              @if (currentTraderTrainingModule(); as currentModule) {
+                <article class="current-module-card">
+                  <span>Current module</span>
+                  <strong>{{ currentModule.moduleName }}</strong>
+                  <p>{{ currentModule.moduleDescription }}</p>
+                </article>
+              }
+
+              @if (traderTrainingNotice()) {
+                <p class="trader-training-notice">{{ traderTrainingNotice() }}</p>
+              }
+
+              <div class="trader-training-modules">
+                @for (module of traderTrainingModulesForView(); track module.id) {
+                  <article [class.locked]="module.status === 'Locked'" [class.completed]="module.status === 'Completed'">
+                    <div class="module-title">
+                      <span>Module {{ module.sequence }}</span>
+                      <h4>{{ module.moduleName }}</h4>
+                      <p>{{ module.moduleDescription }}</p>
+                    </div>
+
+                    <p class="module-content">{{ module.trainingContent }}</p>
+
+                    @if (module.practicalExerciseTitle) {
+                      <div class="exercise-fields">
+                        <strong>{{ module.practicalExerciseTitle }}</strong>
+                        <span>{{ module.practicalExerciseCalculation }}</span>
+                        <ul>
+                          @for (field of module.practicalExerciseFields; track field) {
+                            <li>{{ field }}</li>
+                          }
+                        </ul>
+                      </div>
+                    }
+
+                    <dl>
+                      <div><dt>Status</dt><dd>{{ module.status }}</dd></div>
+                      <div><dt>Required</dt><dd>{{ module.requiredPassPercentage }}%</dd></div>
+                      <div><dt>Funding</dt><dd>{{ module.fundingAmount | currency:'ZAR' }}</dd></div>
+                      <div><dt>Funding status</dt><dd>{{ module.fundingStatus }}</dd></div>
+                      <div><dt>Payment ref</dt><dd>{{ module.payment?.paymentReference || 'Trader + Programme + Module' }}</dd></div>
+                      <div><dt>Attempts</dt><dd>{{ module.attempts.length }}</dd></div>
+                      <div><dt>Started</dt><dd>{{ module.dateStarted ? (module.dateStarted | date:'mediumDate') : 'Not started' }}</dd></div>
+                      <div><dt>Completed</dt><dd>{{ module.dateCompleted ? (module.dateCompleted | date:'mediumDate') : 'Not completed' }}</dd></div>
+                      <div><dt>Lesson viewed</dt><dd>{{ module.trainingContentViewed ? 'Yes' : 'No' }}</dd></div>
+                    </dl>
+
+                    @if (module.status === 'Available' || module.status === 'In Progress') {
+                      <button type="button" (click)="submitPerfectTraderTrainingAttempt(module)">Complete lesson and quiz</button>
+                    } @else if (module.status === 'Locked') {
+                      <small>Complete the previous module to unlock.</small>
+                    } @else {
+                      <small>Completed with duplicate-payment protection on {{ module.payment?.paymentReference || 'this milestone' }}.</small>
+                    }
+
+                    @if (module.attempts.length) {
+                      <div class="attempt-list">
+                        @for (attempt of module.attempts; track attempt.attemptNumber) {
+                          <span>Attempt {{ attempt.attemptNumber }} · {{ attempt.score }}% · {{ attempt.passed ? 'Passed' : 'Failed' }} · {{ attempt.timeTaken }}</span>
+                        }
+                      </div>
+                    }
+                  </article>
+                }
+              </div>
+            } @else {
+              <div class="trader-training-heading">
+                <img src="/trader-connect-logo.png" alt="" aria-hidden="true">
+                <div>
+                  <p class="eyebrow">TRADER TRAINING</p>
+                  <h3 id="trader-training-title">Trader Training is being configured</h3>
+                  <p>No active training programme is linked to this member and community yet.</p>
+                </div>
+              </div>
+            }
+          </section>
+        } @else if (isActiveVumaView(service)) {
+          <section class="vuma-workspace" aria-labelledby="vuma-workspace-title">
+            <div class="vuma-workspace-heading">
+              <img src="/service-vuma-fibre.png" alt="" aria-hidden="true">
+              <div>
+                <p class="eyebrow">VUMA FORCE SERVICE</p>
+                <h3 id="vuma-workspace-title">Your active Vuma Force services</h3>
+                <p>
+                  Vuma Force is active on your account. Open Education or buy
+                  Vuma Force data from inside this service.
+                </p>
+              </div>
+            </div>
+
+            @if (vumaPublicity().active) {
+              <article class="vuma-publicity-card">
+                <img [src]="vumaPublicity().image" alt="Vuma subscriber publicity">
+                <div>
+                  <p class="eyebrow">VUMA PUBLICITY</p>
+                  <h4>{{ vumaPublicity().title }}</h4>
+                  <p>{{ vumaPublicity().message }}</p>
+                  <a [href]="vumaPublicity().link" target="_blank" rel="noopener">View campaign</a>
+                </div>
+              </article>
+            }
+
+            <div class="vuma-inner-services">
+              <article>
+                <img src="/service-education.png" alt="Education">
+                <div>
+                  <span>Included</span>
+                  <h4>Education</h4>
+                  <p>EduU learning resources and education opportunities for Vuma-connected members.</p>
+                </div>
+                <button type="button">Open Education</button>
+              </article>
+              <article class="vuma-micro-isp-card">
+                <img src="/vuma-shop-in-box-micro-isp.png" alt="Vuma Shop-in-Box micro ISP business">
+                <div>
+                  <span>Business opportunity</span>
+                  <h4>Start a Micro ISP Business</h4>
+                  <p>
+                    Apply to run a Vuma-powered Shop-in-Box retail unit for data,
+                    devices, airtime, payments, fibre and home services in your community.
+                  </p>
+                </div>
+                <button type="button" (click)="vumaMicroIspOpen.set(true)">
+                  Start application
+                </button>
+              </article>
+            </div>
+
+            @if (vumaMicroIspOpen()) {
+              <form class="vuma-micro-isp-form" (ngSubmit)="submitVumaMicroIspInterest()">
+                <label>
+                  <span>Your name</span>
+                  <input [formControl]="vumaMicroIspName">
+                </label>
+                <label>
+                  <span>Cellphone</span>
+                  <input type="tel" [formControl]="vumaMicroIspPhone">
+                </label>
+                <label>
+                  <span>Community or area</span>
+                  <input [formControl]="vumaMicroIspArea" placeholder="Example: Umlazi, Soweto, Pinetown">
+                </label>
+                <label>
+                  <span>Preferred unit size</span>
+                  <select [formControl]="vumaMicroIspSize">
+                    <option>10ft mini unit</option>
+                    <option>20ft standard unit</option>
+                    <option>30ft flagship unit</option>
+                    <option>Double expanded retail hub</option>
+                  </select>
+                </label>
+                <label class="wide">
+                  <span>Why this area is a good fit</span>
+                  <textarea
+                    [formControl]="vumaMicroIspNotes"
+                    placeholder="Tell Vuma about your community, foot traffic, location or business experience."
+                  ></textarea>
+                </label>
+                <button type="submit">Submit interest</button>
+              </form>
+              @if (vumaMicroIspSubmitted()) {
+                <p class="purchase-success">{{ vumaMicroIspSubmitted() }}</p>
+              }
+            }
+
+            <section class="vuma-force-panel" aria-labelledby="vuma-force-title">
+              <img src="/vuma-force-distributed-retail-system.png" alt="Vuma Force distributed retail system">
+              <div>
+                <p class="eyebrow">VUMA FORCE</p>
+                <h4 id="vuma-force-title">Distributed retail system</h4>
+                <p>
+                  The Micro ISP opportunity is part of Vuma Force: a networked retail
+                  ecosystem connecting entrepreneurs, retail units, suppliers and
+                  customers in local communities.
+                </p>
+                <ul>
+                  <li>Local entrepreneur ownership</li>
+                  <li>Shop-in-Box retail unit</li>
+                  <li>Vuma standards and governance</li>
+                  <li>Supplier, technology and deployment support</li>
+                </ul>
+              </div>
+            </section>
+
+            @if (selectedPlanCode() === 'buy-vuma-data') {
+              <div class="vuma-data-form">
+                <label>
+                  <span>Vuma Force account or linked cellphone</span>
+                  <input
+                    type="text"
+                    [formControl]="vumaFibreAccount"
+                    placeholder="Enter Vuma account or cellphone"
+                  >
+                </label>
+                <label>
+                  <span>Data bundle</span>
+                  <select [formControl]="selectedVumaDataBundle">
+                    @for (bundle of vumaDataBundles(); track bundle.code) {
+                      <option [value]="bundle.code">
+                        {{ bundle.name }} · {{ bundle.dataSize }} · R{{ bundle.price }}
+                      </option>
+                    }
+                  </select>
+                </label>
+                @if (selectedVumaBundle(); as bundle) {
+                  <div class="vuma-bundle-summary">
+                    <span>{{ bundle.dataSize }}</span>
+                    <strong>R{{ bundle.price }}</strong>
+                    <small>Valid for {{ bundle.validity }}</small>
+                  </div>
+                }
+              </div>
+              @if (vumaDataPurchaseComplete()) {
+                <p class="purchase-success">{{ vumaDataPurchaseComplete() }}</p>
+              }
+            }
+          </section>
+        } @else if (service.code === 'community') {
+          <div class="vas-purchase-form">
+            <label>
+              <span>Church</span>
+              <select
+                [formControl]="communityChurchId"
+                (change)="onCommunityChurchChange()"
+              >
+                <option value="">Select a church</option>
+                @for (churchOption of communityChurches(); track churchOption.id) {
+                  <option [value]="churchOption.id">
+                    {{ churchOption.name }} · {{ churchOption.region }}
+                  </option>
+                }
+              </select>
+            </label>
+            @if (communityChurchId.value && communityBranches().length > 0) {
+              <label>
+                <span>Church branch</span>
+                <select [formControl]="communityBranchId">
+                  <option value="">Select a church branch</option>
+                  @for (branch of communityBranches(); track branch.id) {
+                    <option [value]="branch.id">{{ branch.branchName }}</option>
+                  }
+                </select>
+              </label>
+            }
+          </div>
+        }
+
+        @if (
+          isActiveFuneralView(service) ||
+          isActiveReferralView(service) ||
+          isActiveWalletView(service) ||
+          isActiveCatchRideView(service) ||
+          isActiveEduUView(service) ||
+          isActiveGrantDistributionView(service) ||
+          isActiveTraderTrainingView(service)
+        ) {
+        } @else if (service.application) {
+          <div class="application-documents">
+            <label class="document-upload">
+              <span class="document-number">1</span>
+              <span class="document-copy">
+                <strong>Bank account confirmation letter</strong>
+                <small>PDF, JPG or PNG · Maximum 5 MB</small>
+                @if (bankConfirmationFile()) {
+                  <em>{{ bankConfirmationFile()!.name }}</em>
+                }
+              </span>
+              <span class="choose-file">Choose file</span>
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                (change)="selectApplicationFile('bank', $event)"
+              >
+            </label>
+
+            <label class="document-upload">
+              <span class="document-number">2</span>
+              <span class="document-copy">
+                <strong>ID document</strong>
+                <small>PDF, JPG or PNG · Maximum 5 MB</small>
+                @if (idDocumentFile()) {
+                  <em>{{ idDocumentFile()!.name }}</em>
+                }
+              </span>
+              <span class="choose-file">Choose file</span>
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                (change)="selectApplicationFile('id', $event)"
+              >
+            </label>
+          </div>
+        } @else {
+          <div class="plan-list">
+            @for (plan of service.plans; track plan.code) {
+              @if (
+                service.code !== 'vas-services' ||
+                (vasPurchaseEnabled(service) ? plan.code !== 'free' : plan.code === 'free')
+              ) {
+                <label
+                  class="plan-option"
+                  [class.vas-plan]="vasPurchaseEnabled(service)"
+                  [class.provider-plan]="plan.image"
+                  [class.selected]="
+                    service.code === 'funeral'
+                      ? isFuneralPlanSelected(plan.code)
+                      : selectedPlanCode() === plan.code
+                  "
+                >
+                  <input
+                    [type]="
+                      service.code === 'funeral' && plan.code === 'african-bank'
+                        ? 'checkbox'
+                        : 'radio'
+                    "
+                    [name]="
+                      service.code === 'funeral' && plan.code === 'african-bank'
+                        ? 'africanBankFuneralCover'
+                        : 'servicePlan'
+                    "
+                    [value]="plan.code"
+                    [checked]="
+                      service.code === 'funeral'
+                        ? isFuneralPlanSelected(plan.code)
+                        : selectedPlanCode() === plan.code
+                    "
+                    (change)="
+                      service.code === 'funeral'
+                        ? selectFuneralPlan(plan.code)
+                        : selectedPlanCode.set(plan.code)
+                    "
+                  >
+                  <span class="plan-radio"></span>
+                  @if (plan.image) {
+                    <span class="plan-image">
+                      <img [src]="plan.image" [alt]="plan.provider || plan.name">
+                    </span>
+                  }
+                  <span class="plan-copy">
+                    @if (plan.provider) {
+                      <em>{{ plan.provider }}</em>
+                    }
+                    <strong>{{ plan.name }}</strong>
+                    <small>{{ plan.description }}</small>
+                  </span>
+                  <b>{{ plan.price }}</b>
+                </label>
+              }
+            }
+          </div>
+        }
+
+        @if (vasPurchaseEnabled(service)) {
+          <div class="vas-purchase-form">
+            @if (savedVasBeneficiaries().length > 0) {
+              <label>
+                <span>Saved beneficiary</span>
+                <select
+                  [formControl]="vasSelectedBeneficiary"
+                  (change)="selectVasBeneficiary()"
+                >
+                  <option value="">Add new recipient</option>
+                  @for (beneficiary of savedVasBeneficiaries(); track beneficiary.id) {
+                    <option [value]="beneficiary.id">
+                      {{ beneficiary.beneficiaryName }} · {{ beneficiary.beneficiaryType }}
+                    </option>
+                  }
+                </select>
+              </label>
+              <button
+                class="vas-delete-beneficiary"
+                type="button"
+                [disabled]="!vasSelectedBeneficiary.value"
+                (click)="deleteSelectedVasBeneficiary()"
+              >
+                Delete selected
+              </button>
+            }
+            <label>
+              <span>Buying for</span>
+              <select [formControl]="vasBuyingFor" (change)="onVasBuyingForChange()">
+                <option value="MYSELF">Myself</option>
+                <option value="SOMEONE_ELSE">Someone else</option>
+              </select>
+            </label>
+            @if (vasBuyingFor.value === 'SOMEONE_ELSE') {
+              <label>
+                <span>Recipient name (optional)</span>
+                <input
+                  type="text"
+                  [formControl]="vasRecipientName"
+                  placeholder="Recipient name"
+                >
+              </label>
+            }
+            @if (selectedPlanCode() === 'electricity') {
+              <label>
+                <span>Municipality / provider</span>
+                <select [formControl]="vasProvider">
+                  @for (provider of vasProviders(); track provider) {
+                    <option [value]="provider">{{ provider }}</option>
+                  }
+                </select>
+              </label>
+            } @else {
+              <label>
+                <span>Network</span>
+                <select [formControl]="vasNetwork" (change)="onVasNetworkChange()">
+                  @for (network of vasNetworks(); track network) {
+                    <option [value]="network">{{ network.replace('_', ' ') }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                <span>Purchase type</span>
+                <select [formControl]="vasPurchaseType">
+                  <option value="AIRTIME">Airtime</option>
+                  <option value="DATA">Data</option>
+                  <option value="COMBO">Combo / bundle</option>
+                </select>
+              </label>
+              @if (vasPurchaseType.value !== 'AIRTIME') {
+                <label>
+                  <span>Data bundle</span>
+                  <select [formControl]="vasBundleName" (change)="selectVasBundle()">
+                    <option value="">Choose a bundle</option>
+                    @for (bundle of vasBundles(); track bundle.bundleName) {
+                      <option [value]="bundle.bundleName">
+                        {{ bundle.bundleName }} · {{ bundle.dataSize }} · R{{ bundle.price }}
+                      </option>
+                    }
+                  </select>
+                </label>
+              }
+            }
+            <label>
+              <span>
+                {{ selectedPlanCode() === 'electricity' ? 'Meter number' : 'Mobile number' }}
+              </span>
+              <input
+                type="text"
+                [formControl]="vasAccount"
+                [placeholder]="selectedPlanCode() === 'electricity' ? 'Enter meter number' : 'Enter mobile number'"
+              >
+            </label>
+            <label>
+              <span>
+                {{ selectedPlanCode() === 'electricity' ? 'Confirm meter number' : 'Confirm mobile number' }}
+              </span>
+              <input
+                type="text"
+                [formControl]="vasConfirmAccount"
+                [placeholder]="selectedPlanCode() === 'electricity' ? 'Confirm meter number' : 'Confirm mobile number'"
+              >
+            </label>
+            <label>
+              <span>Purchase amount</span>
+              <div class="amount-input">
+                <b>R</b>
+                <input type="number" min="1" step="1" [formControl]="vasAmount" placeholder="0.00">
+              </div>
+            </label>
+            @if (vasBuyingFor.value === 'SOMEONE_ELSE') {
+              <label class="vas-save-recipient">
+                <input type="checkbox" [formControl]="vasSaveBeneficiary">
+                <span>Save recipient for later</span>
+              </label>
+            }
+          </div>
+          @if (vasPurchaseComplete()) {
+            <p class="purchase-success">{{ vasPurchaseComplete() }}</p>
+          }
+        }
+
+        @if (
+          service.code === 'funeral' &&
+          !isActiveFuneralView(service) &&
+          africanBankFuneralSelected()
+        ) {
+          <div class="plan-notice">
+            <strong>African Bank card collection</strong>
+            <p>
+              You can collect your African Bank card at your closest African Bank
+              branch or at your church reception.
+            </p>
+          </div>
+        }
+
+        @if (service.code === 'vuma-fibre' && !subscriptionFor(service.code)) {
+          <section class="vuma-consent-panel">
+            <strong>Vuma Force availability enquiry</strong>
+            <p>
+              Do you want to share your personal details with Vuma so they can contact you
+              about fibre availability in your area?
+            </p>
+            <label>
+              <input
+                type="checkbox"
+                [checked]="vumaSharingConsent()"
+                (change)="vumaSharingConsent.set($any($event.target).checked)"
+              >
+              <span>
+                Yes, I consent to Duranki sharing my name, contact details and address
+                with Vuma for this fibre availability enquiry.
+              </span>
+            </label>
+          </section>
+        }
+
+        @if (
+          !isActiveFuneralView(service) &&
+          !isActiveReferralView(service) &&
+          !isActiveWalletView(service) &&
+          !isActiveCatchRideView(service) &&
+          !isActiveEduUView(service) &&
+          !isActiveGrantDistributionView(service) &&
+          !isActiveTraderTrainingView(service) &&
+          !isActiveVumaView(service) &&
+          !service.application &&
+          !vasPurchaseEnabled(service)
+        ) {
+          <label class="terms-acceptance">
+            <input
+              type="checkbox"
+              [checked]="termsAccepted()"
+              (change)="termsAccepted.set($any($event.target).checked)"
+            >
+            <span>
+              @if (hasServiceTerms(service)) {
+                I confirm that I have read and accepted the
+                {{ serviceTermsTitle(service) }} Terms and Conditions.
+                I agree that my electronic acceptance, identity, date and time,
+                document version, document fingerprint, IP address and browser
+                details may be retained as an acceptance record.
+              } @else {
+                I have read and accept the Terms and Conditions for this service,
+                and agree that my electronic acceptance may be retained as a record.
+              }
+            </span>
+          </label>
+        }
+
+        @if (subscriptionError()) {
+          <p class="subscription-error" role="alert">{{ subscriptionError() }}</p>
+        }
+
+        @if (
+          isActiveFuneralView(service) ||
+          isActiveReferralView(service) ||
+          isActiveWalletView(service) ||
+          isActiveCatchRideView(service) ||
+          isActiveEduUView(service) ||
+          isActiveGrantDistributionView(service) ||
+          isActiveTraderTrainingView(service) ||
+          (service.code === 'community-membership' && subscriptionFor('community-membership')) ||
+          (isActiveVumaView(service) && selectedPlanCode() !== 'buy-vuma-data')
+        ) {
+          <button
+            class="confirm-subscription"
+            type="button"
+            (click)="closeSubscription()"
+          >
+            Close
+          </button>
+        } @else if (service.application) {
+          <button
+            class="confirm-subscription"
+            type="button"
+            [disabled]="!bankConfirmationFile() || !idDocumentFile() || subscriptionLoading()"
+            (click)="submitStepUpApplication()"
+          >
+            {{ subscriptionLoading() ? 'Uploading...' : 'Submit application' }}
+          </button>
+          <p class="payment-note">
+            Your documents are private and will only be used to review this application.
+          </p>
+        } @else if (vasPurchaseEnabled(service)) {
+          <button
+            class="confirm-subscription"
+            type="button"
+            (click)="completeVasPurchase()"
+          >
+            Buy now
+          </button>
+          <p class="payment-note">
+            Purchase confirmation will be recorded against your Duranki account.
+          </p>
+        } @else if (isActiveVumaView(service) && selectedPlanCode() === 'buy-vuma-data') {
+          <button
+            class="confirm-subscription"
+            type="button"
+            (click)="completeVumaDataPurchase()"
+          >
+            Buy Vuma Force data
+          </button>
+          <p class="payment-note">
+            This purchase belongs to Vuma Force and is separate from VAS Services.
+          </p>
+        } @else if (service.code === 'community-membership') {
+          <div class="membership-payment-panel">
+            <strong>Monthly access fee: R{{ (communityMembershipFeeCents() / 100).toFixed(2) }}</strong>
+            <p>
+              Pay from your Duranki Wallet if you have balance, or pay by bank card.
+              Once paid, the full community dashboard and enabled services are unlocked.
+            </p>
+            <div>
+              <button
+                type="button"
+                [disabled]="!termsAccepted() || subscriptionLoading()"
+                (click)="payCommunityMembershipFromWallet()"
+              >
+                Pay from Wallet
+              </button>
+              <button
+                type="button"
+                [disabled]="!termsAccepted() || subscriptionLoading()"
+                (click)="confirmSubscription()"
+              >
+                Pay by Card
+              </button>
+            </div>
+          </div>
+          <p class="payment-note">
+            Card payment is recorded through the current Duranki subscription flow. A live payment gateway can be connected later.
+          </p>
+        } @else {
+          <button
+            class="confirm-subscription"
+            type="button"
+            [disabled]="
+              !termsAccepted() ||
+              subscriptionLoading() ||
+              (service.code === 'vuma-fibre' && !vumaSharingConsent())
+            "
+            (click)="confirmSubscription()"
+          >
+            @if (subscriptionLoading()) {
+              Processing...
+            } @else {
+              Confirm subscription
+            }
+          </button>
+          <p class="payment-note">
+            Paid plans are recorded for testing. Payment gateway collection will be connected separately.
+          </p>
+        }
+      </section>
+    </div>
+  }
+
+  @if (marketplaceOpen()) {
+    <div class="modal-backdrop" (click)="closeMarketplace()">
+      <section
+        class="marketplace-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="marketplace-title"
+        (click)="$event.stopPropagation()"
+      >
+        <button
+          class="modal-close"
+          type="button"
+          aria-label="Close marketplace"
+          (click)="closeMarketplace()"
+        >
+          ×
+        </button>
+
+        <header class="marketplace-heading">
+          <div>
+            <p class="eyebrow">COMMUNITY MARKETPLACE</p>
+            <h2 id="marketplace-title">Buy and Sell</h2>
+            <p>Discover items offered by trusted Duranki members.</p>
+          </div>
+          <div class="business-heading-actions">
+            <button type="button" class="business-tools-button" (click)="openBusinessCenter('BUY_SELL')">
+              Business tools
+            </button>
+            <button type="button" (click)="listingFormOpen.set(!listingFormOpen())">
+              {{ listingFormOpen() ? 'Close form' : '+ List an item' }}
+            </button>
+          </div>
+        </header>
+
+        @if (listingFormOpen()) {
+          <section class="listing-form" aria-labelledby="listing-form-title">
+            <div class="listing-image-upload">
+              <label>
+                @if (listingImage()) {
+                  <img [src]="listingImage()" alt="Item preview">
+                } @else {
+                  <span>Upload item picture</span>
+                  <small>PNG or JPG</small>
+                }
+                <input type="file" accept="image/png,image/jpeg" (change)="selectListingImage($event)">
+              </label>
+            </div>
+            <div class="listing-fields">
+              <h3 id="listing-form-title">List your item</h3>
+              <div class="listing-row">
+                <label>
+                  <span>Item name</span>
+                  <input type="text" [formControl]="listingTitle" placeholder="What are you selling?">
+                </label>
+                <label>
+                  <span>Price</span>
+                  <div class="amount-input">
+                    <b>R</b>
+                    <input type="number" min="1" [formControl]="listingPrice" placeholder="0.00">
+                  </div>
+                </label>
+              </div>
+              <div class="listing-row">
+                <label>
+                  <span>Category</span>
+                  <select [formControl]="listingCategory">
+                    @for (category of buySellCategories; track category) {
+                      <option [value]="category">{{ category }}</option>
+                    }
+                  </select>
+                </label>
+                <label>
+                  <span>Condition</span>
+                  <select [formControl]="listingCondition">
+                    <option value="NEW">New</option>
+                    <option value="SECOND_HAND">Second-hand</option>
+                    <option value="USED">Used</option>
+                    <option value="REFURBISHED">Refurbished</option>
+                  </select>
+                </label>
+              </div>
+              <label>
+                <span>Area / location</span>
+                <input type="text" [formControl]="listingArea" placeholder="Town or area">
+              </label>
+              <label>
+                <span>Description</span>
+                <textarea
+                  rows="3"
+                  [formControl]="listingDescription"
+                  placeholder="Describe the condition and important details"
+                ></textarea>
+              </label>
+              <p class="listing-owner">
+                Seller: <strong>{{ user()?.firstName }} {{ user()?.lastName }}</strong>
+              </p>
+              @if (businessesFor('BUY_SELL').length) {
+                <label>
+                  <span>Publish as</span>
+                  <select [formControl]="listingBusinessId">
+                    <option value="">My personal profile</option>
+                    @for (business of businessesFor('BUY_SELL'); track business.id) {
+                      <option [value]="business.id">{{ business.businessName }}</option>
+                    }
+                  </select>
+                </label>
+              }
+              <button class="publish-listing" type="button" (click)="addMarketplaceListing()">
+                Publish item
+              </button>
+            </div>
+          </section>
+        }
+
+        @if (marketplaceConversations().length) {
+          <section class="marketplace-filters" aria-label="Buy and Sell conversations">
+            <strong>My conversations</strong>
+            @for (conversation of marketplaceConversations(); track conversation.id) {
+              <button type="button" (click)="openMarketplaceConversation(conversation)">
+                {{ conversation.listingTitle }} ·
+                {{
+                  conversation.sellerUserId === currentUserId()
+                    ? conversation.buyerName
+                    : conversation.sellerName
+                }}
+              </button>
+            }
+          </section>
+        }
+
+        <section class="marketplace-filters" aria-label="Search Buy and Sell listings">
+          <input [formControl]="marketplaceSearch" placeholder="Search items">
+          <input [formControl]="marketplaceArea" placeholder="Area / location">
+          <select [formControl]="marketplaceCategory">
+            <option value="">All categories</option>
+            @for (category of buySellCategories; track category) {
+              <option [value]="category">{{ category }}</option>
+            }
+          </select>
+          <select [formControl]="marketplaceCondition">
+            <option value="">Any condition</option>
+            <option value="NEW">New</option>
+            <option value="SECOND_HAND">Second-hand</option>
+            <option value="USED">Used</option>
+            <option value="REFURBISHED">Refurbished</option>
+          </select>
+          <input type="number" min="0" [formControl]="marketplaceMinPrice" placeholder="Min price">
+          <input type="number" min="0" [formControl]="marketplaceMaxPrice" placeholder="Max price">
+          <input [formControl]="marketplaceCommunity" placeholder="Church / branch">
+          <select [formControl]="marketplaceRating">
+            <option value="">Any seller rating</option>
+            <option value="4">4+ stars</option>
+            <option value="4.5">4.5+ stars</option>
+          </select>
+          <select [formControl]="marketplaceStatus">
+            <option value="">Any status</option>
+            <option value="AVAILABLE">Available</option>
+            <option value="RESERVED">Reserved</option>
+            <option value="SOLD">Sold</option>
+          </select>
+          <button type="button" (click)="applyMarketplaceFilters()">Search</button>
+          <button type="button" (click)="clearMarketplaceFilters()">Clear</button>
+        </section>
+
+        <div class="marketplace-grid">
+          @for (listing of marketplaceListings(); track listing.id) {
+            <article class="marketplace-item">
+              <div class="marketplace-image">
+                <img [src]="listing.images?.[0] || '/service-buy-and-sell.png'" [alt]="listing.title">
+              </div>
+              <div class="marketplace-copy">
+                <span>Listed by {{ listing.sellerName }}</span>
+                <h3>{{ listing.title }}</h3>
+                <p>{{ listing.description }}</p>
+                <small>
+                  {{ listing.category }} · {{ listing.condition.replace('_', ' ') }} ·
+                  {{ listing.area }} · {{ listing.status }}
+                </small>
+                <div>
+                  <strong>R{{ listing.price.toFixed(2) }}</strong>
+                  <span class="marketplace-card-actions">
+                    <button type="button" (click)="viewMarketplaceListing(listing)">View details</button>
+                    <button type="button" (click)="startMarketplaceChat(listing)">Chat</button>
+                  </span>
+                </div>
+              </div>
+            </article>
+          }
+        </div>
+
+        @if (selectedMarketplaceListing(); as listing) {
+          <section class="marketplace-detail">
+            <div>
+              <p class="eyebrow">LISTING DETAILS</p>
+              <h3>{{ listing.title }}</h3>
+              <p>{{ listing.description }}</p>
+              <dl>
+                <div><dt>Category</dt><dd>{{ listing.category }}</dd></div>
+                <div><dt>Condition</dt><dd>{{ listing.condition.replace('_', ' ') }}</dd></div>
+                <div><dt>Area</dt><dd>{{ listing.area }}</dd></div>
+                <div><dt>Status</dt><dd>{{ listing.status }}</dd></div>
+                <div><dt>Listed</dt><dd>{{ listing.createdAt | date:'mediumDate' }}</dd></div>
+              </dl>
+            </div>
+            <aside>
+              <strong>{{ listing.sellerName }}</strong>
+              @if (listing.sellerChurchName || listing.sellerCommunityName) {
+                <span>{{ listing.sellerChurchName || listing.sellerCommunityName }}</span>
+              }
+              @if (listing.sellerBranchName) {
+                <span>{{ listing.sellerBranchName }}</span>
+              }
+              @if (listing.sellerRating) {
+                <span>{{ listing.sellerRating }} / 5 seller rating</span>
+              }
+              <button type="button" (click)="startMarketplaceChat(listing)">Chat with seller</button>
+            </aside>
+          </section>
+        }
+
+        @if (marketplaceConversation(); as conversation) {
+          <section class="marketplace-chat">
+            <header>
+              <div>
+                <p class="eyebrow">DIRECT CHAT</p>
+                <h3>{{ selectedMarketplaceListing()?.title }}</h3>
+              </div>
+              <span>Conversation {{ conversation.id }}</span>
+            </header>
+            <div class="marketplace-chat-messages">
+              @for (message of marketplaceMessages(); track message.id) {
+                <p [class.mine]="message.senderUserId === currentUserId()">
+                  <strong>{{ message.messageType.replace('_', ' ') }}</strong>
+                  {{ message.messageText }}
+                </p>
+              }
+              @for (request of marketplacePaymentRequests(); track request.id) {
+                <article class="marketplace-payment-request">
+                  <strong>Payment request: R{{ request.requestedAmount.toFixed(2) }}</strong>
+                  <p>{{ request.description }}</p>
+                  <span>{{ request.status }}</span>
+                  @if (
+                    request.status === 'PENDING' &&
+                    request.requestedFromUserId === currentUserId()
+                  ) {
+                    <div>
+                      <button type="button" (click)="payMarketplaceRequest(request)">Pay from Wallet</button>
+                      <button type="button" (click)="declineMarketplaceRequest(request)">Decline</button>
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+            <form (submit)="sendMarketplaceMessage(); $event.preventDefault()">
+              <input [formControl]="marketplaceChatText" placeholder="Write a message to the seller">
+              <button type="submit">Send</button>
+            </form>
+            @if (isMarketplaceSeller()) {
+              <div class="marketplace-payment-compose">
+                <input
+                  type="number"
+                  min="1"
+                  [formControl]="marketplaceRequestAmount"
+                  placeholder="Payment amount"
+                >
+                <button type="button" (click)="sendMarketplacePaymentRequest()">
+                  Send payment request
+                </button>
+              </div>
+            }
+            @if (marketplaceNotice()) {
+              <strong class="marketplace-notice">{{ marketplaceNotice() }}</strong>
+            }
+          </section>
+        }
+      </section>
+    </div>
+  }
+
+  @if (propertyMarketplaceOpen()) {
+    <div class="modal-backdrop" (click)="closePropertyMarketplace()">
+      <section
+        class="marketplace-modal property-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="property-marketplace-title"
+        (click)="$event.stopPropagation()"
+      >
+        <button
+          class="modal-close"
+          type="button"
+          aria-label="Close Keytcha Properties"
+          (click)="closePropertyMarketplace()"
+        >
+          &times;
+        </button>
+
+        <header class="marketplace-heading">
+          <div>
+            <p class="eyebrow">PROPERTY MARKETPLACE</p>
+            <h2 id="property-marketplace-title">Keytcha Properties</h2>
+            <p>Find property rentals and sales listed by Duranki members.</p>
+          </div>
+          <div class="business-heading-actions">
+            <button type="button" class="business-tools-button" (click)="openBusinessCenter('KEYTCHA_PROPERTIES')">
+              Business tools
+            </button>
+            <button type="button" (click)="propertyFormOpen.set(!propertyFormOpen())">
+              {{ propertyFormOpen() ? 'Close form' : '+ List a property' }}
+            </button>
+          </div>
+        </header>
+
+        @if (propertyFormOpen()) {
+          <section class="listing-form" aria-labelledby="property-form-title">
+            <div class="listing-image-upload">
+              <label>
+                @if (propertyImage()) {
+                  <img [src]="propertyImage()" alt="Property preview">
+                } @else {
+                  <span>Upload property picture</span>
+                  <small>PNG or JPG</small>
+                }
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  (change)="selectPropertyImage($event)"
+                >
+              </label>
+            </div>
+            <div class="listing-fields">
+              <h3 id="property-form-title">List a rental or property for sale</h3>
+              <div class="listing-row property-primary-row">
+                <label>
+                  <span>Listing type</span>
+                  <select [formControl]="propertyListingType">
+                    <option value="RENT">For rent</option>
+                    <option value="SALE">For sale</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Property type</span>
+                  <select [formControl]="propertyType">
+                    @for (type of propertyTypes; track type.value) {
+                      <option [value]="type.value">{{ type.label }}</option>
+                    }
+                  </select>
+                </label>
+              </div>
+              @if (businessesFor('KEYTCHA_PROPERTIES').length) {
+                <label>
+                  <span>Publish as</span>
+                  <select [formControl]="propertyBusinessId">
+                    <option value="">My personal profile</option>
+                    @for (business of businessesFor('KEYTCHA_PROPERTIES'); track business.id) {
+                      <option [value]="business.id">{{ business.businessName }}</option>
+                    }
+                  </select>
+                </label>
+              }
+              <div class="listing-row">
+                <label>
+                  <span>Property title</span>
+                  <input
+                    type="text"
+                    [formControl]="propertyTitle"
+                    placeholder="e.g. Two-bedroom apartment"
+                  >
+                </label>
+                <label>
+                  <span>
+                    {{ propertyListingType.value === 'RENT' ? 'Monthly rent' : 'Sale price' }}
+                  </span>
+                  <div class="amount-input">
+                    <b>R</b>
+                    <input type="number" min="1" [formControl]="propertyPrice" placeholder="0.00">
+                  </div>
+                </label>
+              </div>
+              <div class="property-number-row">
+                <label>
+                  <span>Bedrooms</span>
+                  <input type="number" min="0" [formControl]="propertyBedrooms">
+                </label>
+                <label>
+                  <span>Bathrooms</span>
+                  <input type="number" min="0" [formControl]="propertyBathrooms">
+                </label>
+                <label>
+                  <span>Parking spaces</span>
+                  <input type="number" min="0" [formControl]="propertyParking">
+                </label>
+              </div>
+              <div class="listing-row property-primary-row">
+                <label>
+                  <span>Area / town</span>
+                  <input type="text" [formControl]="propertyArea" placeholder="Town or suburb">
+                </label>
+                <label>
+                  <span>Address (optional)</span>
+                  <input
+                    type="text"
+                    [formControl]="propertyAddress"
+                    placeholder="Property address"
+                  >
+                </label>
+              </div>
+              <label>
+                <span>Description</span>
+                <textarea
+                  rows="3"
+                  [formControl]="propertyDescription"
+                  placeholder="Describe the property, included services and important details"
+                ></textarea>
+              </label>
+              <p class="listing-owner">
+                Property owner: <strong>{{ user()?.firstName }} {{ user()?.lastName }}</strong>
+              </p>
+              <button class="publish-listing" type="button" (click)="addPropertyListing()">
+                Publish property
+              </button>
+            </div>
+          </section>
+        }
+
+        @if (propertyConversations().length) {
+          <section class="marketplace-filters property-conversations" aria-label="Property enquiries">
+            <strong>My property enquiries</strong>
+            @for (conversation of propertyConversations(); track conversation.id) {
+              <button type="button" (click)="openPropertyConversation(conversation)">
+                {{ conversation.listingTitle }} &middot;
+                {{
+                  conversation.ownerUserId === currentUserId()
+                    ? conversation.interestedUserName
+                    : conversation.ownerName
+                }}
+              </button>
+            }
+          </section>
+        }
+
+        <section class="marketplace-filters property-filters" aria-label="Search properties">
+          <input [formControl]="propertySearch" placeholder="Search properties">
+          <select [formControl]="propertyFilterListingType">
+            <option value="">Rent or sale</option>
+            <option value="RENT">For rent</option>
+            <option value="SALE">For sale</option>
+          </select>
+          <select [formControl]="propertyFilterType">
+            <option value="">All property types</option>
+            @for (type of propertyTypes; track type.value) {
+              <option [value]="type.value">{{ type.label }}</option>
+            }
+          </select>
+          <input [formControl]="propertyFilterArea" placeholder="Area / town">
+          <input
+            type="number"
+            min="0"
+            [formControl]="propertyFilterMinPrice"
+            placeholder="Min price"
+          >
+          <input
+            type="number"
+            min="0"
+            [formControl]="propertyFilterMaxPrice"
+            placeholder="Max price"
+          >
+          <input
+            type="number"
+            min="0"
+            [formControl]="propertyFilterBedrooms"
+            placeholder="Min bedrooms"
+          >
+          <select [formControl]="propertyFilterStatus">
+            <option value="">Any status</option>
+            <option value="AVAILABLE">Available</option>
+            <option value="UNDER_OFFER">Under offer</option>
+            <option value="RENTED">Rented</option>
+            <option value="SOLD">Sold</option>
+          </select>
+          <button type="button" (click)="applyPropertyFilters()">Search</button>
+          <button type="button" (click)="clearPropertyFilters()">Clear</button>
+        </section>
+
+        <div class="marketplace-grid property-grid">
+          @for (listing of propertyListings(); track listing.id) {
+            <article class="marketplace-item property-card">
+              <div class="marketplace-image">
+                <img
+                  [src]="listing.images?.[0] || '/service-keycha-properties.png'"
+                  [alt]="listing.title"
+                >
+                <span class="property-type-badge">
+                  {{ listing.listingType === 'RENT' ? 'FOR RENT' : 'FOR SALE' }}
+                </span>
+              </div>
+              <div class="marketplace-copy">
+                <span>{{ listing.propertyType.replace('_', ' ') }}</span>
+                <h3>{{ listing.title }}</h3>
+                <p>{{ listing.description }}</p>
+                <small>
+                  {{ listing.bedrooms }} bed &middot; {{ listing.bathrooms }} bath &middot;
+                  {{ listing.parkingSpaces }} parking &middot; {{ listing.area }}
+                </small>
+                <div>
+                  <strong>{{ propertyPriceLabel(listing) }}</strong>
+                  <span class="marketplace-card-actions">
+                    <button type="button" (click)="viewProperty(listing)">View</button>
+                    <button type="button" (click)="startPropertyConversation(listing)">
+                      Enquire
+                    </button>
+                  </span>
+                </div>
+              </div>
+            </article>
+          } @empty {
+            <p class="property-empty">No properties match your search.</p>
+          }
+        </div>
+
+        @if (selectedProperty(); as listing) {
+          <section class="marketplace-detail property-detail">
+            <div>
+              <p class="eyebrow">
+                {{ listing.listingType === 'RENT' ? 'PROPERTY TO RENT' : 'PROPERTY FOR SALE' }}
+              </p>
+              <h3>{{ listing.title }}</h3>
+              <p>{{ listing.description }}</p>
+              <dl>
+                <div><dt>Property</dt><dd>{{ listing.propertyType.replace('_', ' ') }}</dd></div>
+                <div><dt>Price</dt><dd>{{ propertyPriceLabel(listing) }}</dd></div>
+                <div><dt>Bedrooms</dt><dd>{{ listing.bedrooms }}</dd></div>
+                <div><dt>Bathrooms</dt><dd>{{ listing.bathrooms }}</dd></div>
+                <div><dt>Parking</dt><dd>{{ listing.parkingSpaces }}</dd></div>
+                <div><dt>Area</dt><dd>{{ listing.area }}</dd></div>
+                <div><dt>Status</dt><dd>{{ listing.status.replace('_', ' ') }}</dd></div>
+                <div><dt>Listed</dt><dd>{{ listing.createdAt | date:'mediumDate' }}</dd></div>
+              </dl>
+            </div>
+            <aside>
+              <small>PROPERTY OWNER</small>
+              <strong>{{ listing.ownerName }}</strong>
+              @if (listing.ownerCommunityName) {
+                <span>{{ listing.ownerCommunityName }}</span>
+              }
+              <span>{{ listing.area }}</span>
+              <button type="button" (click)="startPropertyConversation(listing)">
+                Message property owner
+              </button>
+            </aside>
+          </section>
+        }
+
+        @if (propertyConversation(); as conversation) {
+          <section class="marketplace-chat">
+            <header>
+              <div>
+                <p class="eyebrow">PROPERTY ENQUIRY</p>
+                <h3>{{ selectedProperty()?.title || conversation.listingTitle }}</h3>
+              </div>
+              <span>Private member conversation</span>
+            </header>
+            <div class="marketplace-chat-messages">
+              @for (message of propertyMessages(); track message.id) {
+                <p [class.mine]="message.senderUserId === currentUserId()">
+                  {{ message.messageText }}
+                </p>
+              } @empty {
+                <p>Ask the owner about availability, viewing arrangements or property details.</p>
+              }
+            </div>
+            <form (submit)="sendPropertyMessage(); $event.preventDefault()">
+              <input
+                [formControl]="propertyChatText"
+                placeholder="Write a message to the property owner"
+              >
+              <button type="submit">Send</button>
+            </form>
+          </section>
+        }
+
+        @if (propertyNotice()) {
+          <strong class="marketplace-notice property-notice" role="status">
+            {{ propertyNotice() }}
+          </strong>
+        }
+      </section>
+    </div>
+  }
+
+  @if (jobsOpen()) {
+    <div class="modal-backdrop" (click)="closeJobs()">
+      <section
+        class="marketplace-modal jobs-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="jobs-title"
+        (click)="$event.stopPropagation()"
+      >
+        <button class="modal-close" type="button" aria-label="Close jobs" (click)="closeJobs()">×</button>
+
+        <header class="marketplace-heading">
+          <div>
+            <p class="eyebrow">COMMUNITY OPPORTUNITIES</p>
+            <h2 id="jobs-title">Job Search</h2>
+            <p>Find available work or share a vacancy with Duranki members.</p>
+          </div>
+          <div class="business-heading-actions">
+            <button type="button" class="business-tools-button" (click)="openBusinessCenter('JOB_SEARCH')">
+              Business tools
+            </button>
+            <button type="button" (click)="jobFormOpen.set(!jobFormOpen())">
+              {{ jobFormOpen() ? 'Close form' : '+ Post a job' }}
+            </button>
+          </div>
+        </header>
+
+        @if (jobFormOpen()) {
+          <section class="job-form" aria-labelledby="job-form-title">
+            <h3 id="job-form-title">Post a job opportunity</h3>
+            <div class="job-form-grid">
+              <label>
+                <span>Job title</span>
+                <input type="text" [formControl]="jobTitle" placeholder="e.g. Sales Assistant">
+              </label>
+              <label>
+                <span>Company or organisation</span>
+                <input type="text" [formControl]="jobCompany" placeholder="Organisation name">
+              </label>
+              <label>
+                <span>Location</span>
+                <input type="text" [formControl]="jobLocation" placeholder="Town or remote">
+              </label>
+              <label>
+                <span>Job type</span>
+                <select [formControl]="jobType">
+                  <option value="FULL_TIME">Full-time</option>
+                  <option value="PART_TIME">Half-time / part-time</option>
+                  <option value="PERMANENT">Permanent</option>
+                  <option value="TEMPORARY">Temporary</option>
+                  <option value="CONTRACT">Contract</option>
+                  <option value="ONCE_OFF">Once-off</option>
+                </select>
+              </label>
+              <label>
+                <span>Job category</span>
+                <select [formControl]="jobCategory">
+                  @for (category of jobCategories; track category) {
+                    <option [value]="category">{{ category }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                <span>Work mode</span>
+                <select [formControl]="jobWorkMode">
+                  <option value="ON_SITE">On-site</option>
+                  <option value="REMOTE">Remote</option>
+                  <option value="HYBRID">Hybrid</option>
+                </select>
+              </label>
+              <label>
+                <span>Salary or payment amount</span>
+                <input type="number" min="0" [formControl]="jobSalary" placeholder="Optional amount">
+              </label>
+              <label>
+                <span>Payment frequency</span>
+                <select [formControl]="jobPaymentFrequency">
+                  <option value="HOURLY">Hourly</option>
+                  <option value="DAILY">Daily</option>
+                  <option value="WEEKLY">Weekly</option>
+                  <option value="MONTHLY">Monthly</option>
+                  <option value="ONCE_OFF">Once-off</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              <span>Description</span>
+              <textarea
+                rows="4"
+                [formControl]="jobDescription"
+                placeholder="Describe the role, requirements and how to apply"
+              ></textarea>
+            </label>
+            <p class="listing-owner">
+              Posted by: <strong>{{ user()?.firstName }} {{ user()?.lastName }}</strong>
+            </p>
+            @if (businessesFor('JOB_SEARCH').length) {
+              <label>
+                <span>Publish as</span>
+                <select [formControl]="jobBusinessId">
+                  <option value="">My personal profile</option>
+                  @for (business of businessesFor('JOB_SEARCH'); track business.id) {
+                    <option [value]="business.id">{{ business.businessName }}</option>
+                  }
+                </select>
+              </label>
+            }
+            <button class="publish-listing" type="button" (click)="addJobListing()">Publish job</button>
+          </section>
+        }
+
+        <section class="marketplace-filters" aria-label="Search jobs">
+          <input [formControl]="jobSearch" placeholder="Search jobs">
+          <input [formControl]="jobFilterArea" placeholder="Area / location">
+          <select [formControl]="jobFilterCategory">
+            <option value="">All categories</option>
+            @for (category of jobCategories; track category) {
+              <option [value]="category">{{ category }}</option>
+            }
+          </select>
+          <select [formControl]="jobFilterEmployment">
+            <option value="">Any employment type</option>
+            <option value="FULL_TIME">Full-time</option>
+            <option value="PART_TIME">Part-time</option>
+            <option value="PERMANENT">Permanent</option>
+            <option value="TEMPORARY">Temporary</option>
+            <option value="CONTRACT">Contract</option>
+            <option value="ONCE_OFF">Once-off</option>
+          </select>
+          <select [formControl]="jobFilterWorkMode">
+            <option value="">Any work mode</option>
+            <option value="ON_SITE">On-site</option>
+            <option value="REMOTE">Remote</option>
+            <option value="HYBRID">Hybrid</option>
+          </select>
+          <input type="number" min="0" [formControl]="jobFilterMinPay" placeholder="Minimum pay">
+          <input type="number" min="0" [formControl]="jobFilterMaxPay" placeholder="Maximum pay">
+          <input [formControl]="jobFilterCommunity" placeholder="Church / branch">
+          <select [formControl]="jobFilterStatus">
+            <option value="">Any status</option>
+            <option value="OPEN">Open</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="FILLED">Filled</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+          <button type="button" (click)="applyJobFilters()">Search</button>
+          <button type="button" (click)="clearJobFilters()">Clear</button>
+        </section>
+
+        <div class="job-grid">
+          @for (job of jobListings(); track job.id) {
+            <article class="job-card">
+              <div class="job-card-icon" aria-hidden="true">JOB</div>
+              <div class="job-card-copy">
+                <span>{{ job.employmentType.replace('_', ' ') }} · {{ job.area }}</span>
+                <h3>{{ job.title }}</h3>
+                <strong>{{ job.listedByUserName }}</strong>
+                <p>{{ job.description }}</p>
+                <div>
+                  <b>
+                    @if (job.paymentAmount) {
+                      R{{ job.paymentAmount.toFixed(2) }} {{ job.paymentFrequency?.replace('_', ' ') }}
+                    } @else {
+                      Payment negotiable
+                    }
+                  </b>
+                  <span class="marketplace-card-actions">
+                    <button type="button" (click)="viewJob(job)">View details</button>
+                    <button type="button" (click)="startJobChat(job)">Chat</button>
+                  </span>
+                </div>
+                <small>{{ job.category }} · {{ job.workMode?.replace('_', ' ') }} · {{ job.status }}</small>
+              </div>
+            </article>
+          }
+        </div>
+
+        @if (selectedJob(); as job) {
+          <section class="marketplace-detail">
+            <div>
+              <p class="eyebrow">JOB DETAILS</p>
+              <h3>{{ job.title }}</h3>
+              <p>{{ job.description }}</p>
+              <dl>
+                <div><dt>Category</dt><dd>{{ job.category }}</dd></div>
+                <div><dt>Employment</dt><dd>{{ job.employmentType.replace('_', ' ') }}</dd></div>
+                <div><dt>Work mode</dt><dd>{{ job.workMode?.replace('_', ' ') }}</dd></div>
+                <div><dt>Location</dt><dd>{{ job.area }}</dd></div>
+                <div><dt>Status</dt><dd>{{ job.status }}</dd></div>
+                <div><dt>Listed</dt><dd>{{ job.createdAt | date:'mediumDate' }}</dd></div>
+              </dl>
+              @if (!isSelectedJobLister()) {
+                <div class="job-application-row">
+                  <input [formControl]="jobApplicationMessage" placeholder="Short application message">
+                  <button type="button" (click)="applyForSelectedJob(job)">Apply / Contact</button>
+                </div>
+              }
+            </div>
+            <aside>
+              <strong>{{ job.listedByUserName }}</strong>
+              @if (job.listedByChurchName || job.listedByCommunityName) {
+                <span>{{ job.listedByChurchName || job.listedByCommunityName }}</span>
+              }
+              @if (job.listedByBranchName) {
+                <span>{{ job.listedByBranchName }}</span>
+              }
+              @if (job.listerRating) {
+                <span>{{ job.listerRating }} / 5 lister rating</span>
+              }
+              <button type="button" (click)="startJobChat(job)">Open job chat</button>
+            </aside>
+          </section>
+        }
+
+        @if (jobConversation(); as conversation) {
+          <section class="marketplace-chat">
+            <header>
+              <div>
+                <p class="eyebrow">JOB CONVERSATION</p>
+                <h3>{{ selectedJob()?.title }}</h3>
+              </div>
+              <span>{{ conversation.status }}</span>
+            </header>
+            <div class="marketplace-chat-messages">
+              @for (message of jobMessages(); track message.id) {
+                <p [class.mine]="message.senderUserId === currentUserId()">
+                  <strong>{{ message.messageType.replace('_', ' ') }}</strong>
+                  {{ message.messageText }}
+                </p>
+              }
+              @for (request of jobPaymentRequests(); track request.id) {
+                <article class="marketplace-payment-request">
+                  <strong>Job payment request: R{{ request.requestedAmount.toFixed(2) }}</strong>
+                  <p>{{ request.description }}</p>
+                  <span>{{ request.status }}</span>
+                  @if (request.status === 'PENDING' && request.requestedFromUserId === currentUserId()) {
+                    <div>
+                      <button type="button" (click)="payJobRequest(request)">Pay from Wallet</button>
+                      <button type="button" (click)="declineJobRequest(request)">Decline</button>
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+            <form (submit)="sendJobMessage(); $event.preventDefault()">
+              <input [formControl]="jobChatText" placeholder="Write a job message">
+              <button type="submit">Send</button>
+            </form>
+            <div class="marketplace-payment-compose">
+              @if (isSelectedJobLister()) {
+                <button type="button" (click)="sendInterviewRequest()">Send interview request</button>
+              }
+              <input type="number" min="1" [formControl]="jobPaymentAmount" placeholder="Payment amount">
+              <button type="button" (click)="sendJobPaymentRequest()">Send payment request</button>
+            </div>
+            @if (jobNotice()) {
+              <strong class="marketplace-notice">{{ jobNotice() }}</strong>
+            }
+          </section>
+        }
+      </section>
+    </div>
+  }
+
+  <div class="assistant-widget" [class.open]="assistantOpen()">
+    @if (assistantOpen()) {
+      <section class="assistant-panel" aria-labelledby="assistant-title">
+        <header class="assistant-header">
+          <div>
+            <span class="assistant-status"></span>
+            <div>
+              <h2 id="assistant-title">Duranki Assistant</h2>
+              <p>Here to help</p>
+            </div>
+          </div>
+          <button type="button" aria-label="Close assistant" (click)="toggleAssistant()">×</button>
+        </header>
+
+        <div class="assistant-messages" aria-live="polite">
+          @for (message of assistantMessages(); track $index) {
+            <div class="assistant-message" [class.user]="message.role === 'user'">
+              @if (message.role === 'assistant') {
+                <img src="/duranki-bot.png" alt="">
+              }
+              <p>{{ message.text }}</p>
+            </div>
+          }
+        </div>
+
+        @if (assistantMessages().length === 1) {
+          <div class="assistant-suggestions">
+            <button type="button" (click)="askSuggestedQuestion('How do I subscribe to a service?')">
+              How do I subscribe?
+            </button>
+            <button type="button" (click)="askSuggestedQuestion('How does Job Search work?')">
+              How does Job Search work?
+            </button>
+            <button type="button" (click)="askSuggestedQuestion('How does the Wallet work?')">
+              How does Wallet work?
+            </button>
+          </div>
+        }
+
+        <form
+          class="assistant-composer"
+          (submit)="askAssistant(); $event.preventDefault()"
+        >
+          <input
+            type="text"
+            [formControl]="assistantQuestion"
+            placeholder="Ask a question..."
+            aria-label="Ask the Duranki assistant"
+            maxlength="500"
+          >
+          <button
+            type="submit"
+            [disabled]="!assistantQuestion.value.trim()"
+            aria-label="Send question"
+          >
+            ↑
+          </button>
+        </form>
+      </section>
+    }
+
+    <button
+      class="assistant-launcher"
+      type="button"
+      [attr.aria-expanded]="assistantOpen()"
+      aria-label="Open Duranki help assistant"
+      (click)="toggleAssistant()"
+    >
+      <img src="/duranki-bot.png" alt="">
+      @if (!assistantOpen()) {
+        <span>Need help?</span>
+      }
+    </button>
+  </div>
+  @if (profileOpen()) {
+    <app-profile-modal
+      [memberId]="user()?.id || 0"
+      (closed)="profileOpen.set(false)"
+    ></app-profile-modal>
+  }
+
+  @if (walletAction()) {
+    <div class="wallet-action-backdrop" (click)="closeWalletAction()">
+      <section
+        class="wallet-action-modal"
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-labelledby]="'wallet-action-title'"
+        (click)="$event.stopPropagation()"
+      >
+        <button
+          class="wallet-action-close"
+          type="button"
+          aria-label="Close wallet action"
+          (click)="closeWalletAction()"
+        >×</button>
+
+        <p class="eyebrow">DURANKI WALLET</p>
+        <h2 id="wallet-action-title">
+          {{
+            walletAction() === 'topup'
+              ? 'Top Up with Cycle'
+              : walletAction() === 'cashout'
+                ? 'Cash Out to African Bank'
+                : 'Transfer to a Member'
+          }}
+        </h2>
+        <p class="wallet-action-copy">
+          @if (walletAction() === 'topup') {
+            Your bank card payment is processed securely by Cycle. Duranki does not
+            store your card details.
+          } @else if (walletAction() === 'cashout') {
+            Cash out your available Izaka directly to your personal African Bank account.
+          } @else {
+            Send Izaka instantly to another registered Duranki member wallet.
+          }
+        </p>
+
+        <label class="wallet-action-field">
+          <span>Amount</span>
+          <div>
+            <b>Izaka</b>
+            <input
+              type="number"
+              min="10"
+              step="1"
+              [formControl]="walletAmount"
+              placeholder="0.00"
+            >
+          </div>
+        </label>
+
+        @if (walletAction() === 'cashout') {
+          <label class="wallet-action-field">
+            <span>Account holder</span>
+            <input type="text" [formControl]="africanBankAccountHolder">
+          </label>
+          <label class="wallet-action-field">
+            <span>African Bank account number</span>
+            <input
+              type="text"
+              inputmode="numeric"
+              maxlength="11"
+              [formControl]="africanBankAccountNumber"
+              placeholder="Enter account number"
+            >
+          </label>
+          <label class="wallet-action-field">
+            <span>Account type</span>
+            <select [formControl]="africanBankAccountType">
+              <option value="SAVINGS">Savings</option>
+              <option value="CURRENT">Current</option>
+            </select>
+          </label>
+          <p class="wallet-bank-note">African Bank universal branch code: 430000</p>
+        } @else if (walletAction() === 'transfer') {
+          <label class="wallet-action-field">
+            <span>Recipient cellphone number</span>
+            <input
+              type="tel"
+              inputmode="tel"
+              [formControl]="walletRecipientTelephone"
+              placeholder="e.g. 0725550184"
+            >
+          </label>
+          <label class="wallet-action-field">
+            <span>Payment reference (optional)</span>
+            <input
+              type="text"
+              maxlength="40"
+              [formControl]="walletTransferReference"
+              placeholder="What is this payment for?"
+            >
+          </label>
+          <div class="member-transfer-note">
+            <strong>Member-to-member transfer</strong>
+            <span>The recipient must have an active Duranki wallet.</span>
+          </div>
+        } @else {
+          <div class="cycle-payment-note">
+            <strong>Cycle secure checkout</strong>
+            <span>Visa and Mastercard bank cards accepted</span>
+          </div>
+        }
+
+        @if (walletActionNotice()) {
+          <p class="wallet-action-notice" role="status">{{ walletActionNotice() }}</p>
+        }
+
+        <button
+          class="wallet-action-submit"
+          type="button"
+          [disabled]="walletActionLoading()"
+          (click)="submitWalletAction()"
+        >
+          @if (walletActionLoading()) {
+            Processing...
+          } @else if (walletAction() === 'topup') {
+            Continue with Cycle
+          } @else if (walletAction() === 'transfer') {
+            Send Izaka
+          } @else {
+            Cash Out
+          }
+        </button>
+      </section>
+    </div>
+  }
+
+  @if (businessCenterOpen()) {
+    <div class="modal-backdrop" (click)="businessCenterOpen.set(false)">
+      <section
+        class="subscription-modal business-center-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="business-center-title"
+        (click)="$event.stopPropagation()"
+      >
+        <button
+          class="modal-close"
+          type="button"
+          aria-label="Close business tools"
+          (click)="businessCenterOpen.set(false)"
+        >&times;</button>
+        <p class="eyebrow">SMALL BUSINESS & JOB CREATION</p>
+        <h2 id="business-center-title">Business tools</h2>
+        <p>
+          Register a shop, agency, employer or transport operator and publish under
+          its business name instead of your personal name.
+        </p>
+
+        <div class="business-center-grid">
+          <section class="business-registration">
+            <h3>Register my business</h3>
+            <label>
+              <span>Business or shop name</span>
+              <input [formControl]="businessName" placeholder="e.g. Jeremy Trading">
+            </label>
+            <div class="business-form-row">
+              <label>
+                <span>Registration number (optional)</span>
+                <input [formControl]="businessRegistration" placeholder="Company or co-op number">
+              </label>
+              <label>
+                <span>Telephone</span>
+                <input type="tel" [formControl]="businessTelephone" placeholder="10-digit number">
+              </label>
+            </div>
+            <div class="business-form-row">
+              <label>
+                <span>Email (optional)</span>
+                <input type="email" [formControl]="businessEmail" placeholder="Business email">
+              </label>
+              <label>
+                <span>Area</span>
+                <input [formControl]="businessArea" placeholder="Town or operating area">
+              </label>
+            </div>
+            <label>
+              <span>About the business</span>
+              <textarea rows="3" [formControl]="businessDescription" placeholder="Products, jobs or services offered"></textarea>
+            </label>
+            <div class="business-service-selector">
+              <span>Where will this business operate?</span>
+              @for (option of [
+                { code: 'BUY_SELL', label: 'Buy and Sell' },
+                { code: 'JOB_SEARCH', label: 'Job Search' },
+                { code: 'KEYTCHA_PROPERTIES', label: 'Keytcha' },
+                { code: 'CATCH_A_RIDE', label: 'Catch a Lift' }
+              ]; track option.code) {
+                <button
+                  type="button"
+                  [class.selected]="businessServiceSelected($any(option.code))"
+                  (click)="toggleBusinessService($any(option.code))"
+                >
+                  {{ option.label }}
+                </button>
+              }
+            </div>
+            <button type="button" class="business-primary" (click)="registerBusiness()">
+              Register business
+            </button>
+          </section>
+
+          <section class="business-bulk-publish">
+            <h3>Bulk publish</h3>
+            @if (businessProfiles().length) {
+              <label>
+                <span>Business</span>
+                <select [formControl]="bulkBusinessId">
+                  <option value="">Choose a business</option>
+                  @for (business of businessesFor(bulkBusinessService.value); track business.id) {
+                    <option [value]="business.id">{{ business.businessName }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                <span>Service</span>
+                <select [formControl]="bulkBusinessService">
+                  <option value="BUY_SELL">Buy and Sell products</option>
+                  <option value="JOB_SEARCH">Job vacancies</option>
+                  <option value="KEYTCHA_PROPERTIES">Properties</option>
+                  <option value="CATCH_A_RIDE">Fleet vehicles / lifts</option>
+                </select>
+              </label>
+              <label>
+                <span>One record per line</span>
+                <small>{{ businessRowHelp() }}</small>
+                <textarea
+                  rows="9"
+                  [formControl]="bulkBusinessRows"
+                  [placeholder]="businessRowHelp()"
+                ></textarea>
+              </label>
+              <button type="button" class="business-primary" (click)="publishBusinessRows()">
+                Publish all rows
+              </button>
+            } @else {
+              <p class="business-empty">
+                Register your first business to unlock bulk products, vacancies,
+                properties and transport listings.
+              </p>
+            }
+          </section>
+        </div>
+        @if (businessNotice()) {
+          <p class="business-notice" role="status">{{ businessNotice() }}</p>
+        }
+      </section>
+    </div>
+  }
+
+  @if (walletBrandingOpen()) {
+    <div class="modal-backdrop" (click)="closeWalletBranding()">
+      <section
+        class="subscription-modal wallet-branding-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="wallet-branding-title"
+        (click)="$event.stopPropagation()"
+      >
+        <button
+          class="modal-close"
+          type="button"
+          aria-label="Close wallet branding"
+          (click)="closeWalletBranding()"
+        >×</button>
+        <p class="eyebrow">PERSONALISE YOUR WALLET</p>
+        <h2 id="wallet-branding-title">Change your wallet card logo</h2>
+        <p>
+          Upload your own logo or choose an optional football-team style.
+          Your selection will replace the Duranki logo on your wallet card.
+        </p>
+
+        <div class="football-team-options">
+          @for (team of footballTeamPresets; track team.name) {
+            <button
+              type="button"
+              [class.selected]="walletBrandTeam() === team.name"
+              (click)="chooseFootballTeam(team)"
+            >
+              <img [src]="createTeamBadge(team.badge, team.color)" alt="">
+              <span>{{ team.name }}</span>
+            </button>
+          }
+        </div>
+
+        <label class="team-logo-upload">
+          <span>Upload wallet logo</span>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            (change)="uploadWalletLogo($event)"
+          >
+          <small>PNG, JPEG or WebP. Maximum source size 8 MB.</small>
+        </label>
+
+        @if (walletBrandNotice()) {
+          <p class="wallet-brand-notice" role="status">{{ walletBrandNotice() }}</p>
+        }
+
+        @if (walletBrandLogo()) {
+          <div class="wallet-brand-preview" [style.--team-color]="walletBrandColor()">
+            <img [src]="walletBrandLogo()" [alt]="walletBrandTeam()">
+            <div>
+              <small>DURANKI WALLET</small>
+              <strong>{{ walletBrandTeam() }}</strong>
+              <span>{{ user()?.firstName }} {{ user()?.lastName }}</span>
+            </div>
+          </div>
+        }
+
+        <div class="wallet-brand-actions">
+          <button type="button" class="secondary-action" (click)="clearWalletBranding()">
+            Restore Inkolo logo
+          </button>
+          <button
+            type="button"
+            class="primary-action"
+            [disabled]="!walletBrandLogo()"
+            (click)="saveWalletBranding()"
+          >
+            Save wallet logo
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+</main>

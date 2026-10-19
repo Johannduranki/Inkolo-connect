@@ -1,0 +1,31 @@
+<div class="role-switcher">
+  <div class="role-identity">
+    <strong>{{ userFullName }}</strong>
+    <span>Current role: {{ activeRole$ | async }}</span>
+  </div>
+  @if (availableRoles$ | async; as availableRoles) {
+    @if (showSwitcher(availableRoles)) {
+      <label>
+        <span class="sr-only">Switch dashboard access</span>
+        <select
+          aria-label="Switch dashboard access"
+          [value]="selectedDestination(activeRole$ | async)"
+          (change)="switchRole($event)"
+        >
+          @if (hasCommunityAccess()) {
+            @for (community of memberCommunities(); track community.churchId + '-' + (community.branchId ?? 'main')) {
+              <option [value]="'__community:' + community.churchId">
+                {{ communityLabel(community) }}
+              </option>
+            }
+          } @else if (canShowMemberServices(availableRoles)) {
+            <option value="__member-services">Member Services</option>
+          }
+          @for (role of availableRoles; track role) {
+            <option [value]="role">{{ roleLabel(role) }}</option>
+          }
+        </select>
+      </label>
+    }
+  }
+</div>
