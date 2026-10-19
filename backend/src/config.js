@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { validateProduction } from './production-security.js';
 
 dotenv.config({
   path: resolve(dirname(fileURLToPath(import.meta.url)), "../.env"),
@@ -9,6 +10,7 @@ dotenv.config({
 const required = ["DB_HOST", "DB_USER", "DB_NAME", "ID_PEPPER", "JWT_SECRET"];
 
 export function getConfig() {
+  validateProduction(process.env);
   const missing = required.filter((name) => !process.env[name]);
 
   if (missing.length > 0) {
@@ -23,8 +25,7 @@ export function getConfig() {
       .split(",")
       .map((origin) => origin.trim())
       .filter(Boolean),
-    "https://localhost",
-    "capacitor://localhost",
+    ...(process.env.NODE_ENV === 'production' ? [] : ['https://localhost', 'capacitor://localhost'])
   ];
 
   return {

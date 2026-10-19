@@ -10,13 +10,13 @@
     "android:apk": "npm run android:sync && cd android && gradlew.bat assembleDebug"
   },
   "dependencies": {
-    "@angular/animations": "^20.0.0",
-    "@angular/common": "^20.0.0",
-    "@angular/compiler": "^20.0.0",
-    "@angular/core": "^20.0.0",
-    "@angular/forms": "^20.0.0",
-    "@angular/platform-browser": "^20.0.0",
-    "@angular/router": "^20.0.0",
+    "@angular/animations": "20.3.34",
+    "@angular/common": "20.3.34",
+    "@angular/compiler": "20.3.34",
+    "@angular/core": "20.3.34",
+    "@angular/forms": "20.3.34",
+    "@angular/platform-browser": "20.3.34",
+    "@angular/router": "20.3.34",
     "@capacitor/android": "^7.6.6",
     "@capacitor/cli": "^7.6.6",
     "@capacitor/core": "^7.6.6",
@@ -26,9 +26,9 @@
     "zone.js": "~0.15.0"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "^20.0.0",
-    "@angular/cli": "^20.0.0",
-    "@angular/compiler-cli": "^20.0.0",
+    "@angular/build": "20.3.40",
+    "@angular/cli": "20.3.40",
+    "@angular/compiler-cli": "20.3.34",
     "typescript": "~5.8.2"
   }
 }
