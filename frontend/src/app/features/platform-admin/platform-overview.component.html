@@ -1,0 +1,22 @@
+<header>
+  <div class="brand"><img src="/duranki-up-logo.png" alt="Duranki"><strong>Duranki Platform</strong></div>
+  <div class="account"><app-role-switcher [userFullName]="name()"></app-role-switcher><button type="button" (click)="logout()">Sign out</button></div>
+</header>
+<main>
+  <div class="heading"><h1>Platform administration</h1><button type="button" (click)="load()" [disabled]="loading()">Refresh</button></div>
+  <nav aria-label="Administration areas">
+    @for (area of areas; track area.url) { <a [href]="area.url">{{ area.name }}</a> }
+  </nav>
+  @if (loading()) { <p role="status">Loading platform directory...</p> }
+  @if (error()) { <p role="alert">{{ error() }}</p> }
+  @if (!loading() && !error()) {
+    <div class="directories">
+      <section><h2>Tenants <span>{{ tenants().length }}</span></h2>
+        <ul>@for (tenant of tenants(); track tenant.id) { <li><a [href]="tenantUrl(tenant.id)">{{ tenant.name }}</a></li> } @empty { <li>No tenants registered.</li> }</ul>
+      </section>
+      <section><h2>Community reports <span>{{ communities().length }}</span></h2>
+        <ul>@for (community of communities(); track community.id) { <li><a [href]="communityUrl(community.id)">{{ community.name }}</a></li> } @empty { <li>No communities registered.</li> }</ul>
+      </section>
+    </div>
+  }
+</main>

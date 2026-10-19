@@ -1,0 +1,653 @@
+<main
+  class="platform-page"
+  [style.--active-primary]="view() === 'community' ? selectedCommunityBranding().primaryColor : selectedTenantBranding().primaryColor"
+  [style.--active-secondary]="view() === 'community' ? selectedCommunityBranding().secondaryColor : selectedTenantBranding().secondaryColor"
+  [style.--active-accent]="view() === 'community' ? selectedCommunityBranding().accentColor : selectedTenantBranding().accentColor"
+  [style.--active-background]="view() === 'community' ? selectedCommunityBranding().backgroundColor : '#f3f9fd'"
+>
+  <header class="topbar">
+    <button class="brand" type="button" (click)="openPlatform()" aria-label="Duranki platform">
+      <img src="/duranki-up-logo.png" alt="Duranki">
+      <span>Duranki Platform</span>
+    </button>
+    <nav aria-label="Platform navigation">
+      <button type="button" [class.active]="view() === 'platform'" (click)="openPlatform()">Duranki</button>
+      <button type="button" [class.active]="view() === 'tenant'" (click)="view.set('tenant')">Tenant</button>
+      <button type="button" [class.active]="view() === 'community'" (click)="openCommunityById(selectedCommunityId())">Community</button>
+      <button type="button" class="accounting-link" (click)="openAccounting()">Accounting</button>
+      <a href="/dashboard/treasury" data-treasury="true">Treasury</a>
+      <label class="topbar-community-picker">
+        <span>Choose community</span>
+        <select [value]="selectedCommunity().id" (change)="openCommunityById($any($event.target).value)">
+          @for (community of communities(); track community.id) {
+            <option [value]="community.id">
+              {{ tenantForCommunity(community)?.name }} · {{ community.name }}
+            </option>
+          }
+        </select>
+      </label>
+    </nav>
+    <div class="platform-account">
+      @if (user()) {
+        <app-role-switcher [userFullName]="user()!.firstName + ' ' + user()!.lastName"></app-role-switcher>
+      }
+      <button class="signout" type="button" (click)="logout()">Sign out</button>
+    </div>
+  </header>
+
+  @if (notice()) {
+    <p class="notice">{{ notice() }}</p>
+  }
+
+  <section class="hero">
+    <p>DURANKI NETWORK</p>
+    <h1>{{ view() === 'tenant' ? 'Tenant administration' : view() === 'community' ? 'Community administration' : 'Platform overview' }}</h1>
+  </section>
+
+  <section class="summary-grid">
+    <article><span>Tenants</span><strong>{{ tenants().length }}</strong></article>
+    <article><span>Communities</span><strong>{{ communities().length }}</strong></article>
+    <article><span>Users</span><strong>{{ platformUsers() }}</strong></article>
+    <article><span>Transactions</span><strong>{{ platformRevenue() | currency:'ZAR' }}</strong></article>
+  </section>
+
+  <p data-real-data-notice="true">Financial totals require reconciled transaction data.</p>
+
+  @if (view() === 'platform') {
+    <section class="panel hierarchy-panel">
+      <div class="breadcrumb">Duranki Dashboard</div>
+      <div class="hierarchy-map">
+        <strong>Duranki</strong>
+        <span>Full platform access</span>
+        <strong>Tenant</strong>
+        <span>Tenant-owned users, services, website and communities</span>
+        <strong>Community</strong>
+        <span>Community users, services, transactions and reports</span>
+      </div>
+    </section>
+
+    <section
+      class="panel tenant-navigator tenant-branded-panel"
+      [style.--tenant-primary]="selectedTenantBranding().primaryColor"
+      [style.--tenant-secondary]="selectedTenantBranding().secondaryColor"
+      [style.--tenant-accent]="selectedTenantBranding().accentColor"
+    >
+      <div class="heading">
+        <div>
+          <p>VIEW TENANTS</p>
+          <h2>Navigate between tenant dashboards</h2>
+        </div>
+      </div>
+      <div class="tenant-switcher">
+        <label>
+          <span>Select tenant</span>
+          <select [value]="selectedTenantId()" (change)="selectedTenantId.set($any($event.target).value)">
+            @for (tenant of tenants(); track tenant.id) {
+              <option [value]="tenant.id">{{ tenant.name }} · {{ tenant.companyName }}</option>
+            }
+          </select>
+        </label>
+        <button type="button" (click)="openTenantById(selectedTenantId())">Open Selected Tenant</button>
+      </div>
+      <div class="tenant-quick-links">
+        @for (tenant of tenants(); track tenant.id) {
+          <button
+            type="button"
+            [class.active]="selectedTenantId() === tenant.id"
+            [style.--tenant-primary]="tenant.branding.primaryColor"
+            [style.--tenant-secondary]="tenant.branding.secondaryColor"
+            [style.--tenant-accent]="tenant.branding.accentColor"
+            (click)="openTenant(tenant)"
+          >
+            {{ tenant.name }}
+          </button>
+        }
+      </div>
+    </section>
+
+    <section class="layout">
+      <article class="panel form-panel">
+        <div class="heading">
+          <div>
+            <p>{{ editingTenantId() ? 'EDIT TENANT' : 'CREATE NEW TENANT' }}</p>
+            <h2>{{ editingTenantId() ? 'Edit tenant: ' + tenantName.value : 'Tenant setup' }}</h2>
+          </div>
+          <button type="button" class="secondary small-button" (click)="clearTenantForm()">New</button>
+        </div>
+
+        <form class="form-grid" (submit)="$event.preventDefault(); createOrUpdateTenant()">
+          <h3 class="form-section">Tenant Information</h3>
+          <label><span>Tenant name</span><input [formControl]="tenantName"></label>
+          <label><span>Company name</span><input [formControl]="companyName"></label>
+          <label><span>Registration number</span><input [formControl]="registrationNumber"></label>
+          <label><span>Contact person</span><input [formControl]="contactPerson"></label>
+          <label><span>Email</span><input type="email" [formControl]="tenantEmail"></label>
+          <label><span>Telephone number</span><input [formControl]="tenantTelephone"></label>
+          <label class="wide"><span>Address</span><input [formControl]="tenantAddress"></label>
+          <label><span>Country</span><input [formControl]="tenantCountry"></label>
+          <label><span>Status</span><select [formControl]="tenantStatus"><option>Configured</option><option>Active</option><option>Inactive</option></select></label>
+
+          <h3 class="form-section">Tenant Administrator</h3>
+          <label><span>Administrator name</span><input [formControl]="tenantAdminName"></label>
+          <label><span>Administrator email</span><input type="email" [formControl]="tenantAdminEmail"></label>
+          <label><span>Administrator telephone</span><input [formControl]="tenantAdminTelephone"></label>
+          <label><span>Tenant URL / subdomain</span><input [formControl]="tenantSubdomain"></label>
+          <label><span>Website URL</span><input [formControl]="tenantWebsite"></label>
+
+          <h3 class="form-section">Tenant Colour Scheme</h3>
+          <label><span>Tenant logo URL</span><input [formControl]="tenantLogo"><a data-upload-logo="true" href="/dashboard/branding">Upload logo</a></label>
+          <label><span>Primary colour</span><input type="color" [formControl]="primaryColor"></label>
+          <label><span>Secondary colour</span><input type="color" [formControl]="secondaryColor"></label>
+          <label><span>Accent colour</span><input type="color" [formControl]="accentColor"></label>
+          <label class="wide"><span>Hero image URL</span><input [formControl]="heroImageUrl"></label>
+
+          <h3 class="form-section">Tenant Login Email</h3>
+          <div class="invite-summary wide">
+            <strong>After this tenant is created, Duranki sends the tenant administrator login details.</strong>
+            <span>The tenant administrator then logs into the tenant dashboard and configures their services, pricing, website, branding, communities and users.</span>
+          </div>
+
+          <button type="submit">{{ editingTenantId() ? 'Update Tenant' : 'Create New Tenant' }}</button>
+        </form>
+      </article>
+
+      <aside class="stack">
+        <article class="panel">
+          <div class="heading">
+            <div>
+              <p>SERVICE CATALOGUE</p>
+              <h2>Future services</h2>
+            </div>
+          </div>
+          <form class="mini-form" (ngSubmit)="addServiceToCatalogue()">
+            <input [formControl]="newServiceName" placeholder="New service name">
+            <input [formControl]="newServiceCategory" placeholder="Category">
+            <input [formControl]="newServiceDescription" placeholder="Short description">
+            <a href="/dashboard/service-pricing">Configure service pricing</a>
+            <input [formControl]="newServiceDashboardName" placeholder="Dashboard name">
+            <input [formControl]="newServiceDashboardRoute" placeholder="/dashboard/services/service-name">
+            <input [formControl]="newServiceAdminName" placeholder="First dashboard admin">
+            <input [formControl]="newServiceAdminEmail" placeholder="Admin email">
+            <input [formControl]="newServiceAdminTelephone" placeholder="Admin telephone">
+            <button type="submit">Add Service</button>
+          </form>
+          <div class="catalogue-list">
+            @for (service of services(); track service.code) {
+              <article>
+                <div>
+                  <strong>{{ service.name }}</strong>
+                  <span>{{ service.category }}</span>
+                </div>
+                <dl>
+                  <div><dt>Price</dt><dd>{{ servicePrice(service) }}</dd></div>
+                  <div><dt>Dashboard</dt><dd>{{ serviceDashboard(service) }}</dd></div>
+                  <div><dt>Admins</dt><dd>{{ service.adminUsers.length }}</dd></div>
+                </dl>
+              </article>
+            }
+          </div>
+          <form class="mini-form service-admin-form" (ngSubmit)="addServiceAdmin()">
+            <h3 class="form-section">Create Service Dashboard Admin</h3>
+            <select [formControl]="adminServiceCode">
+              @for (service of services(); track service.code) {
+                <option [value]="service.code">{{ service.name }}</option>
+              }
+            </select>
+            <input [formControl]="serviceAdminName" placeholder="Admin name">
+            <input [formControl]="serviceAdminEmail" placeholder="Admin email">
+            <input [formControl]="serviceAdminTelephone" placeholder="Admin telephone">
+            <select [formControl]="serviceAdminScope">
+              <option>Platform</option>
+              <option>Tenant</option>
+              <option>Community</option>
+            </select>
+            <button type="submit">Add Admin User</button>
+          </form>
+        </article>
+
+        @if (tenantInviteMessage()) {
+          <article class="panel invite-card">
+            <div class="heading">
+              <div>
+                <p>TENANT EMAIL</p>
+                <h2>Login details sent</h2>
+              </div>
+            </div>
+            <pre>{{ tenantInviteMessage() }}</pre>
+          </article>
+        }
+
+        <article class="panel">
+          <div class="heading">
+            <div>
+              <p>ALL TENANTS</p>
+              <h2>Tenant register</h2>
+            </div>
+          </div>
+          <div class="tenant-list">
+            @for (tenant of tenants(); track tenant.id) {
+              <article
+                class="tenant-card"
+                [style.--tenant-primary]="tenant.branding.primaryColor"
+                [style.--tenant-secondary]="tenant.branding.secondaryColor"
+                [style.--tenant-accent]="tenant.branding.accentColor"
+              >
+                <div class="tenant-title">
+                  <span class="logo-mark">
+                    @if (tenant.branding.logoUrl) {
+                      <img [src]="tenant.branding.logoUrl" [alt]="tenant.name">
+                    } @else {
+                      {{ tenant.name.charAt(0) }}
+                    }
+                  </span>
+                  <div>
+                    <h3>{{ tenant.name }}</h3>
+                    <p>{{ tenant.websiteConfig.domainName || tenant.subdomain }}</p>
+                  </div>
+                  <em [class.off]="tenant.status !== 'Active'">{{ tenant.status }}</em>
+                </div>
+                <dl>
+                  <div><dt>Communities</dt><dd>{{ tenantCommunityCount(tenant.id) }}</dd></div>
+                  <div><dt>Services</dt><dd>{{ tenant.serviceCodes.length }}</dd></div>
+                  <div><dt>Revenue</dt><dd>{{ tenantRevenue(tenant.id) | currency:'ZAR' }}</dd></div>
+                </dl>
+                <div class="actions">
+                  <button type="button" (click)="openTenant(tenant)">Tenant Admin Dashboard</button>
+                  <button type="button" class="secondary" (click)="loadTenantForEdit(tenant)">Edit</button>
+                  <button type="button" class="secondary" (click)="toggleTenantStatus(tenant)">{{ tenant.status === 'Active' ? 'Deactivate' : 'Activate' }}</button>
+                </div>
+              </article>
+            }
+          </div>
+        </article>
+      </aside>
+    </section>
+
+    <section class="panel">
+      <div class="heading">
+        <div>
+          <p>ALL COMMUNITIES</p>
+          <h2>Every community underneath every tenant</h2>
+        </div>
+      </div>
+      <div class="community-list compact">
+        @for (community of communities(); track community.id) {
+          <article
+            class="community-card"
+            [style.--community-primary]="community.branding.primaryColor"
+            [style.--community-secondary]="community.branding.secondaryColor"
+            [style.--community-accent]="community.branding.accentColor"
+            [style.--community-background]="community.branding.backgroundColor"
+          >
+            <div>
+              <h3>{{ community.name }}</h3>
+              <p>Duranki → {{ tenantForCommunity(community)?.name }} → {{ community.name }}</p>
+            </div>
+            <dl>
+              <div><dt>Users</dt><dd>{{ community.users }}</dd></div>
+              <div><dt>Services</dt><dd>{{ community.serviceCodes.length }}</dd></div>
+              <div><dt>Transactions</dt><dd>{{ community.transactions | currency:'ZAR' }}</dd></div>
+            </dl>
+            <div class="actions">
+              <button type="button" (click)="openTenant(tenantForCommunity(community))">Tenant Admin Dashboard</button>
+              <button type="button" class="secondary" (click)="openCommunity(community)">Community Admin Dashboard</button>
+            </div>
+          </article>
+        }
+      </div>
+    </section>
+  }
+
+  @if (view() === 'tenant' && selectedTenant(); as tenant) {
+    <section
+      class="panel tenant-branded-panel"
+      [style.--tenant-primary]="tenant.branding.primaryColor"
+      [style.--tenant-secondary]="tenant.branding.secondaryColor"
+      [style.--tenant-accent]="tenant.branding.accentColor"
+    >
+      <div class="breadcrumb">
+        <button type="button" (click)="openPlatform()">Duranki</button>
+        <span>→</span>
+        <strong>{{ tenant.name }}</strong>
+      </div>
+      <div class="tenant-switcher inline-switcher">
+        <label>
+          <span>Switch tenant</span>
+          <select [value]="tenant.id" (change)="openTenantById($any($event.target).value)">
+            @for (tenantOption of tenants(); track tenantOption.id) {
+              <option [value]="tenantOption.id">{{ tenantOption.name }}</option>
+            }
+          </select>
+        </label>
+      </div>
+      <div class="tenant-dashboard">
+        <div>
+          <p>TENANT DASHBOARD</p>
+          <h2>{{ tenant.name }}</h2>
+          <span>{{ tenant.companyName }} · {{ tenant.country }} · {{ tenant.websiteConfig.domainName }}</span>
+        </div>
+        <dl>
+          <div><dt>Communities</dt><dd>{{ communitiesForSelectedTenant().length }}</dd></div>
+          <div><dt>Users</dt><dd>{{ tenantUsers(tenant.id) }}</dd></div>
+          <div><dt>Revenue</dt><dd>{{ tenantRevenue(tenant.id) | currency:'ZAR' }}</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="layout tenant-control-layout">
+      <article class="panel">
+        <div class="heading">
+          <div>
+            <p>TENANT WEBSITE</p>
+            <h2>Standard Duranki website template</h2>
+          </div>
+        </div>
+        <div
+          class="website-preview"
+          [style.--tenant-primary]="tenant.branding.primaryColor"
+          [style.--tenant-secondary]="tenant.branding.secondaryColor"
+          [style.--tenant-accent]="tenant.branding.accentColor"
+        >
+          <div class="website-hero">
+            @if (tenant.branding.logoUrl) {
+              <img [src]="tenant.branding.logoUrl" [alt]="tenant.name">
+            } @else {
+              <strong>{{ tenant.name }}</strong>
+            }
+            <h3>{{ tenant.websiteConfig.mainHeading }}</h3>
+            <p>{{ tenant.websiteConfig.shortDescription }}</p>
+            <button type="button">{{ tenant.websiteConfig.callToActionText }}</button>
+          </div>
+          <div class="website-services">
+            @for (service of enabledServicesForTenant(tenant); track service.code) {
+              <span>{{ service.name }}</span>
+            }
+          </div>
+        </div>
+      </article>
+
+      <article class="panel settings-panel">
+        <div class="heading">
+          <div>
+            <p>TENANT DETAILS</p>
+            <h2>Settings and activation</h2>
+          </div>
+        </div>
+        <dl>
+          <div><dt>Company</dt><dd>{{ tenant.companyName }}</dd></div>
+          <div><dt>Registration</dt><dd>{{ tenant.registrationNumber }}</dd></div>
+          <div><dt>Admin</dt><dd>{{ tenant.tenantAdmin.name }}</dd></div>
+          <div><dt>Email</dt><dd>{{ tenant.email }}</dd></div>
+          <div><dt>Telephone</dt><dd>{{ tenant.telephone }}</dd></div>
+          <div><dt>Domain</dt><dd>{{ tenant.websiteConfig.domainName }}</dd></div>
+          <div><dt>Monthly fee</dt><dd>{{ tenant.pricing.monthlyPlatformFee | currency:'ZAR' }}</dd></div>
+          <div><dt>Transaction fee</dt><dd>{{ tenant.pricing.transactionFeePercentage }}%</dd></div>
+          <div><dt>Revenue share</dt><dd>{{ revenueShareTotal(tenant) }}%</dd></div>
+          <div><dt>Status</dt><dd>{{ tenant.status }}</dd></div>
+        </dl>
+        <div class="actions">
+          <button type="button" (click)="loadTenantForEdit(tenant)">Edit Tenant</button>
+          <button type="button" class="secondary" (click)="toggleTenantStatus(tenant)">{{ tenant.status === 'Active' ? 'Deactivate Tenant' : 'Activate Tenant' }}</button>
+        </div>
+      </article>
+    </section>
+
+    <section class="layout">
+      <article class="panel">
+        <div class="heading">
+          <div>
+            <p>ENABLED SERVICES</p>
+            <h2>Add or remove tenant services</h2>
+          </div>
+        </div>
+        <div class="service-management">
+          @for (service of services(); track service.code) {
+            <label class="service-row">
+              <span>
+                <b>{{ service.name }}</b>
+                <small>{{ service.description }}</small>
+                <small>{{ servicePrice(service) }} · {{ service.dashboardName }}</small>
+              </span>
+              <input type="checkbox" [checked]="tenant.serviceCodes.includes(service.code)" (change)="setTenantService(tenant, service.code)">
+            </label>
+          }
+        </div>
+      </article>
+
+      <article class="panel modules-panel">
+        <div class="heading">
+          <div>
+            <p>TENANT ACCESS</p>
+            <h2>Operational areas</h2>
+          </div>
+        </div>
+        <div class="module-grid inline">
+          @for (module of ['Tenant details', 'Tenant website', 'Enabled services', 'Communities', 'Users', 'Transactions', 'Revenue', 'Reports', 'Settings']; track module) {
+            <article><button class="tenant-operation" type="button"><span>{{ module }}</span><strong>{{ module === 'Revenue' || module === 'Reports' ? 'Not connected' : 'Open' }}</strong></button></article>
+          }
+        </div>
+      </article>
+    </section>
+
+    <section class="layout">
+      <article class="panel form-panel">
+        <div class="heading">
+          <div>
+            <p>CREATE NEW COMMUNITY</p>
+            <h2>Community setup under {{ tenant.name }}</h2>
+          </div>
+        </div>
+        <form class="form-grid" (ngSubmit)="createCommunity()">
+          <label><span>Community name</span><input [formControl]="communityName"></label>
+          <label><span>Community type</span><select [formControl]="communityType"><option>Church</option><option>Business</option><option>Township</option><option>Education</option><option>General</option></select></label>
+          <label><span>Country</span><input [formControl]="communityCountry"></label>
+          <label><span>Region</span><input [formControl]="communityRegion"></label>
+          <label><span>Town / location</span><input [formControl]="communityTown"></label>
+          <label><span>Community logo URL</span><input [formControl]="communityLogo"><a data-upload-logo="true" href="/dashboard/branding">Upload logo</a></label>
+          <label><span>Community administrator</span><input [formControl]="communityAdministrator"></label>
+          <label><span>Contact details</span><input [formControl]="communityContact"></label>
+          <label><span>Status</span><select [formControl]="communityStatus"><option>Active</option><option>Inactive</option></select></label>
+          <label class="wide"><span>Description</span><textarea [formControl]="communityDescription"></textarea></label>
+          <h3 class="form-section">Community Colour Scheme</h3>
+          <label><span>Primary colour</span><input type="color" [formControl]="communityPrimaryColor"></label>
+          <label><span>Secondary colour</span><input type="color" [formControl]="communitySecondaryColor"></label>
+          <label><span>Accent colour</span><input type="color" [formControl]="communityAccentColor"></label>
+          <label><span>Dashboard background</span><input type="color" [formControl]="communityBackgroundColor"></label>
+          <div class="service-selector wide">
+            <span>Community services selected from tenant-enabled services</span>
+            <div>
+              @for (service of services(); track service.code) {
+                <label class="toggle" [class.disabled]="!tenant.serviceCodes.includes(service.code)">
+                  <input type="checkbox" [disabled]="!tenant.serviceCodes.includes(service.code)" [checked]="communityServiceCodes().includes(service.code)" (change)="toggleCommunityService(service.code)">
+                  <b>{{ service.name }}</b>
+                  <small>{{ tenant.serviceCodes.includes(service.code) ? service.category + ' · ' + servicePrice(service) : 'Not enabled for tenant' }}</small>
+                </label>
+              }
+            </div>
+          </div>
+          <button type="submit">Create New Community</button>
+        </form>
+      </article>
+
+      <article class="panel">
+        <div class="heading">
+          <div>
+            <p>TENANT COMMUNITIES</p>
+            <h2>Communities belonging to {{ tenant.name }}</h2>
+          </div>
+        </div>
+        <div class="community-list">
+          @for (community of communitiesForSelectedTenant(); track community.id) {
+            <article
+              class="community-card"
+              [style.--community-primary]="community.branding.primaryColor"
+              [style.--community-secondary]="community.branding.secondaryColor"
+              [style.--community-accent]="community.branding.accentColor"
+              [style.--community-background]="community.branding.backgroundColor"
+            >
+              <div>
+                <h3>{{ community.name }}</h3>
+                <p>{{ community.type }} · {{ community.region }} · {{ community.town }}</p>
+              </div>
+              <dl>
+                <div><dt>Users</dt><dd>{{ community.users }}</dd></div>
+                <div><dt>Services</dt><dd>{{ community.serviceCodes.length }}</dd></div>
+                <div><dt>Status</dt><dd>{{ community.status }}</dd></div>
+              </dl>
+              <div class="actions">
+                <button type="button" (click)="openCommunity(community)">Community Admin Dashboard</button>
+                <button type="button" class="secondary" (click)="toggleCommunityStatus(community)">{{ community.status === 'Active' ? 'Deactivate' : 'Activate' }}</button>
+              </div>
+            </article>
+          }
+        </div>
+      </article>
+    </section>
+  }
+
+  @if (view() === 'community' && selectedCommunity(); as community) {
+    <section
+      class="panel community-branded-panel"
+      [style.--community-primary]="community.branding.primaryColor"
+      [style.--community-secondary]="community.branding.secondaryColor"
+      [style.--community-accent]="community.branding.accentColor"
+      [style.--community-background]="community.branding.backgroundColor"
+    >
+      <div class="breadcrumb">
+        <button type="button" (click)="openPlatform()">Duranki</button>
+        <span>→</span>
+        <button type="button" (click)="openTenant(tenantForCommunity(community))">{{ tenantForCommunity(community)?.name }}</button>
+        <span>→</span>
+        <strong>{{ community.name }}</strong>
+      </div>
+      <div class="community-dashboard">
+        <div>
+          <p>COMMUNITY DASHBOARD</p>
+          <h2>{{ community.name }}</h2>
+          <span>{{ community.description }}</span>
+        </div>
+        <dl>
+          <div><dt>Users</dt><dd>{{ community.users }}</dd></div>
+          <div><dt>Transactions</dt><dd>{{ community.transactions | currency:'ZAR' }}</dd></div>
+          <div><dt>Projects</dt><dd>{{ community.projects }}</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section
+      class="module-grid community-module-grid"
+      [style.--community-primary]="community.branding.primaryColor"
+      [style.--community-secondary]="community.branding.secondaryColor"
+      [style.--community-accent]="community.branding.accentColor"
+    >
+      @for (module of ['Community information', 'Members', 'Services', 'Transactions', 'Projects', 'Jobs / opportunities', 'Marketplace', 'Communications', 'Reports', 'Settings']; track module) {
+        <article>
+          <span>{{ module }}</span>
+          <strong>{{ module === 'Services' ? community.serviceCodes.length + ' active' : 'Ready' }}</strong>
+        </article>
+      }
+    </section>
+
+    @if (hasCommunityService(community, 'grant-distribution')) {
+      <section
+        class="panel grant-panel community-service-panel"
+        [style.--community-primary]="community.branding.primaryColor"
+        [style.--community-secondary]="community.branding.secondaryColor"
+        [style.--community-accent]="community.branding.accentColor"
+      >
+        <div class="heading">
+          <div>
+            <p>GRANT DISTRIBUTION SERVICE</p>
+            <h2>Government grant control for {{ community.name }}</h2>
+          </div>
+        </div>
+        <div class="grant-summary">
+          <article><span>Total approved</span><strong>{{ grantTotal() | currency:'ZAR' }}</strong></article>
+          <article><span>Paid to traders</span><strong>{{ grantPaidTotal() | currency:'ZAR' }}</strong></article>
+          <article><span>Pending reconciliation</span><strong>{{ grantPendingTotal() | currency:'ZAR' }}</strong></article>
+        </div>
+        <div class="grant-layout">
+          <div class="grant-batches">
+            @for (batch of grantDistributionBatches; track batch.name) {
+              <article>
+                <div>
+                  <h3>{{ batch.name }}</h3>
+                  <span>{{ batch.traders }} traders · {{ batch.status }}</span>
+                </div>
+                <dl>
+                  <div><dt>Approved</dt><dd>{{ batch.amount | currency:'ZAR' }}</dd></div>
+                  <div><dt>Paid</dt><dd>{{ batch.paid | currency:'ZAR' }}</dd></div>
+                  <div><dt>Outstanding</dt><dd>{{ batch.amount - batch.paid | currency:'ZAR' }}</dd></div>
+                </dl>
+              </article>
+            }
+          </div>
+          <aside class="grant-controls">
+            @for (control of grantControls; track control) {
+              <button type="button">{{ control }}</button>
+            }
+          </aside>
+        </div>
+      </section>
+    }
+
+    @if (hasCommunityService(community, 'trader-training')) {
+      <section
+        class="panel training-panel community-service-panel"
+        [style.--community-primary]="community.branding.primaryColor"
+        [style.--community-secondary]="community.branding.secondaryColor"
+        [style.--community-accent]="community.branding.accentColor"
+      >
+        <div class="heading">
+          <div>
+            <p>TRADER TRAINING SERVICE</p>
+            <h2>Training modules and completion tracking</h2>
+          </div>
+          <strong>{{ trainingCompletionRate() }}% complete</strong>
+        </div>
+        <div class="training-list">
+          @for (module of uifTrainingModules; track module.title) {
+            <article>
+              <div>
+                <h3>{{ module.title }}</h3>
+                <span>{{ module.learners }} enrolled · {{ module.completed }} completed</span>
+              </div>
+              <progress [value]="module.completed" [max]="module.learners"></progress>
+              <em>{{ module.status }}</em>
+            </article>
+          }
+        </div>
+      </section>
+    }
+
+    <section
+      class="panel community-service-management"
+      [style.--community-primary]="community.branding.primaryColor"
+      [style.--community-secondary]="community.branding.secondaryColor"
+      [style.--community-accent]="community.branding.accentColor"
+    >
+      <div class="heading">
+        <div>
+          <p>MANAGE SERVICES</p>
+          <h2>Services assigned to {{ community.name }}</h2>
+        </div>
+      </div>
+      <div class="service-management">
+        @for (service of services(); track service.code) {
+          <label class="service-row" [class.disabled]="!communityTenantHasService(community, service.code)">
+            <span>
+              <b>{{ service.name }}</b>
+              <small>{{ communityTenantHasService(community, service.code) ? service.description : 'Not enabled for tenant' }}</small>
+            </span>
+            <input
+              type="checkbox"
+              [disabled]="!communityTenantHasService(community, service.code)"
+              [checked]="community.serviceCodes.includes(service.code)"
+              (change)="setCommunityService(community, service.code)"
+            >
+          </label>
+        }
+      </div>
+    </section>
+  }
+</main>

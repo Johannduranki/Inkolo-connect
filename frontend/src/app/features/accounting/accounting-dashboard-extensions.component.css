@@ -1,0 +1,400 @@
+.inline-form,
+.invoice-form {
+  display: grid;
+  margin-top: 1rem;
+  padding: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .75rem;
+  border: 1px solid #d8e3e7;
+  background: #f7fafb;
+}
+
+.inline-form label,
+.invoice-form label {
+  display: grid;
+  gap: .3rem;
+}
+
+.inline-form label > span,
+.invoice-form label > span {
+  color: #5e7480;
+  font-size: .67rem;
+  font-weight: 700;
+}
+
+.inline-form input,
+.inline-form select,
+.invoice-form input,
+.invoice-form select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.45rem;
+  padding: .58rem;
+  border: 1px solid #c9d8de;
+  color: #173b55;
+  background: #fff;
+  font: inherit;
+  font-size: .73rem;
+}
+
+.inline-form > button,
+.invoice-form > button {
+  min-height: 2.45rem;
+  align-self: end;
+  border: 0;
+  color: #fff;
+  background: #176a88;
+  font: inherit;
+  font-size: .7rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.invoice-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .9rem;
+}
+
+.invoice-layout .invoice-form {
+  padding: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 0;
+  background: transparent;
+}
+
+.invoice-form .wide {
+  grid-column: 1 / -1;
+}
+
+.file-field input {
+  padding: .35rem;
+}
+
+.file-field small {
+  color: #738791;
+  font-size: .62rem;
+}
+
+.invoice-preview {
+  display: grid;
+  padding: .7rem;
+  align-content: center;
+  border-left: 3px solid #2d9b78;
+  background: #edf8f4;
+}
+
+.invoice-preview span {
+  color: #607780;
+  font-size: .64rem;
+}
+
+.invoice-preview strong {
+  margin-top: .25rem;
+  color: #176849;
+}
+
+.fund-flow {
+  display: grid;
+  margin-top: .9rem;
+  padding: 1rem;
+  grid-template-columns: repeat(9, auto);
+  gap: .5rem;
+  align-items: center;
+  border: 1px solid #d6e1e5;
+  background: #fff;
+}
+
+.fund-flow > div {
+  display: grid;
+  min-width: 0;
+  padding: .7rem;
+  border-left: 3px solid #287d9b;
+  background: #f5f8f9;
+}
+
+.fund-flow > div > span {
+  display: grid;
+  width: 1.4rem;
+  height: 1.4rem;
+  margin-bottom: .4rem;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: #176a88;
+  font-size: .6rem;
+  font-weight: 800;
+}
+
+.fund-flow strong {
+  color: #173b55;
+  font-size: .72rem;
+}
+
+.fund-flow small {
+  margin-top: .25rem;
+  color: #71848e;
+  font-size: .6rem;
+  line-height: 1.35;
+}
+
+.fund-flow > i {
+  color: #83a0af;
+  font-style: normal;
+}
+
+.bank-reference {
+  min-width: 9rem;
+  padding: .45rem;
+  border: 1px solid #c9d8de;
+  font: inherit;
+  font-size: .68rem;
+}
+
+.scope-note {
+  max-width: 55rem;
+  color: #657b87;
+  font-size: .73rem;
+  line-height: 1.5;
+}
+
+.code-form {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.code-groups {
+  display: grid;
+  margin-top: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .8rem;
+}
+
+.code-groups > section {
+  padding: .8rem;
+  border: 1px solid #dce5e8;
+  background: #f7fafb;
+}
+
+.code-groups h3 {
+  margin: 0 0 .7rem;
+  color: #173b55;
+  font-size: .8rem;
+}
+
+.code-list {
+  display: grid;
+  gap: .45rem;
+}
+
+.code-list article {
+  display: grid;
+  padding: .55rem;
+  grid-template-columns: auto 1fr auto;
+  gap: .55rem;
+  align-items: center;
+  background: #fff;
+}
+
+.code-list article > span {
+  padding: .3rem .4rem;
+  color: #fff;
+  background: #176a88;
+  font-family: monospace;
+  font-size: .65rem;
+  font-weight: 800;
+}
+
+.code-list article > div {
+  display: grid;
+  min-width: 0;
+}
+
+.code-list strong {
+  overflow: hidden;
+  color: #24485e;
+  font-size: .67rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code-list small {
+  overflow: hidden;
+  color: #80919a;
+  font-size: .56rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code-list b {
+  color: #25805f;
+  font-size: .52rem;
+}
+
+.bulk-upload {
+  display: grid;
+  margin-top: 1rem;
+  padding: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 1rem;
+  align-items: end;
+  border: 1px dashed #9fb5c1;
+  background: #f7fafb;
+}
+
+.bulk-upload label,
+.bulk-upload > div {
+  display: grid;
+  gap: .25rem;
+}
+
+.bulk-upload span,
+.bulk-upload small {
+  color: #6b808b;
+  font-size: .65rem;
+}
+
+.bulk-upload > div strong {
+  color: #173b55;
+  font-size: 1.25rem;
+}
+
+.bulk-upload button,
+.payment-form > button {
+  min-height: 2.5rem;
+  padding: .6rem .85rem;
+  border: 0;
+  color: #fff;
+  background: #176a88;
+  font: inherit;
+  font-size: .7rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.bulk-upload button:disabled {
+  background: #a5b5bd;
+  cursor: default;
+}
+
+.payment-warning {
+  display: grid;
+  margin-top: 1rem;
+  padding: .8rem;
+  border-left: 3px solid #d3a72d;
+  background: #fff9e9;
+}
+
+.payment-warning strong {
+  color: #755b11;
+  font-size: .7rem;
+}
+
+.payment-warning span {
+  margin-top: .25rem;
+  color: #766b4b;
+  font-size: .66rem;
+  line-height: 1.45;
+}
+
+.payment-form {
+  display: grid;
+  margin-top: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .75rem;
+}
+
+.payment-form label {
+  display: grid;
+  gap: .3rem;
+}
+
+.payment-form label > span {
+  color: #5e7480;
+  font-size: .67rem;
+  font-weight: 700;
+}
+
+.payment-form input,
+.payment-form select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.45rem;
+  padding: .58rem;
+  border: 1px solid #c9d8de;
+  color: #173b55;
+  background: #fff;
+  font: inherit;
+  font-size: .73rem;
+}
+
+.payment-form .wide {
+  grid-column: span 2;
+}
+
+.payment-summary {
+  display: grid;
+  padding: .6rem .75rem;
+  align-content: center;
+  border-left: 3px solid #2d9b78;
+  background: #edf8f4;
+}
+
+.payment-summary span {
+  color: #607780;
+  font-size: .62rem;
+}
+
+.payment-summary strong {
+  margin-top: .2rem;
+  color: #176849;
+  font-size: 1rem;
+}
+
+.empty-cell {
+  padding: 2rem;
+  color: #7b8d96;
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .inline-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .invoice-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .fund-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .code-form,
+  .code-groups,
+  .payment-form {
+    grid-template-columns: 1fr;
+  }
+
+  .bulk-upload {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-form .wide {
+    grid-column: auto;
+  }
+
+  .fund-flow > i {
+    display: none;
+  }
+}
+
+@media (max-width: 650px) {
+  .inline-form,
+  .invoice-layout .invoice-form {
+    grid-template-columns: 1fr;
+  }
+
+  .invoice-form .wide {
+    grid-column: auto;
+  }
+}
