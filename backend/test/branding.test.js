@@ -1,0 +1,34 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import express from 'express';
+import { readFileSync } from 'node:fs';
+import { createBrandingRouter,imageType } from '../src/branding.js';
+const png=readFileSync(new URL('../../frontend/public/inkolo-connect-logo.png',import.meta.url));
+test('logo validation accepts PNG and rejects SVG, HTML and excessive dimensions',()=>{
+  assert.equal(imageType(png),'image/png');
+  assert.throws(()=>imageType(Buffer.from('<svg onload="alert(1)"></svg>')));
+  assert.throws(()=>imageType(Buffer.from('<html><script>alert(1)</script></html>')));
+  const tooLarge=Buffer.from(png);tooLarge.writeUInt32BE(99999,16);assert.throws(()=>imageType(tooLarge));
+});
+test('logo upload enforces tenant scope, preserves bytes, persists revision and audit',async t=>{
+  let state={importedCommunities:[{id:'trader-ilembe',platformCommunityId:'community-traders',tenantId:'tenant-traders',tenantName:'Traders',name:'Traders Community'}],tenantStaff:[{userId:'staff',tenantId:'tenant-traders',status:'active',permissions:['branding.manage']}],entityBranding:{}};
+  state.users=['admin','staff','member'].map(id=>({id,status:'active',roles:id==='admin'?['Platform Admin']:['Member']}));
+  const app=express();app.use(express.json());app.use('/branding',createBrandingRouter({requireAuth:(req,res,next)=>{if(!req.get('x-user'))return res.sendStatus(401);req.auth={sub:req.get('x-user')};next();},resolveUser:async id=>state.users.find(u=>u.id===id),readState:()=>state,updateState:fn=>{const copy=structuredClone(state);const result=fn(copy);state=copy;return result;}}));
+  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));t.after(()=>{server.closeAllConnections();server.close();});
+  const base='http://127.0.0.1:'+server.address().port+'/branding';
+  const upload=(user,revision=0,bytes=png,path='/community/community-traders')=>{const body=new FormData();body.append('logo',new Blob([bytes],{type:'image/png'}),'../../unsafe.png');body.append('revision',String(revision));return fetch(base+path,{method:'PUT',headers:{'x-user':user},body});};
+  assert.equal((await fetch(base)).status,401);
+  assert.equal((await upload('member')).status,403);
+  assert.equal((await upload('staff',0,png,'/community/missing')).status,404);
+  assert.equal((await upload('admin',0,Buffer.alloc(2*1024*1024+1))).status,400);
+  assert.equal((await upload('admin',0,Buffer.from('<svg></svg>'))).status,400);
+  const response=await upload('staff');assert.equal(response.status,200);const saved=await response.json();assert.equal(saved.revision,1);
+  assert.equal(state.brandingAudit.length,1);assert.equal(state.entityBranding['community:community-traders'].logoUrl,saved.logoUrl);
+  const downloaded=await fetch(base+'/images/'+saved.logoUrl.split('/').at(-1));assert.equal(downloaded.headers.get('content-type'),'image/png');assert.equal(downloaded.headers.get('x-content-type-options'),'nosniff');assert.deepEqual(Buffer.from(await downloaded.arrayBuffer()),png);
+  assert.equal((await upload('staff')).status,409);
+  state.tenantStaff[0].status='revoked';assert.equal((await upload('staff',1)).status,403);
+  assert.equal((await upload('admin',1)).status,200);
+  const directory=await (await fetch(base,{headers:{'x-user':'member'}})).json();assert.equal(directory[1].canEdit,false);assert.equal(directory[1].aliases[0],'trader-ilembe');
+  const add=user=>fetch(base+'/directory',{method:'POST',headers:{'x-user':user,'Content-Type':'application/json'},body:JSON.stringify({kind:'tenant',id:'tenant-ingwe',name:'Ingwe'})});
+  assert.equal((await add('member')).status,403);assert.equal((await add('admin')).status,201);
+});

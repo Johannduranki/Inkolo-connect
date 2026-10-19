@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {editAdminProfile,profileVersion} from '../src/admin-profile.js';
+const fixture=()=>({users:[{id:1,firstName:'Test',lastName:'User',telephoneNumber:'0821111111',email:'',roles:['Member'],passwordHash:'unchanged'},{id:2,telephoneNumber:'0822222222'},{id:99,status:'active',roles:['Platform Admin']}],profiles:[]});
+const body=s=>({version:profileVersion(s.users[0]),firstName:'Updated',lastName:'User',telephoneNumber:'0821111111',email:'test@example.com',address:'Street',city:'Town',postalCode:'4000',emergencyContactName:'Contact',emergencyContactNumber:'0833333333'});
+test('updates allowed fields, preserves permissions and passwords, records audit',()=>{const s=fixture();editAdminProfile(s,1,{...body(s),roles:['Platform Admin'],passwordHash:'bad'},99);assert.equal(s.users[0].firstName,'Updated');assert.deepEqual(s.users[0].roles,['Member']);assert.equal(s.users[0].passwordHash,'unchanged');assert.equal(s.profiles[0].city,'Town');assert.equal(s.profileAudit[0].actorId,'99');});
+test('rejects duplicate phones and stale edits without mutation',()=>{const s=fixture(),before=structuredClone(s);assert.throws(()=>editAdminProfile(s,1,{...body(s),telephoneNumber:'+27822222222'},99),{status:409});assert.deepEqual(s,before);assert.throws(()=>editAdminProfile(s,1,{...body(s),version:'stale'},99),{status:409});});
+test('protects owner login and validates email',()=>{const s=fixture();s.users[0].id=1000001;assert.throws(()=>editAdminProfile(s,1000001,{...body(s),telephoneNumber:'0844444444'},99),{status:400});assert.throws(()=>editAdminProfile(s,1000001,{...body(s),email:'invalid'},99),{status:400});});
