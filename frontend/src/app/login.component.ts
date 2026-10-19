@@ -1,6 +1,7 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
 import { Router } from '@angular/router';
 import { AuthService } from './auth.service';
@@ -14,6 +15,28 @@ import { RoleService, UserRole } from './core/services/role.service';
   styleUrl: './login.component.css'
 })
 export class LoginComponent {
+  private readonly http = inject(HttpClient);
+  private readonly destroyRef = inject(DestroyRef);
+  readonly brandFaces = Array.from({ length: 16 }, (_, index) => index + 1);
+  readonly existingAccount = signal(false);
+  private lookupVersion = 0;
+
+  constructor() {
+    this.telephoneNumber.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.lookupVersion++;
+      this.existingAccount.set(false);
+    });
+  }
+
+  checkExistingAccount(): void {
+    if (this.mode() !== 'register' || this.telephoneNumber.invalid) return;
+    const version = ++this.lookupVersion;
+    this.http.post<{ registered: boolean }>('/api/auth/registration-check', { telephoneNumber: this.telephoneNumber.value })
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: result => { if (version === this.lookupVersion && this.mode() === 'register') this.existingAccount.set(result.registered); },
+        error: () => { /* Registration still performs the authoritative duplicate check. */ }
+      });
+  }
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly roles = inject(RoleService);
@@ -35,6 +58,8 @@ export class LoginComponent {
   readonly errorMessage = signal('');
   readonly mode = signal<'login' | 'register'>('login');
   setMode(mode: 'login' | 'register'): void {
+    this.lookupVersion++;
+    this.existingAccount.set(false);
     this.mode.set(mode);
     this.errorMessage.set('');
     this.firstName.markAsUntouched();
@@ -54,7 +79,7 @@ export class LoginComponent {
     this.telephoneNumber.markAsTouched();
 
     if (
-      (this.mode() === 'register' && (this.firstName.invalid || this.lastName.invalid || this.password.value.length < 15)) ||
+      (this.mode() === 'register' && !this.existingAccount() && (this.firstName.invalid || this.lastName.invalid || this.password.value.length < 15)) ||
       this.password.invalid ||
       this.telephoneNumber.invalid ||
       this.loading()
@@ -63,7 +88,8 @@ export class LoginComponent {
     }
 
     this.loading.set(true);
-    const request = this.mode() === 'register'
+    const joiningCommunity = (this.mode() === 'register' && this.existingAccount()) || sessionStorage.getItem('duranki_join_after_login') === 'true';
+    const request = this.mode() === 'register' && !joiningCommunity
       ? this.auth.register(
           this.telephoneNumber.value,
           this.firstName.value.trim(),
@@ -81,7 +107,12 @@ export class LoginComponent {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: ({ user, mfaRequired }) => {
+          if (joiningCommunity) {
+            sessionStorage.setItem('duranki_join_after_login', 'true');
+            sessionStorage.removeItem('duranki_login_landing_pending');
+          }
           if (mfaRequired) { window.location.assign('/two-factor'); return; }
+          if (joiningCommunity) { window.location.assign('/join-community'); return; }
           this.completeLogin(user);
         },
         error: (error: HttpErrorResponse) => {

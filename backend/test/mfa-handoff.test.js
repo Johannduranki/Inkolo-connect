@@ -6,15 +6,17 @@ import ts from '../../frontend/node_modules/typescript/lib/typescript.js';
 
 const storage=()=>{const values=new Map();return {getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,String(value)),removeItem:key=>values.delete(key)};};
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
-const bundle=fs.readFileSync(new URL('../../frontend/dist/duranki-login/browser/main-4DAPJI7G.js',import.meta.url),'utf8');
-const ast=ts.createSourceFile('main.js',bundle,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
 const methods={};
-function visit(node){if(ts.isMethodDeclaration(node)){const name=node.name.getText(ast),text=node.getText(ast);if(name==='login'&&text.includes('/auth/login'))methods.login=text;if(name==='submit'&&text.includes('this.auth.login'))methods.submit=text;}ts.forEachChild(node,visit);}visit(ast);
+for(const file of ['auth.service.ts','login.component.ts']){
+  const source=fs.readFileSync(new URL('../../frontend/src/app/'+file,import.meta.url),'utf8');
+  const ast=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
+  function visit(node){if(ts.isMethodDeclaration(node)){const name=node.name.getText(ast),text=node.getText(ast);if((name==='login'&&text.includes('/auth/login'))||(name==='submit'&&text.includes('this.auth.login')))methods[name]=ts.transpileModule('({'+text+'})',{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;}ts.forEachChild(node,visit);}visit(ast);
+}
 
 test('deployed auth stores MFA challenge separately and never treats it as an authenticated session',()=>{
   const sessionStorage=storage(),localStorage=storage();let saved=null;
   sessionStorage.setItem('duranki_access_token','old-session');localStorage.setItem('duranki_access_token','old-session');
-  const login=vm.runInNewContext('({'+methods.login+'}).login',{sessionStorage,localStorage,rt:callback=>callback});
+  const login=vm.runInNewContext(methods.login,{sessionStorage,localStorage,tap:callback=>callback}).login;
   const response={mfaRequired:true,accessToken:'test-challenge'};
   const auth={apiUrl:'/api',tokenKey:'duranki_access_token',inMemoryToken:'old-session',http:{post:()=>({pipe:callback=>callback(response)})},storeToken:token=>saved=token};
   login.call(auth,'fixture','fixture');
@@ -26,17 +28,17 @@ test('deployed auth stores MFA challenge separately and never treats it as an au
 
 test('deployed login redirects challenge responses without requesting protected dashboard data',()=>{
   let redirected,completed=false;
-  const submit=vm.runInNewContext('({'+methods.submit+'}).submit',{window:{location:{replace:url=>redirected=url}},En:fn=>fn});
+  const submit=vm.runInNewContext(methods.submit,{sessionStorage:storage(),window:{location:{assign:url=>redirected=url}},finalize:fn=>fn}).submit;
   const loading=()=>false;loading.set=()=>{};
   const control={value:'fixture',invalid:false,markAsTouched(){}};
-  const context={errorMessage:{set(){}},registrationNotice:{set(){}},telephoneNumber:control,password:control,loading,mode:()=> 'login',auth:{login:()=>({pipe:()=>({subscribe:handlers=>handlers.next({mfaRequired:true,user:{}})})})},completeLogin:()=>completed=true};
+  const context={errorMessage:{set(){}},firstName:control,lastName:control,telephoneNumber:control,password:control,loading,mode:()=> 'login',existingAccount:()=>false,auth:{login:()=>({pipe:()=>({subscribe:handlers=>handlers.next({mfaRequired:true,user:{}})})})},completeLogin:()=>completed=true};
   submit.call(context);assert.equal(redirected,'/two-factor');assert.equal(completed,false);
 });
 
 test('late status response cannot erase a new challenge or send it back to login',async()=>{
   const sessionStorage=storage(),localStorage=storage();sessionStorage.setItem('duranki_access_token','old-session');
   let resolveResponse,redirected;
-  vm.runInNewContext(fs.readFileSync(new URL('../../frontend/public/mfa-navigation.js',import.meta.url),'utf8'),{sessionStorage,localStorage,location:{pathname:'/login',replace:url=>redirected=url},setInterval(){},fetch:()=>new Promise(resolve=>resolveResponse=resolve)});
+  vm.runInNewContext(fs.readFileSync(new URL('../../frontend/public/mfa-navigation.js',import.meta.url),'utf8'),{document:{addEventListener(){}},sessionStorage,localStorage,location:{pathname:'/login',replace:url=>redirected=url},setInterval(){},fetch:()=>new Promise(resolve=>resolveResponse=resolve)});
   sessionStorage.removeItem('duranki_access_token');sessionStorage.setItem('duranki_mfa_challenge','new-challenge');
   resolveResponse({ok:true,json:async()=>({required:true,verified:false})});await tick();
   assert.equal(sessionStorage.getItem('duranki_mfa_challenge'),'new-challenge');assert.equal(redirected,undefined);

@@ -1,14 +1,15 @@
 <main class="login-page">
   <section class="brand-panel" aria-label="Duranki introduction">
-    <div class="logo-frame">
-      <img class="inkolo-logo" src="/duranki-up-logo.png" alt="Duranki">
+    <div class="brand-photo-bubbles" aria-hidden="true">
+      @for (face of brandFaces; track face) {
+        <span [class]="'photo-bubble face-' + face"></span>
+      }
     </div>
-    <div>
-      <p class="eyebrow">DURANKI</p>
-      <h1>Welcome back.</h1>
-      <p class="brand-copy">
-        Sign in securely to access your Duranki workspace.
-      </p>
+    <div class="brand-center">
+      <div class="logo-frame">
+        <img class="inkolo-logo" src="/duranki-up-logo-transparent.png" alt="Duranki">
+      </div>
+      <p class="brand-slogan">Your Gateway to Financial Freedom and Inclusion</p>
     </div>
     <p class="support">Need help? Contact your platform administrator.</p>
   </section>
@@ -16,16 +17,16 @@
   <section class="form-panel">
     <form class="login-card" (submit)="submit(); $event.preventDefault()" novalidate>
       <div class="mobile-brand">
-        <img class="inkolo-logo mobile" src="/duranki-up-logo.png" alt="Duranki">
+        <img class="inkolo-logo mobile" src="/duranki-up-logo-transparent.png" alt="Duranki">
       </div>
 
       <p class="eyebrow dark">ACCOUNT ACCESS</p>
-      <h2>{{ mode() === 'register' ? 'Create your account' : 'Sign in' }}</h2>
+      <h2>{{ mode() === 'register' ? 'Create your account' : 'Tell us who you are' }}</h2>
       <p class="form-intro">
         @if (mode() === 'register') {
           Register as a Duranki member using your name, surname and telephone number.
         } @else {
-          Enter your telephone number and password.
+          Sign in with one telephone number and password, then switch between your assigned dashboards.
         }
       </p>
 
@@ -46,7 +47,7 @@
         </button>
       </div>
 
-      @if (mode() === 'register') {
+      @if (mode() === 'register' && !existingAccount()) {
       <div class="name-fields">
         <label>
           <span>Name</span>
@@ -76,10 +77,6 @@
       }
       }
 
-      <label for="accountPassword">Password</label>
-      <input id="accountPassword" type="password" [formControl]="password"
-        [attr.autocomplete]="mode() === 'register' ? 'new-password' : 'current-password'" maxlength="1024">
-      @if (mode() === 'register') { <p>Use at least 15 characters.</p> }
       <label for="telephoneNumber">Telephone number</label>
       <input
         id="telephoneNumber"
@@ -87,6 +84,7 @@
         inputmode="tel"
         autocomplete="tel"
         [formControl]="telephoneNumber"
+        (blur)="checkExistingAccount()"
         placeholder="e.g. 0712345678"
         aria-describedby="telephone-help"
       >
@@ -97,6 +95,18 @@
           Use the number registered to your account.
         }
       </p>
+
+      @if (existingAccount()) {
+        <section class="existing-registration-panel" aria-live="polite">
+          <strong>You are already registered.</strong>
+          <span>Sign in with your existing password to choose another community. Your account and memberships will be kept.</span>
+        </section>
+      }
+
+      <label for="accountPassword">Password</label>
+      <input id="accountPassword" type="password" [formControl]="password"
+        [attr.autocomplete]="mode() === 'register' && !existingAccount() ? 'new-password' : 'current-password'" maxlength="1024">
+      <p class="field-help">{{ mode() === 'register' && !existingAccount() ? 'Use at least 15 characters.' : 'Use the password assigned to your telephone-number login.' }}</p>
 
       @if (telephoneNumber.touched && telephoneNumber.invalid) {
         <p class="error" role="alert">Enter a valid telephone number.</p>
@@ -109,7 +119,7 @@
         {{
           loading()
             ? (mode() === 'register' ? 'Creating account...' : 'Signing in...')
-            : (mode() === 'register' ? 'Register and continue' : 'Continue')
+            : (existingAccount() ? 'Sign in and choose a community' : mode() === 'register' ? 'Register and continue' : 'Continue')
         }}
       </button>
 

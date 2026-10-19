@@ -1,0 +1,29 @@
+Frontend routing repair (operator action; no CI workflow change)
+
+The current frontend is Apache in durankidemo_frontend. Its public /login and
+/api/health paths returned 404 during diagnosis. Copying Angular assets alone
+cannot change the Apache virtual-host configuration.
+
+Johann: back up the existing Apache configuration outside its served document
+root. Enable rewrite_module, proxy_module, proxy_http_module and headers_module
+if not already loaded. Include deploy/apache-app-routes.conf inside the active
+application VirtualHost. Verify that backend:3001 resolves on the existing
+Docker network; substitute the confirmed internal endpoint if it differs.
+Do not open a new public database or API port.
+
+Run httpd -t inside the frontend container before activation. Only when it
+passes, use httpd -k graceful to reload configuration without stopping services.
+Persist the configuration in the existing server-managed config volume.
+This file is not automatically installed by the deployment workflow.
+
+Verify /login returns the Angular entry point, /api/health returns JSON,
+/two-factor returns the MFA page, and protected APIs still deny anonymous users.
+Check /dashboard/wholesaler-orders, /dashboard/treasury, /join-community and a
+direct refresh on /dashboard/platform-admin. Test both desktop and mobile.
+
+Fix the HTTPS certificate/reverse-proxy configuration before entering real
+credentials. Preserve the existing trusted-proxy settings; do not trust arbitrary
+forwarded headers or expose backend:3001 externally.
+
+Rollback: restore only the backed-up Apache configuration, validate with httpd
+-t and reload gracefully. Do not alter database volumes or uploaded documents.
