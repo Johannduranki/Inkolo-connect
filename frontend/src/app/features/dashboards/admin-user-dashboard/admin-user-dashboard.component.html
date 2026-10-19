@@ -34,6 +34,10 @@
     </button>
   </section>
 
+  @if (roleUpdateError$ | async; as roleError) {
+    <p role="alert">{{ roleError }}</p>
+  }
+
   @if (reportOpen()) {
     <div class="report-backdrop" (click)="reportOpen.set(false)">
       <section

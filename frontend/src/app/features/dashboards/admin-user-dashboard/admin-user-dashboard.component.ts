@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { AsyncPipe, CurrencyPipe, DatePipe } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService, User } from '../../../auth.service';
@@ -45,7 +45,7 @@ interface SubscriptionChartItem extends ServiceSubscriptionCount {
 @Component({
   selector: 'app-admin-user-dashboard',
   standalone: true,
-  imports: [RoleSwitcherComponent, DatePipe, CurrencyPipe, ReactiveFormsModule],
+  imports: [RoleSwitcherComponent, DatePipe, CurrencyPipe, ReactiveFormsModule, AsyncPipe],
   templateUrl: './admin-user-dashboard.component.html',
   styleUrl: './admin-user-dashboard.component.css'
 })
@@ -99,6 +99,7 @@ export class AdminUserDashboardComponent implements OnInit {
   readonly newEmail = new FormControl('', { nonNullable: true });
   readonly newRole = new FormControl<UserRole>('Member', { nonNullable: true });
   readonly allRoles = this.roles.allRoles;
+  readonly roleUpdateError$ = this.roles.roleUpdateErrorSubject.asObservable();
   readonly reportServices = [
     { code: 'funeral', name: 'Funeral Services' },
     { code: 'kzncc', name: 'KZNCC Membership' },

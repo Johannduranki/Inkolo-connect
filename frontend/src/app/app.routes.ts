@@ -11,12 +11,27 @@ import { AdminUserDashboardComponent } from './features/dashboards/admin-user-da
 import { KznccUserDashboardComponent } from './features/dashboards/kzncc-user-dashboard/kzncc-user-dashboard.component';
 import { KznccAdminDashboardComponent } from './features/dashboards/kzncc-admin-dashboard/kzncc-admin-dashboard.component';
 import { ServiceProviderDashboardComponent } from './features/service-provider/service-provider-dashboard/service-provider-dashboard.component';
+import { PlatformOverviewComponent } from './features/platform-admin/platform-overview.component';
 
 export const routes: Routes = [
-  { path: 'login', component: LoginComponent },
+  { path: 'login', component: LoginComponent, title: 'Sign in | Duranki' },
+  {
+    path: 'dashboard/accounting',
+    loadComponent: () => import('./features/accounting/accounting-dashboard.component').then(module => module.AccountingDashboardComponent),
+    title: 'Accounting | Duranki', canActivate: [authGuard, roleGuard],
+    data: { roles: ['Platform Admin', 'Accountant'] }
+  },
+  {
+    path: 'dashboard/platform-admin',
+    component: PlatformOverviewComponent,
+    title: 'Platform administration | Duranki',
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'Platform Admin' }
+  },
   {
     path: 'dashboard/member',
     component: MemberDashboardComponent,
+    title: 'Member services | Duranki',
     canActivate: [authGuard, roleGuard],
     data: { role: 'Member' }
   },
@@ -52,12 +67,14 @@ export const routes: Routes = [
   },
   {
     path: 'dashboard/service-provider-admin',
+    title: 'Provider workspace | Duranki',
     component: ServiceProviderDashboardComponent,
     canActivate: [authGuard, roleGuard],
     data: { role: 'Service Provider Admin' }
   },
   {
     path: 'dashboard/service-provider-user',
+    title: 'Provider workspace | Duranki',
     component: ServiceProviderDashboardComponent,
     canActivate: [authGuard, roleGuard],
     data: { role: 'Service Provider User' }

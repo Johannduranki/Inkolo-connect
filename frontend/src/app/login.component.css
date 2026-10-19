@@ -4,6 +4,12 @@
   --inkolo-cyan: var(--inkolo-lime);
 }
 
+:host *,
+:host *::before,
+:host *::after {
+  box-sizing: border-box;
+}
+
 .login-page {
   display: grid;
   min-height: 100vh;
@@ -11,6 +17,7 @@
 }
 
 .brand-panel {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -38,6 +45,7 @@
 .inkolo-logo {
   display: block;
   width: 18rem;
+  max-width: 100%;
   height: 8.5rem;
   object-fit: contain;
 }
@@ -81,6 +89,7 @@ h1 {
 }
 
 .form-panel {
+  min-width: 0;
   display: grid;
   padding: 2rem;
   place-items: center;
@@ -235,6 +244,10 @@ label {
   color: #29495f;
   font-size: 0.9rem;
   font-weight: 700;
+}
+
+input + label {
+  margin-top: 1rem;
 }
 
 .name-fields {

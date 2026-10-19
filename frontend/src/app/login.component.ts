@@ -6,14 +6,6 @@ import { Router } from '@angular/router';
 import { AuthService } from './auth.service';
 import { RoleService, UserRole } from './core/services/role.service';
 
-interface DemoLoginUser {
-  id: number;
-  firstName: string;
-  lastName: string;
-  telephoneNumber: string;
-  description: string;
-}
-
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -39,28 +31,9 @@ export class LoginComponent {
     validators: [Validators.required, Validators.pattern(/^[+\d\s()-]{9,24}$/)]
   });
   readonly loading = signal(false);
+  readonly password = new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(1024)] });
   readonly errorMessage = signal('');
   readonly mode = signal<'login' | 'register'>('login');
-  readonly demoUsers: DemoLoginUser[] = [
-    { id: 1, firstName: 'Jeremy', lastName: 'Shabalala', telephoneNumber: '0712345678', description: 'Member' },
-    { id: 2, firstName: 'Nandi', lastName: 'Mthembu', telephoneNumber: '0725550184', description: 'Member + Pastor' },
-    { id: 3, firstName: 'Thabo', lastName: 'Khumalo', telephoneNumber: '0736614209', description: 'Member + Bishop' },
-    { id: 4, firstName: 'Lerato', lastName: 'Sithole', telephoneNumber: '0789441132', description: 'Member + KZNCC User' },
-    { id: 5, firstName: 'Ayanda', lastName: 'Dlamini', telephoneNumber: '0741002003', description: 'Member + KZNCC Admin' },
-    { id: 6, firstName: 'Sipho', lastName: 'Ncube', telephoneNumber: '0763004005', description: 'Duranki Admin User' },
-    { id: 7, firstName: 'Zanele', lastName: 'Mkhize', telephoneNumber: '0795006007', description: 'Service Provider Admin' },
-    { id: 8, firstName: 'Mandla', lastName: 'Cele', telephoneNumber: '0817008009', description: 'Service Provider User' },
-    { id: 19, firstName: 'Vuma', lastName: 'Admin', telephoneNumber: '0829001001', description: 'Vuma Force Admin' }
-  ];
-
-  chooseDemoUser(user: DemoLoginUser): void {
-    this.mode.set('login');
-    this.firstName.setValue(user.firstName);
-    this.lastName.setValue(user.lastName);
-    this.telephoneNumber.setValue(user.telephoneNumber);
-    this.errorMessage.set('');
-  }
-
   setMode(mode: 'login' | 'register'): void {
     this.mode.set(mode);
     this.errorMessage.set('');
@@ -81,8 +54,8 @@ export class LoginComponent {
     this.telephoneNumber.markAsTouched();
 
     if (
-      this.firstName.invalid ||
-      this.lastName.invalid ||
+      (this.mode() === 'register' && (this.firstName.invalid || this.lastName.invalid || this.password.value.length < 15)) ||
+      this.password.invalid ||
       this.telephoneNumber.invalid ||
       this.loading()
     ) {
@@ -94,18 +67,23 @@ export class LoginComponent {
       ? this.auth.register(
           this.telephoneNumber.value,
           this.firstName.value.trim(),
-          this.lastName.value.trim()
+          this.lastName.value.trim(),
+          this.password.value
         )
       : this.auth.login(
           this.telephoneNumber.value,
           this.firstName.value.trim(),
-          this.lastName.value.trim()
+          this.lastName.value.trim(),
+          this.password.value
         );
 
     request
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: ({ user }) => this.completeLogin(user),
+        next: ({ user, mfaRequired }) => {
+          if (mfaRequired) { window.location.assign('/two-factor'); return; }
+          this.completeLogin(user);
+        },
         error: (error: HttpErrorResponse) => {
           this.errorMessage.set(
             error.error?.message || 'We could not sign you in. Please try again.'
@@ -120,26 +98,15 @@ export class LoginComponent {
     lastName: string;
     roles: UserRole[];
   }): void {
-    const isVumaAdmin =
-      user.id === 19 ||
-      (user.firstName.trim().toLowerCase() === 'vuma' &&
-        user.lastName.trim().toLowerCase() === 'admin');
-
     this.roles.initializeUser(
       user.id,
       user.roles,
       `${user.firstName} ${user.lastName}`
     );
-    if (isVumaAdmin) {
-      window.location.href = '/dashboard/service-provider-admin';
-      return;
-    }
-
+    if (user.roles.includes('Platform Admin')) this.roles.setActiveRole('Platform Admin');
     const activeRole = this.roles.getActiveRole();
     if (activeRole !== 'Member') {
-      void this.router.navigate([
-        this.roles.getDashboardRouteForRole(activeRole)
-      ]);
+      window.location.assign(this.roles.getDashboardRouteForRole(activeRole));
       return;
     }
 

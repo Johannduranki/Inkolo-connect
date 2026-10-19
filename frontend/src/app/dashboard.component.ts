@@ -1,5 +1,7 @@
 import { DatePipe, DecimalPipe, NgStyle } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { memberCapabilities, reconcileMemberCatalogue, scopedMemberCatalogue, programmeContext } from '../../public/member-service-catalogue.js';
+import { resolveCommunityConfiguration } from '../../public/tenant-service-policy.js';
+import { ChangeDetectorRef, Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -69,6 +71,11 @@ import {
 import { BusinessProfileService } from './core/services/business-profile.service';
 
 interface Service {
+  canonicalCode?: string;
+  catalogueStatus?: string;
+  catalogueDetail?: string;
+  catalogueBlocked?: boolean;
+  catalogueRoute?: string;
   code: string;
   name: string;
   description: string;
@@ -179,6 +186,8 @@ interface WalletOperatorFunction {
 })
 export class DashboardComponent implements OnInit {
   private readonly auth = inject(AuthService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
+  private catalogueRequest = 0;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly communities = inject(MemberCommunityService);
@@ -354,12 +363,9 @@ export class DashboardComponent implements OnInit {
     link: 'https://vumatel.co.za'
   };
   readonly vumaPublicity = signal<VumaPublicity>(this.defaultVumaPublicity);
-  readonly walletBalance = signal(850);
-  readonly walletTransactions = signal<WalletTransaction[]>([
-    { description: 'Wallet activated', date: 'Today', amount: 0 },
-    { description: 'Community payment received', date: '7 June', amount: 250 },
-    { description: 'Opening balance', date: '5 June', amount: 600 }
-  ]);
+  readonly walletBalance = signal(0);
+  readonly walletLoadNotice = signal('');
+  readonly walletTransactions = signal<WalletTransaction[]>([]);
   readonly marketplaceOpen = signal(false);
   readonly listingFormOpen = signal(false);
   readonly listingImage = signal('');
@@ -491,49 +497,21 @@ export class DashboardComponent implements OnInit {
       text: 'Hello! I am the Duranki assistant. Ask me about services, subscriptions or your account.'
     }
   ]);
-  readonly announcements: Announcement[] = [
-    {
-      category: 'Community',
-      title: 'New Born Church monthly gathering',
-      summary: 'Join members for updates, questions and upcoming community opportunities.',
-      date: '14 June',
-      featured: true
-    },
-    {
-      category: 'Services',
-      title: 'New services now available',
-      summary: 'Explore Wallet, My Community, Referral and more from your dashboard.',
-      date: '8 June'
-    },
-    {
-      category: 'Reminder',
-      title: 'Keep your member profile current',
-      summary: 'Accurate contact information helps us share important community notices.',
-      date: '5 June'
-    }
-  ];
+  readonly announcements: Announcement[] = [];
   readonly chatMessage = new FormControl('', { nonNullable: true });
-  readonly chatMessages = signal<ChatMessage[]>([
-    {
-      author: 'Nandi M.',
-      initials: 'NM',
-      message: 'Morning everyone. Has anyone joined the new savings service yet?',
-      time: '09:14'
-    },
-    {
-      author: 'Thabo K.',
-      initials: 'TK',
-      message: 'Yes, I subscribed today. The process was quick.',
-      time: '09:18'
-    },
-    {
-      author: 'Lerato S.',
-      initials: 'LS',
-      message: 'Thanks for sharing. I am going to look at it now.',
-      time: '09:21'
-    }
-  ]);
+  readonly chatMessages = signal<ChatMessage[]>([]);
   readonly services: Service[] = [
+    {
+      code: 'loans',
+      name: 'Loans',
+      description: 'Loan applications are not yet connected. This service is awaiting setup.',
+      image: '/service-wallet.png',
+      accent: '#007c94',
+      tag: 'Finance',
+      availability: 'coming-soon',
+      billingNote: 'Loan applications, approvals and payouts are not yet available.',
+      plans: []
+    },
     {
       code: 'build-up-balance',
       name: 'Buy and Sell',
@@ -767,26 +745,29 @@ export class DashboardComponent implements OnInit {
   ];
 
   ngOnInit(): void {
+    void this.loadConfiguredServicePrices();
     this.loadVumaPublicity();
     this.requestedServiceCode = this.route.snapshot.queryParamMap.get('service') ?? '';
     this.returnToCommunityOnClose =
       this.route.snapshot.queryParamMap.get('from') === 'community';
-    this.communityServiceEntry.set(
-      this.returnToCommunityOnClose && Boolean(this.requestedServiceCode)
-    );
+    this.communityServiceEntry.set(false);
     this.auth.getProfile().subscribe({
       next: (user) => {
         this.user.set(user);
         this.loadWalletBranding(user.id);
         this.profiles.load().subscribe();
         this.refreshWallet();
-        this.communities.getMemberCommunity(String(user.id)).subscribe((community) => {
+        this.communities.getMemberCommunity(String(user.id), this.route.snapshot.queryParamMap.get('communityId') ?? undefined).subscribe({ next: (community) => {
           this.memberCommunity.set(community);
           if (community) {
             this.communityChurchId.setValue(community.churchId);
             this.communityBranchId.setValue(community.branchId ?? '');
           }
-        });
+          void this.loadConfiguredServicePrices();
+        }, error: () => {
+          this.memberCommunity.set(null);
+          this.subscriptionError.set('The selected community is unavailable. Choose one of your registered communities.');
+        } });
       },
       error: () => this.logout()
     });
@@ -980,7 +961,45 @@ export class DashboardComponent implements OnInit {
     }
   }
 
+  private async loadConfiguredServicePrices(): Promise<void> {
+    const request = ++this.catalogueRequest;
+    const fallback = Object.keys(memberCapabilities).map(code => ({code,name:this.services.find(s=>s.code===(memberCapabilities[code].native||code))?.name||code.replace(/-/g,' ')}));
+    this.services.splice(0,this.services.length,...reconcileMemberCatalogue(this.services,fallback,false));
+    try {
+      const token = this.auth.getToken() || '';
+      const response = await fetch('/api/service-pricing', { headers: { Authorization: 'Bearer ' + token }, cache: 'no-store' });
+      if (!response.ok) throw new Error('Pricing unavailable');
+      const data = await response.json() as { services: Array<{ code: string; mode: string; amountCents: number }> };
+      const training=await fetch('/api/trader-training/access',{headers:{Authorization:'Bearer '+token},cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
+      if (request !== this.catalogueRequest) return;
+      this.services.splice(0,this.services.length,...reconcileMemberCatalogue(this.services,data.services,true,programmeContext(training,this.memberCommunity()?.churchId)));
+      // Native fetch does not schedule a render in the zoneless Angular client.
+      this.changeDetector.markForCheck();
+    } catch { if (request === this.catalogueRequest) this.subscriptionError.set('Service pricing could not be loaded. Please refresh.'); }
+  }
+
   openService(service: Service): void {
+    if(['Payment setup required','Cycle Pay checkout'].includes(service.catalogueStatus||'')&&!this.isServiceActive(service)){
+      window.location.assign('/payments/cycle?service='+encodeURIComponent(service.canonicalCode||service.code)+'&communityId='+encodeURIComponent(this.memberCommunity()?.churchId||''));return;
+    }
+    if(service.catalogueBlocked&&!(this.isServiceActive(service)&&['Pricing required','Payment setup required'].includes(service.catalogueStatus||''))){window.dispatchEvent(new CustomEvent('duranki-service-status',{detail:service}));return;}
+    if(service.catalogueRoute&&this.isServiceActive(service)){
+      const id=this.memberCommunity()?.churchId;
+      window.location.assign(service.catalogueRoute+(id?'?communityId='+encodeURIComponent(id):''));return;
+    }
+    if (service.code === 'loans') {
+      window.alert('Loans is enabled for this community, but loan applications, approvals and payouts are not yet connected.');
+      return;
+    }
+    if (service.code === 'community-membership' && this.user()?.communityMembershipAccess?.exempt === true) {
+      const id = this.memberCommunity()?.churchId ?? new URLSearchParams(window.location.search).get('communityId');
+      window.location.assign('/community' + (id ? '?communityId=' + encodeURIComponent(id) : ''));
+      return;
+    }
+    if (!this.isServiceActive(service) && !service.plans.length) {
+      window.alert('This service price has not been configured yet. Please contact the platform administrator.');
+      return;
+    }
     if (service.code === 'build-up-balance' && this.isServiceActive(service)) {
       this.marketplaceOpen.set(true);
       this.loadMarketplaceConversations();
@@ -1074,7 +1093,9 @@ export class DashboardComponent implements OnInit {
     if (service.code === 'vuma-fibre' && this.subscriptionFor(service.code)) {
       this.vumaFibreAccount.setValue(this.profiles.profile().telephoneNumber);
       const user = this.user();
-      this.vumaMicroIspName.setValue(user ? `${user.firstName} ${user.lastName}`.trim() : '');
+      this.vumaMicroIspName.setValue(
+        user ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() : ''
+      );
       this.vumaMicroIspPhone.setValue(this.profiles.profile().telephoneNumber);
     }
     if (service.code === 'referral' && this.subscriptionFor('referral')) {
@@ -1108,6 +1129,16 @@ export class DashboardComponent implements OnInit {
   }
 
   confirmSubscription(): void {
+    if (this.selectedPlanCode() === 'configured-monthly' && !(this.selectedService()?.code === 'community-membership' && this.user()?.communityMembershipAccess?.exempt === true)) {
+      this.subscriptionError.set('Paid subscription collection is not connected yet. No payment or subscription has been recorded.');
+      return;
+    }
+    if (this.selectedService()?.code === 'community-membership') {
+      if (this.user()?.communityMembershipAccess?.exempt === true) {
+        this.openService(this.selectedService()!);
+        return;
+      }
+    }
     const service = this.selectedService();
     const planCode =
       service?.code === 'funeral'
@@ -1833,7 +1864,10 @@ export class DashboardComponent implements OnInit {
   }
 
   availableServices(): Service[] {
-    return this.services.filter((service) => !this.isServiceActive(service));
+    try {
+      const configuration=this.memberCommunity()?.serviceConfiguration ?? null;
+      return scopedMemberCatalogue(this.services,configuration).filter(service=>!this.isServiceActive(service)&&!(service.code==='community-membership'&&this.user()?.communityMembershipAccess?.exempt===true));
+    } catch {return [];}
   }
 
   toggleWalletCard(): void {
@@ -1973,12 +2007,17 @@ export class DashboardComponent implements OnInit {
     const userId = this.user()?.id;
     if (!userId) return;
 
-    this.walletService.getMemberWallet(String(userId)).subscribe((wallet) => {
-      if (wallet) this.walletBalance.set(wallet.balance);
+    this.walletLoadNotice.set('');
+    this.walletService.getMemberWallet(String(userId)).subscribe({
+      next: (wallet) => { if (wallet) this.walletBalance.set(wallet.balance); },
+      error: (error) => {
+        this.walletBalance.set(0);
+        this.walletLoadNotice.set(error.status === 404 ? 'Your wallet has not been activated.' : 'Your wallet balance is unavailable. Please refresh.');
+      }
     });
     this.walletService
       .getWalletTransactions(`member-${userId}`)
-      .subscribe((transactions) =>
+      .subscribe({ next: (transactions) =>
         this.walletTransactions.set(
           transactions.map((transaction) => ({
             description: transaction.description,
@@ -1992,8 +2031,12 @@ export class DashboardComponent implements OnInit {
                 ? -transaction.amount
                 : transaction.amount
           }))
-        )
-      );
+        ),
+        error: (error) => {
+          this.walletTransactions.set([]);
+          if (error.status !== 404) this.walletLoadNotice.set('Wallet transactions are unavailable. Please refresh.');
+        }
+      });
   }
 
   openWalletAction(action: WalletAction): void {
@@ -2111,26 +2154,7 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
-    this.walletActionLoading.set(true);
-    this.walletService.topUpWithCycle({
-      memberId: this.currentUserId(),
-      amount,
-      returnUrl: `${window.location.origin}/dashboard/member`
-    }).subscribe((result) => {
-      this.walletActionLoading.set(false);
-      if (!result.successful) {
-        this.walletActionNotice.set('Cycle could not process this top up.');
-        return;
-      }
-      this.walletBalance.update((balance) => balance + amount);
-      this.walletTransactions.update((transactions) => [
-        { description: 'Cycle bank card top up', date: 'Today', amount },
-        ...transactions
-      ]);
-      this.walletActionNotice.set(
-        `Top up successful. Reference ${result.reference}.`
-      );
-    });
+    window.location.assign('/payments/cycle?purpose=wallet-top-up&communityId='+encodeURIComponent(this.memberCommunity()?.churchId||''));
   }
 
   closeMarketplace(): void {

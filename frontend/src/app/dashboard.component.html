@@ -215,13 +215,14 @@
   </section>
 
   <div class="dashboard-content">
+    @if (walletLoadNotice()) { <p role="status">{{ walletLoadNotice() }}</p> }
     <section class="services-section">
       <div class="section-heading">
         <div>
           <p class="eyebrow">EXPLORE</p>
           <h2>Duranki services</h2>
         </div>
-        <span>{{ availableServices().length }} services available</span>
+        <span>{{ availableServices().length }} enabled services</span>
       </div>
 
       <div class="service-grid">
@@ -275,9 +276,12 @@
 
       @if (availableServices().length === 0) {
         <div class="all-subscribed">
-          <span>✓</span>
-          <h3>All services are active</h3>
-          <p>Your subscribed services are available in the banner above.</p>
+          <h3>No additional services available</h3>
+          @if (subscribedServices().length > 0) {
+            <p>Your active services are listed above.</p>
+          } @else {
+            <p>No services are currently available for this community. Contact your community administrator.</p>
+          }
         </div>
       }
     </section>
@@ -1504,6 +1508,7 @@
             <p>Discover items offered by trusted Duranki members.</p>
           </div>
           <div class="business-heading-actions">
+            <a data-wholesaler-link [href]="'/dashboard/wholesaler-orders?communityId=' + (memberCommunity()?.churchId || '')">Wholesaler Orders</a>
             <button type="button" class="business-tools-button" (click)="openBusinessCenter('BUY_SELL')">
               Business tools
             </button>

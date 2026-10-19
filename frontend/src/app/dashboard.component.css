@@ -37,6 +37,7 @@
   display: flex;
   align-items: center;
   gap: 0.65rem;
+  min-width: 0;
 }
 
 .top-powered-by {
@@ -83,6 +84,8 @@ nav .active {
   justify-content: flex-end;
   align-items: center;
   gap: 0.75rem;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .account app-role-switcher {
@@ -4207,14 +4210,25 @@ footer {
     height: 3rem;
   }
 
-  .avatar,
-  .sign-out {
+  .avatar {
     display: none;
+  }
+
+  .account {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .sign-out {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
   }
 
   .account app-role-switcher {
     min-width: 0;
-    flex: 1;
+    flex: 1 0 100%;
   }
 
   .monthly-subscription-total {
