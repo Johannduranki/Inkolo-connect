@@ -1,0 +1,51 @@
+import 'dotenv/config';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID,createHmac} from 'node:crypto';
+import mysql from 'mysql2/promise';
+import express from 'express';
+import {MysqlCycleStore} from '../src/mysql-cycle-store.js';
+import {MysqlCycleBilling} from '../src/mysql-cycle-billing.js';
+import {cycleConfig} from '../src/cycle-pay.js';
+import {billingConfig,billingTerms} from '../src/cycle-billing.js';
+import {createCycleRouter} from '../src/cycle-api.js';
+
+test('MariaDB Cycle payments preserve consent, exact-once funding and renewal safety',async t=>{
+  const pool=mysql.createPool({host:process.env.DB_HOST,port:Number(process.env.DB_PORT||3306),user:process.env.DB_USER,password:process.env.DB_PASSWORD,database:process.env.DB_NAME,connectionLimit:4});
+  const store=new MysqlCycleStore(pool),id='sql-cycle-test-'+randomUUID();let time='2026-01-31T12:00:00.000Z',mode='live';
+  t.after(async()=>{try{
+    for(const table of ['event','audit','intent','fulfilment','dispatch','consent'])await pool.execute(`DELETE c FROM cycle_${table} c JOIN cycle_request r ON c.request_id=r.id WHERE r.tenant_id=?`,[id]);
+    await pool.execute('DELETE FROM cycle_request WHERE tenant_id=?',[id]);await pool.execute('DELETE FROM cycle_subscription WHERE tenant_id=?',[id]);
+  }finally{await pool.end();}});
+  const config=()=>cycleConfig({CYCLE_ENABLED:'true',CYCLE_MODE:mode,CYCLE_LIVE_APPROVED:'true',CYCLE_PAYWALL_SECRET:'synthetic',CYCLE_NOTIFICATION_SECRET:'synthetic',CYCLE_PUBLIC_URL:'https://example.test'});
+  const settings=()=>billingConfig({CYCLE_RECURRING_ENABLED:'true',CYCLE_API_CALLER_NAME:'synthetic',CYCLE_API_CALLER_PASSWORD:'synthetic',CYCLE_API_BASE_URL:'https://api.cyclepay.net/api/v3',CYCLE_PROFILE_ID_PATH:'paymentProfileId',CYCLE_TOKEN_ENCRYPTION_KEY:'11'.repeat(32),CYCLE_WALLET_TOPUPS_ENABLED:'true'});
+  const state={users:[{id,status:'active',roles:['Member']}],importedCommunities:[{id,platformCommunityId:id,tenantId:id,tenantName:'Synthetic',name:'Synthetic'}],memberCommunities:[{memberId:id,communityId:id,tenantId:id}],wallets:[{id,ownerType:'MEMBER',ownerId:id,balance:10,availableBalance:10}],walletTransactions:[],servicePricing:{'community-membership':{mode:'paid',amountCents:2500,revision:1}},cycleServiceAvailability:{tenants:[{id,status:'active',serviceCodes:['wallet','community-membership']}],communities:[{id,tenantId:id,status:'active',serviceCodes:['wallet','community-membership']}]}};
+  const calls=[],billing=new MysqlCycleBilling({store,readState:()=>state,updateState:async fn=>fn(state),config,settings,now:()=>time,fetcher:async(...args)=>{calls.push(args);return {ok:true};}});
+  const input=(purpose='subscription',extra={})=>({purpose,communityId:id,serviceCode:'community-membership',amountCents:2500,priceRevision:1,accepted:true,termsVersion:billingTerms,idempotencyKey:randomUUID(),...extra});
+  const pay=async(row,extra={})=>{const event={id:row.id,internalId:'provider-'+row.id,merchantAccount:'Duranki',status:'CHARGED',lineItem:{amount:row.amount_cents/100,currency:'ZAR'},transactions:[{type:'CHARGE',state:'APPROVED',amount:row.amount_cents/100,currency:'ZAR'}],paymentProfileId:'synthetic-private-token',...extra},raw=Buffer.from(JSON.stringify(event));await store.notify(raw,createHmac('sha256','synthetic').update(raw).digest('hex'),config());await billing.fulfil(row.id,event);return event;};
+  await assert.rejects(billing.start(id,input('subscription',{amountCents:1})),{status:409});
+  await assert.rejects(billing.start('stranger',input()),{status:403});
+  const body=input(),duplicates=await Promise.all([billing.start(id,body),billing.start(id,body)]),row=duplicates[0];assert.equal(duplicates[1].id,row.id);
+  assert.equal(JSON.parse((await billing.checkout(row.id,id)).payload).savePaymentProfile,true);
+  await assert.rejects(billing.checkout(row.id,'stranger'),{status:404});
+  await Promise.all([pay(row),pay(row)]);assert.equal((await billing.active(id,id)).length,1);assert.equal((await billing.active(id,'other')).length,0);
+  assert.equal((await billing.list(id))[0].paid_until,'2026-02-28T12:00:00.000Z');assert(!JSON.stringify(await billing.list(id)).includes('synthetic-private-token'));
+  assert(!(await store.get('SELECT token FROM cycle_subscription WHERE user_id=?',id)).token.includes('synthetic-private-token'));
+  const top=await billing.start(id,input('wallet-top-up'));await Promise.all([pay(top),pay(top)]);assert.equal(state.wallets[0].balance,35);assert.equal(state.walletTransactions.length,1);
+  // Simulate a lost Cycle commit after the separate durable wallet commit.
+  await store.run('DELETE FROM cycle_fulfilment WHERE request_id=?',top.id);await pay(top);assert.equal(state.wallets[0].balance,35);
+  await assert.rejects(billing.start(id,{...body,amountCents:999}),{status:409});
+  time='2026-03-01T00:00:00.000Z';await Promise.all([billing.renewDue(),billing.renewDue()]);assert.equal(calls.length,1);
+  const renewal=await store.request(JSON.parse(calls[0][1].body).id);await assert.rejects(billing.checkout(renewal.id,id),{status:409});await pay(renewal);
+  time='2026-04-02T00:00:00.000Z';billing.fetcher=async()=>{calls.push('timeout');throw Error('synthetic timeout');};await billing.renewDue();await billing.renewDue();assert.equal(calls.length,2);
+  const subscription=(await billing.list(id))[0];await assert.rejects(billing.cancel('stranger',subscription.id),{status:404});await billing.cancel(id,subscription.id);assert.equal((await store.get('SELECT token FROM cycle_subscription WHERE id=?',subscription.id)).token,null);
+  await pay(top,{status:'REFUNDED'});assert.equal(state.cycleWalletReview[id],true);
+  mode='sandbox';const sandbox=await billing.start(id,input('wallet-top-up'));await pay(sandbox);assert.equal(state.wallets[0].balance,35);
+  const original=store.audit;store.audit=async()=>{throw Error('synthetic audit failure');};const before=(await store.list(id)).length;await assert.rejects(billing.start(id,input('wallet-top-up')),/synthetic audit failure/);store.audit=original;assert.equal((await store.list(id)).length,before);
+  const app=express();app.use('/cycle/notifications',express.raw({type:'application/json'}));app.use(express.json());app.use('/cycle',createCycleRouter({store,billing,config,readState:()=>state,requireAuth:(req,res,next)=>{if(!req.get('x-user'))return res.sendStatus(401);req.auth={sub:req.get('x-user')};next();},resolveUser:async user=>state.users.find(u=>u.id===user)}));
+  const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));t.after(()=>{server.closeAllConnections();server.close();});
+  const url=`http://127.0.0.1:${server.address().port}/cycle`;
+  assert.equal((await fetch(url+'/billing')).status,401);
+  const response=await fetch(url+'/billing',{headers:{'x-user':id}});assert.equal(response.status,200);assert(!(await response.text()).includes('synthetic-private-token'));
+  assert.equal((await fetch(url+'/notifications',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).status,403);
+});
