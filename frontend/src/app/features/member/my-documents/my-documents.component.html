@@ -1,4 +1,6 @@
 <section class="documents-card">
+  @if (error()) { <p role="alert">{{ error() }}</p><button type="button" (click)="ngOnChanges()">Refresh documents</button> }
+  @if (loading()) { <p role="status">Loading documents...</p> }
   <div class="heading">
     <div>
       <p>PRIVATE TO YOU</p>
@@ -59,7 +61,7 @@
                 <small>Version {{ agreement.documentVersion }} · Plan {{ agreement.planCode }}</small>
                 <code>SHA-256: {{ agreement.documentSha256 }}</code>
               </div>
-              <button type="button" (click)="viewAgreement(agreement)">View terms</button>
+              <button type="button" (click)="viewAgreement(agreement)">Download terms</button>
               <button type="button" (click)="downloadEvidence(agreement)">Evidence</button>
             </article>
           }
@@ -93,8 +95,7 @@
                 </small>
               </div>
               @if (document.fileUrl) {
-                <a [href]="document.fileUrl" target="_blank" rel="noopener">View</a>
-                <a [href]="document.fileUrl" [attr.download]="document.fileName">Download</a>
+                <button type="button" (click)="downloadPolicy(document)">Download</button>
               } @else {
                 <span class="file-pending">File pending</span>
               }

@@ -1,0 +1,17 @@
+/* Loaded by the updated standalone-dashboard host; no changes to member branding. */
+header label:has(select[aria-label="Admin workspace"]) {
+  min-width: 0 !important;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+header select[aria-label="Admin workspace"] {
+  min-width: 0 !important;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+header a { color: inherit !important; }
+header a[style*="background"] { color: #102c42 !important; }
+@media (max-width: 540px) {
+  header label:has(select[aria-label="Admin workspace"]) { flex-basis: 100%; width: 100%; }
+}

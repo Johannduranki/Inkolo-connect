@@ -1,7 +1,21 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
 import { MemberDocument } from '../models/member-document.model';
+
+export interface ProviderScope {
+  serviceProviderId: string;
+  tenantId: string;
+  communityId: string;
+  tenantName: string;
+  communityName: string;
+  serviceCodes: string[];
+}
+
+export interface ProviderWorkspace {
+  scopes: ProviderScope[];
+  documents: MemberDocument[];
+}
 
 @Injectable({ providedIn: 'root' })
 export class ServiceProviderDocumentService {
@@ -11,13 +25,16 @@ export class ServiceProviderDocumentService {
   uploadMemberPolicyDocument(
     memberId: string,
     serviceId: string,
-    file: File
+    file: File,
+    scope: ProviderScope
   ): Observable<MemberDocument> {
     const formData = new FormData();
     formData.append('memberId', memberId);
     formData.append('serviceId', serviceId);
-    formData.append('serviceProviderId', 'sp-001');
-    formData.append('documentType', 'FUNERAL_COVER_POLICY');
+    formData.append('serviceProviderId', scope.serviceProviderId);
+    formData.append('tenantId', scope.tenantId);
+    formData.append('communityId', scope.communityId);
+    formData.append('documentType', serviceId === 'funeral-cover' ? 'FUNERAL_COVER_POLICY' : 'SERVICE_AGREEMENT');
     formData.append('file', file);
     return this.http.post<MemberDocument>(
       `${this.apiUrl}/service-provider/documents`,
@@ -46,11 +63,15 @@ export class ServiceProviderDocumentService {
     );
   }
 
-  canServiceProviderUploadDocument(
-    serviceProviderId: string,
-    memberId: string,
-    serviceId: string
-  ): boolean {
-    return serviceProviderId === 'sp-001' && memberId.length > 0 && serviceId === 'funeral-cover-001';
+  getWorkspace(): Observable<ProviderWorkspace> {
+    return this.http.get<ProviderWorkspace>(`${this.apiUrl}/service-provider/workspace`);
+  }
+
+  download(document: MemberDocument): Observable<Blob> {
+    // Never attach credentials to a URL supplied by an external document record.
+    if (!/^\/uploads\/member-documents\/[a-zA-Z0-9_-]+\.[a-zA-Z0-9]+$/.test(document.fileUrl)) {
+      return throwError(() => new Error('Invalid document location.'));
+    }
+    return this.http.get(document.fileUrl, { responseType: 'blob' });
   }
 }

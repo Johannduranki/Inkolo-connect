@@ -2,6 +2,8 @@ export interface MemberDocument {
   id: string;
   memberId: string;
   serviceProviderId?: string;
+  tenantId?: string;
+  communityId?: string;
   serviceId?: string;
   policyNumber?: string;
   documentType: 'FUNERAL_COVER_POLICY' | 'INSURANCE_DOCUMENT' | 'SERVICE_AGREEMENT' | 'INVOICE' | 'RECEIPT' | 'OTHER';

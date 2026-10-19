@@ -4,44 +4,7 @@ import { BillingCycle } from '../models/billing-cycle.model';
 
 @Injectable({ providedIn: 'root' })
 export class ServiceProviderBillingService {
-  private readonly cycles: BillingCycle[] = [
-    {
-      id: 'bc-2026-06',
-      serviceProviderId: 'sp-001',
-      serviceId: 'funeral-cover-001',
-      serviceName: 'Funeral Cover',
-      cycleName: 'June 2026 Funeral Cover Billing',
-      startDate: '2026-06-01',
-      endDate: '2026-06-30',
-      paymentDueDate: '2026-06-01',
-      billingFrequency: 'MONTHLY',
-      status: 'OPEN',
-      totalMembersBilled: 2700,
-      totalMembersPaid: 2500,
-      totalFailedPayments: 100,
-      totalOverduePayments: 100,
-      totalAmountCollected: 247500,
-      totalAmountPayableToProvider: 180000
-    },
-    {
-      id: 'bc-2026-05',
-      serviceProviderId: 'sp-001',
-      serviceId: 'funeral-cover-001',
-      serviceName: 'Funeral Cover',
-      cycleName: 'May 2026 Funeral Cover Billing',
-      startDate: '2026-05-01',
-      endDate: '2026-05-31',
-      paymentDueDate: '2026-05-01',
-      billingFrequency: 'MONTHLY',
-      status: 'COMPLETED',
-      totalMembersBilled: 2600,
-      totalMembersPaid: 2420,
-      totalFailedPayments: 80,
-      totalOverduePayments: 100,
-      totalAmountCollected: 239580,
-      totalAmountPayableToProvider: 174000
-    }
-  ];
+  private readonly cycles: BillingCycle[] = [];
 
   getBillingCycles(serviceProviderId: string): Observable<BillingCycle[]> {
     return of(this.cycles.filter((cycle) => cycle.serviceProviderId === serviceProviderId));

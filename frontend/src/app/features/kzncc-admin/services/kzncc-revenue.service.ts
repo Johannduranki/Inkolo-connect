@@ -15,21 +15,7 @@ interface PaidServiceActivity {
 @Injectable({ providedIn: 'root' })
 export class KznccRevenueService {
   private readonly formulas = inject(RevenueShareFormulaService);
-  private readonly activity: PaidServiceActivity[] = [
-    activity(1, 5000, 99),
-    activity(2, 4200, 35),
-    activity(3, 3100, 80),
-    activity(4, 980, 399),
-    activity(5, 7200, 8),
-    activity(6, 3900, 20),
-    activity(7, 1200, 25),
-    activity(8, 1600, 49),
-    activity(9, 430, 75),
-    activity(10, 2100, 30),
-    activity(11, 760, 125),
-    activity(12, 8400, 7),
-    activity(13, 520, 45)
-  ];
+  private readonly activity: PaidServiceActivity[] = [];
 
   getPaidServices(): Observable<KznccServiceRevenue[]> {
     return this.formulas.getFormulas().pipe(

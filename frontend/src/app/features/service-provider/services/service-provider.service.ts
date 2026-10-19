@@ -26,13 +26,7 @@ export class ServiceProviderService {
     phone: '011 555 0199',
     status: 'ACTIVE'
   };
-  private readonly members: PaidServiceMember[] = [
-    this.member('mem-001', 'Nandi Mthembu', 'Grace Community Church', 'Family Funeral Cover', 99, 'PAID', 'ACTIVE', 'UPLOADED'),
-    this.member('mem-002', 'Thabo Khumalo', 'Zion Revival Church', 'African Bank Funeral Cover', 99, 'PAID', 'ACTIVE', 'MISSING'),
-    this.member('mem-003', 'Lerato Sithole', 'New Hope Christian Centre', 'Basic Funeral Cover', 75, 'DUE', 'PENDING', 'MISSING'),
-    this.member('mem-004', 'Sibusiso Zulu', 'Durban Central Fellowship', 'Standard Funeral Cover', 110, 'FAILED', 'ACTIVE', 'UPLOADED'),
-    this.member('mem-005', 'Ayanda Dlamini', 'Pietermaritzburg Worship Centre', 'Senior Funeral Cover', 85, 'PAID', 'ACTIVE', 'UPLOADED')
-  ];
+  private readonly members: PaidServiceMember[] = [];
 
   getServiceProviderDashboardSummary(
     serviceProviderId: string

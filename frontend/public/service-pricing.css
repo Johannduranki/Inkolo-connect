@@ -1,0 +1,10 @@
+.price-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;align-items:end;padding:24px 0;border-bottom:1px solid #d5dfdf}
+.price-row h2{grid-column:1/-1;margin:0;font-size:18px}
+.price-row label{min-width:0;font-size:14px}
+.price-row label span{display:block;margin-bottom:6px}
+.price-row input,.price-row select{width:100%;box-sizing:border-box;min-width:0}
+.price-row .row-status,.price-preview{grid-column:1/-1;margin:0;font-size:14px;line-height:1.6;overflow-wrap:anywhere}
+.price-preview{padding:12px 0;color:#24533e}
+.price-row button{min-height:42px;align-self:end}
+@media(max-width:750px){.price-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.price-row{grid-template-columns:minmax(0,1fr)}}

@@ -1,8 +1,8 @@
 export interface AvailableLift {
   id: string;
-  driverUserId: string;
+  driverUserId?: string;
   driverName: string;
-  driverTelephone: string;
+  driverTelephone?: string;
   vehicle: string;
   registrationNumber: string;
   seatsAvailable: number;
@@ -40,12 +40,12 @@ export interface RideRequest {
   liftId: string;
   passengerUserId: string;
   passengerName: string;
-  passengerTelephone: string;
+  passengerTelephone?: string;
   driverUserId: string;
   driverName: string;
   vehicle: string;
-  pickupLatitude: number;
-  pickupLongitude: number;
+  pickupLatitude?: number;
+  pickupLongitude?: number;
   pickupLabel: string;
   requestedAt: string;
   status: RideRequestStatus;
