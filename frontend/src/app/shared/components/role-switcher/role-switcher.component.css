@@ -5,6 +5,7 @@
 
 .role-switcher {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.7rem;
 }
@@ -29,8 +30,9 @@
   font-weight: 750;
 }
 
+label { display: grid; min-width: 0; max-width: 100%; gap: 4px; }
 select {
-  max-width: 9rem;
+  max-width: min(18rem, 100%);
   padding: 0.55rem 1.8rem 0.55rem 0.65rem;
   border: 1px solid #b9d4e8;
   border-radius: 0.65rem;

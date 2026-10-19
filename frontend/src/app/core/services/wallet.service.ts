@@ -18,28 +18,9 @@ import {
 export class WalletService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = '/api/platform/wallet';
-  private readonly memberDirectory = new Map<string, string>([
-    ['0712345678', 'Jeremy Shabalala'],
-    ['0725550184', 'Nandi Mthembu'],
-    ['0736614209', 'Thabo Khumalo'],
-    ['0789441132', 'Lerato Sithole'],
-    ['0741002003', 'Ayanda Dlamini'],
-    ['0763004005', 'Sipho Ncube'],
-    ['0795006007', 'Zanele Mkhize'],
-    ['0817008009', 'Mandla Cele']
-  ]);
-  private readonly wallets: Wallet[] = [
-    this.wallet('member-1', 'MEMBER', '1', 'Personal Wallet', 850),
-    this.wallet('church-1', 'CHURCH', '1', 'Grace Community Church Wallet', 186400),
-    this.wallet('church-2', 'CHURCH', '2', 'Zion Revival Church Wallet', 231800),
-    this.wallet('kzncc-1', 'KZNCC', '1', 'KZNCC Revenue Wallet', 486320)
-  ];
-  private readonly transactions: WalletTransaction[] = [
-    this.transaction('kt-1', 'kzncc-1', 'KZNCC_REVENUE_SHARE', 78200, 'Funeral Cover revenue share'),
-    this.transaction('kt-2', 'kzncc-1', 'KZNCC_REVENUE_SHARE', 22440, 'Airtime and Data revenue share'),
-    this.transaction('kt-3', 'kzncc-1', 'KZNCC_REVENUE_SHARE', 39680, 'Electricity Recharge revenue share'),
-    this.transaction('kt-4', 'kzncc-1', 'KZNCC_REVENUE_SHARE', 46914, 'Fibre Connect revenue share')
-  ];
+  private readonly memberDirectory = new Map<string, string>([]);
+  private readonly wallets: Wallet[] = [];
+  private readonly transactions: WalletTransaction[] = [];
 
   createWallet(ownerType: WalletOwnerType, ownerId: string): Observable<Wallet> {
     const wallet = this.wallet(
@@ -73,86 +54,19 @@ export class WalletService {
       .pipe(map(({ transactions }) => transactions));
   }
 
-  getChurchWalletSummary(churchId: string): Observable<ChurchWalletSummary> {
-    const wallet = this.findWallet('CHURCH', churchId);
-    return of({
-      churchId,
-      churchName: wallet?.walletName.replace(' Wallet', '') ?? 'Church',
-      pastorName: churchId === '1' ? 'Pastor N. Mthembu' : 'Bishop T. Khumalo',
-      totalTithes: churchId === '1' ? 92000 : 114000,
-      totalOfferings: churchId === '1' ? 34800 : 41700,
-      totalPaidServiceRevenueShare: churchId === '1' ? 59600 : 76100,
-      walletBalance: wallet?.balance ?? 0,
-      pendingPayouts: 12000,
-      memberCount: churchId === '1' ? 8200 : 10300
-    });
-  }
+  getChurchWalletSummary(churchId: string): Observable<ChurchWalletSummary> {return new Observable(subscriber=>subscriber.error(new Error('This function requires a connected, reconciled financial ledger.')));}
 
-  getBishopWalletSummary(bishopId: string): Observable<BishopWalletSummary> {
-    return of(['1', '2']).pipe(
-      map((churchIds) => {
-        const assignedChurches = churchIds.map((churchId) => {
-          const wallet = this.findWallet('CHURCH', churchId);
-          return {
-            churchId,
-            churchName: wallet?.walletName.replace(' Wallet', '') ?? 'Church',
-            pastorName: churchId === '1' ? 'Pastor N. Mthembu' : 'Bishop T. Khumalo',
-            totalTithes: churchId === '1' ? 92000 : 114000,
-            totalOfferings: churchId === '1' ? 34800 : 41700,
-            totalPaidServiceRevenueShare: churchId === '1' ? 59600 : 76100,
-            walletBalance: wallet?.balance ?? 0,
-            pendingPayouts: 12000,
-            memberCount: churchId === '1' ? 8200 : 10300
-          };
-        });
-        return {
-          bishopId,
-          bishopName: 'Bishop T. Khumalo',
-          assignedChurches,
-          totalWalletBalance: assignedChurches.reduce((sum, item) => sum + item.walletBalance, 0),
-          totalTithes: assignedChurches.reduce((sum, item) => sum + item.totalTithes, 0),
-          totalOfferings: assignedChurches.reduce((sum, item) => sum + item.totalOfferings, 0),
-          totalRevenueShare: assignedChurches.reduce(
-            (sum, item) => sum + item.totalPaidServiceRevenueShare,
-            0
-          ),
-          totalMembers: assignedChurches.reduce((sum, item) => sum + item.memberCount, 0)
-        };
-      })
-    );
-  }
+  getBishopWalletSummary(bishopId: string): Observable<BishopWalletSummary> {return new Observable(subscriber=>subscriber.error(new Error('This function requires a connected, reconciled financial ledger.')));}
 
-  getKznccRevenueWalletSummary(kznccId: string): Observable<KznccWalletSummary> {
-    const wallet = this.findWallet('KZNCC', kznccId);
-    return of({
-      kznccId,
-      walletBalance: wallet?.balance ?? 0,
-      totalRevenueShare: 486320,
-      monthlyRevenueShare: 196834,
-      revenueByService: [
-        { serviceName: 'Funeral Cover', amount: 78200 },
-        { serviceName: 'Fibre Connect', amount: 46914 },
-        { serviceName: 'Electricity Recharge', amount: 39680 }
-      ],
-      revenueByChurch: [
-        { churchName: 'Grace Community Church', amount: 49600 },
-        { churchName: 'Zion Revival Church', amount: 62800 }
-      ],
-      pendingPayouts: 58400
-    });
-  }
+  getKznccRevenueWalletSummary(kznccId: string): Observable<KznccWalletSummary> {return new Observable(subscriber=>subscriber.error(new Error('This function requires a connected, reconciled financial ledger.')));}
 
-  payTithe(memberId: string, churchId: string, amount: number): Observable<boolean> {
-    return of(memberId.length > 0 && churchId.length > 0 && amount > 0);
-  }
+  payTithe(memberId: string, churchId: string, amount: number): Observable<boolean> {return new Observable(subscriber=>subscriber.error(new Error('This function requires a connected, reconciled financial ledger.')));}
 
   payOffering(memberId: string, churchId: string, amount: number): Observable<boolean> {
     return this.payTithe(memberId, churchId, amount);
   }
 
-  requestWalletPayout(walletId: string, amount: number): Observable<boolean> {
-    return of(walletId.length > 0 && amount > 0);
-  }
+  requestWalletPayout(walletId: string, amount: number): Observable<boolean> {return new Observable(subscriber=>subscriber.error(new Error('This function requires a connected, reconciled financial ledger.')));}
 
   topUpWithCycle(request: CycleTopUpRequest): Observable<WalletOperationResult> {
     return this.http

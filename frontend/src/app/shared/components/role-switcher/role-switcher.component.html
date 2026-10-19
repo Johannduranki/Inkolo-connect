@@ -9,7 +9,7 @@
         <span class="sr-only">Switch active role</span>
         <select
           aria-label="Switch active role"
-          [value]="activeRole$ | async"
+          [ngModel]="activeRole$ | async"
           (change)="switchRole($event)"
         >
           @for (role of availableRoles; track role) {
@@ -18,5 +18,19 @@
         </select>
       </label>
     }
+  }
+  @if ((activeRole$ | async) === 'Member') {
+    @if (communities().length) {
+      <label>
+        <span>Community</span>
+        <select aria-label="Member community" [ngModel]="selectedCommunity" (ngModelChange)="switchCommunity($event)">
+          <option value="" disabled>Choose community</option>
+          @for (community of communities(); track community.memberCommunityId) {
+            <option [value]="community.memberCommunityId">{{ community.tenantName }} - {{ community.name }}</option>
+          }
+        </select>
+      </label>
+    }
+    @if (communityError()) { <span role="status">{{ communityError() }}</span> }
   }
 </div>

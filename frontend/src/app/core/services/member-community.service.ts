@@ -58,9 +58,11 @@ export class MemberCommunityService {
     });
   }
 
-  getMemberCommunity(memberId: string): Observable<MemberCommunity | null> {
+  getMemberCommunity(memberId: string, communityId?: string): Observable<MemberCommunity | null> {
     void memberId;
-    return this.http.get<MemberCommunity | null>(`${this.apiUrl}/community/me`);
+    return this.http.get<MemberCommunity | null>(`${this.apiUrl}/community/me`, {
+      params: communityId ? { communityId } : {}
+    });
   }
 
   getCommunityHeading(community: MemberCommunity | null): string {

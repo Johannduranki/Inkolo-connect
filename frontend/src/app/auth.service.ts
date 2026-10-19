@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
-import type { UserRole } from './core/services/role.service';
+import { RoleService, type UserRole } from './core/services/role.service';
 
 export interface User {
   id: number;
@@ -11,6 +11,11 @@ export interface User {
   idNumberLast4: string;
   membershipType: 'free' | 'paid' | null;
   roles: UserRole[];
+  communityMembershipAccess?: {
+    exempt: boolean;
+    reason: 'platform_admin_testing' | null;
+    scope: 'all_communities' | null;
+  };
 }
 
 export interface ServiceSubscription {
@@ -29,6 +34,7 @@ export interface ServiceApplication {
 }
 
 interface LoginResponse {
+  mfaRequired?: boolean;
   accessToken: string;
   user: User;
 }
@@ -36,6 +42,7 @@ interface LoginResponse {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
+  private readonly roles = inject(RoleService);
   private readonly apiUrl = '/api';
   private readonly tokenKey = 'duranki_access_token';
   private inMemoryToken: string | null = null;
@@ -43,27 +50,41 @@ export class AuthService {
   login(
     telephoneNumber: string,
     firstName: string,
-    lastName: string
+    lastName: string,
+    password: string
   ): Observable<LoginResponse> {
     return this.http
       .post<LoginResponse>(`${this.apiUrl}/auth/login`, {
         telephoneNumber,
         firstName,
-        lastName
+        lastName,
+        password
       })
-      .pipe(tap(({ accessToken }) => this.storeToken(accessToken)));
+      .pipe(tap(({ accessToken, mfaRequired }) => {
+        if (mfaRequired) {
+          this.inMemoryToken = null;
+          sessionStorage.setItem('duranki_mfa_challenge', accessToken);
+          sessionStorage.removeItem(this.tokenKey);
+          localStorage.removeItem(this.tokenKey);
+        } else {
+          sessionStorage.removeItem('duranki_mfa_challenge');
+          this.storeToken(accessToken);
+        }
+      }));
   }
 
   register(
     telephoneNumber: string,
     firstName: string,
-    lastName: string
+    lastName: string,
+    password: string
   ): Observable<LoginResponse> {
     return this.http
       .post<LoginResponse>(`${this.apiUrl}/auth/register`, {
         telephoneNumber,
         firstName,
-        lastName
+        lastName,
+        password
       })
       .pipe(tap(({ accessToken }) => this.storeToken(accessToken)));
   }
@@ -73,7 +94,7 @@ export class AuthService {
   }
 
   getSubscriptions(): Observable<ServiceSubscription[]> {
-    return this.http.get<ServiceSubscription[]>(`${this.apiUrl}/subscriptions`);
+    return this.http.get<ServiceSubscription[]>(`${this.apiUrl}/subscriptions?communityId=${encodeURIComponent(new URLSearchParams(location.search).get('communityId')||'')}`);
   }
 
   subscribeToService(
@@ -129,10 +150,14 @@ export class AuthService {
   }
 
   logout(): void {
+    const token = this.getToken();
+    if (token) void fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, keepalive: true }).catch(() => {});
     this.inMemoryToken = null;
+    this.roles.clearUser();
 
     try {
       sessionStorage.removeItem(this.tokenKey);
+      sessionStorage.removeItem('duranki_mfa_challenge');
       localStorage.removeItem(this.tokenKey);
     } catch {
       try {

@@ -4,6 +4,9 @@ import { BehaviorSubject, Observable, tap } from 'rxjs';
 
 export type UserRole =
   | 'Member'
+  | 'Platform Admin'
+  | 'Tenant Staff'
+  | 'Accountant'
   | 'Pastor'
   | 'Bishop'
   | 'Admin User'
@@ -60,6 +63,9 @@ export interface AdminMemberProfile {
 
 const ROLE_ROUTES: Record<UserRole, string> = {
   Member: '/dashboard/member',
+  'Platform Admin': '/dashboard/platform-admin',
+  'Tenant Staff': '/dashboard/tenant',
+  Accountant: '/dashboard/accounting',
   Pastor: '/dashboard/pastor',
   Bishop: '/dashboard/bishop',
   'Admin User': '/dashboard/admin-user',
@@ -70,6 +76,9 @@ const ROLE_ROUTES: Record<UserRole, string> = {
 };
 
 const ROLE_MENUS: Record<UserRole, RoleMenuItem[]> = {
+  Accountant: [{ label: 'Accounting', description: 'Recorded accounting data.', route: '/dashboard/accounting' }],
+  'Platform Admin': [{ label: 'Platform overview', description: 'Platform administration.', route: '/dashboard/platform-admin' }],
+  'Tenant Staff': [{ label: 'Tenant workspace', description: 'Authorized tenant dashboards.', route: '/dashboard/tenant' }],
   Member: [
     { label: 'My services', description: 'Manage active Duranki services.', route: '/dashboard/member' },
     { label: 'My community', description: 'Open your church community.', route: '/community' },
@@ -118,8 +127,10 @@ export class RoleService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = '/api/platform';
   private readonly currentUserStorageKey = 'duranki_current_user_id';
-  private readonly roleAssignmentsStorageKey = 'duranki_role_assignments';
-  private currentUserId = this.readCurrentUserId();
+  private currentUserId = 0;
+  private identityGeneration = 0;
+  private directoryGeneration = 0;
+  readonly roleUpdateErrorSubject = new BehaviorSubject<string>('');
   readonly allRoles: UserRole[] = [
     'Member',
     'Pastor',
@@ -130,83 +141,10 @@ export class RoleService {
     'Service Provider Admin',
     'Service Provider User'
   ];
-  private readonly defaultAssignments: Record<number, UserRole[]> = {
-    1: ['Member'],
-    2: ['Member', 'Pastor'],
-    3: ['Member', 'Bishop'],
-    4: ['Member', 'KZNCC User'],
-    5: ['Member', 'KZNCC Admin'],
-    6: ['Admin User'],
-    7: ['Service Provider Admin'],
-    8: ['Service Provider User'],
-    19: ['Service Provider Admin']
-  };
-  private readonly userRolesSubject = new BehaviorSubject<UserRole[]>(
-    this.rolesForUser(this.currentUserId)
-  );
-  private readonly activeRoleSubject = new BehaviorSubject<UserRole>(
-    this.readStoredRole()
-  );
+  private readonly userRolesSubject = new BehaviorSubject<UserRole[]>([]);
+  private readonly activeRoleSubject = new BehaviorSubject<UserRole>('Member');
   private readonly communityMembersSubject =
-    new BehaviorSubject<CommunityMemberRoleAssignment[]>([
-      {
-        id: 1,
-        fullName: 'Jeremy Shabalala',
-        telephoneNumber: '071 234 5678',
-        roles: this.rolesForUser(1)
-      },
-      {
-        id: 2,
-        fullName: 'Nandi Mthembu',
-        telephoneNumber: '072 555 0184',
-        roles: this.rolesForUser(2)
-      },
-      {
-        id: 3,
-        fullName: 'Thabo Khumalo',
-        telephoneNumber: '073 661 4209',
-        roles: this.rolesForUser(3)
-      },
-      {
-        id: 4,
-        fullName: 'Lerato Sithole',
-        telephoneNumber: '078 944 1132',
-        roles: this.rolesForUser(4)
-      },
-      {
-        id: 5,
-        fullName: 'Ayanda Dlamini',
-        telephoneNumber: '074 100 2003',
-        roles: this.rolesForUser(5)
-      },
-      {
-        id: 6,
-        fullName: 'Sipho Ncube',
-        telephoneNumber: '076 300 4005',
-        roles: this.rolesForUser(6)
-      },
-      {
-        id: 7,
-        fullName: 'Zanele Mkhize',
-        telephoneNumber: '079 500 6007',
-        roles: this.rolesForUser(7)
-      },
-      {
-        id: 8,
-        fullName: 'Mandla Cele',
-        telephoneNumber: '081 700 8009',
-        roles: this.rolesForUser(8)
-      },
-      {
-        id: 19,
-        fullName: 'Vuma Admin',
-        telephoneNumber: '082 900 1001',
-        roles: this.rolesForUser(19)
-      }
-    ].map((member) => ({
-      ...member,
-      isCurrentUser: member.id === this.currentUserId
-    })));
+    new BehaviorSubject<CommunityMemberRoleAssignment[]>([]);
 
   readonly activeRole$: Observable<UserRole> = this.activeRoleSubject.asObservable();
 
@@ -215,6 +153,9 @@ export class RoleService {
   }
 
   getCommunityMembers(): Observable<CommunityMemberRoleAssignment[]> {
+    const generation = this.identityGeneration;
+    const request = ++this.directoryGeneration;
+    this.communityMembersSubject.next([]);
     this.http
       .get<
         {
@@ -225,13 +166,18 @@ export class RoleService {
         }[]
       >(`${this.apiUrl}/admin/users`)
       .subscribe({
-        next: (members) =>
+        next: (members) => {
+          if (generation !== this.identityGeneration || request !== this.directoryGeneration) return;
           this.communityMembersSubject.next(
             members.map((member) => ({
               ...member,
               isCurrentUser: member.id === this.currentUserId
             }))
-          )
+          );
+        },
+        error: () => {
+          if (generation === this.identityGeneration && request === this.directoryGeneration) this.communityMembersSubject.next([]);
+        }
       });
     return this.communityMembersSubject.asObservable();
   }
@@ -290,28 +236,27 @@ export class RoleService {
     defaultRoles: UserRole[],
     fullName?: string
   ): void {
+    if (this.currentUserId !== userId) {
+      this.identityGeneration++;
+      this.communityMembersSubject.next([]);
+    }
     this.currentUserId = userId;
     localStorage.setItem(this.currentUserStorageKey, String(userId));
-    const assignments = this.readRoleAssignments();
-    const assignedRoles: UserRole[] = defaultRoles.length
-      ? defaultRoles
-      : ['Member'];
-    assignments[userId] = assignedRoles;
-    this.writeRoleAssignments(assignments);
+    const assignedRoles = [...new Set(defaultRoles)];
     this.userRolesSubject.next(assignedRoles);
     this.communityMembersSubject.next(
       this.communityMembersSubject.value.map((member) => ({
         ...member,
         fullName: member.id === userId && fullName ? fullName : member.fullName,
         isCurrentUser: member.id === userId,
-        roles: assignments[member.id] ?? member.roles
+        roles: member.id === userId ? assignedRoles : member.roles
       }))
     );
     const storedRole = localStorage.getItem(this.activeRoleKey(userId));
     const activeRole =
       storedRole && assignedRoles.includes(storedRole as UserRole)
         ? (storedRole as UserRole)
-        : assignedRoles[0];
+        : assignedRoles[0] ?? 'Member';
     this.activeRoleSubject.next(activeRole);
   }
 
@@ -343,19 +288,11 @@ export class RoleService {
   }
 
   setUserRoles(roles: UserRole[]): void {
-    const assignedRoles: UserRole[] = roles.length
-      ? [...new Set(roles)]
-      : ['Member'];
+    const assignedRoles = [...new Set(roles)];
     this.userRolesSubject.next(assignedRoles);
 
-    if (typeof localStorage !== 'undefined') {
-      const assignments = this.readRoleAssignments();
-      assignments[this.currentUserId] = assignedRoles;
-      this.writeRoleAssignments(assignments);
-    }
-
     if (!assignedRoles.includes(this.activeRoleSubject.value)) {
-      this.setActiveRole(assignedRoles[0]);
+      this.activeRoleSubject.next(assignedRoles[0] ?? 'Member');
     }
   }
 
@@ -363,33 +300,23 @@ export class RoleService {
     const assignedRoles: UserRole[] = roles.length
       ? [...new Set(roles)]
       : ['Member'];
-    const members: CommunityMemberRoleAssignment[] =
-      this.communityMembersSubject.value.map((member) =>
-      member.id === memberId ? { ...member, roles: assignedRoles } : member
-    );
-    const updatedMember = members.find((member) => member.id === memberId);
-
-    this.communityMembersSubject.next(members);
-    const assignments = this.readRoleAssignments();
-    assignments[memberId] = assignedRoles;
-    this.writeRoleAssignments(assignments);
+    const generation = this.identityGeneration;
+    this.roleUpdateErrorSubject.next('');
     this.http
-      .put(`${this.apiUrl}/admin/users/${memberId}/roles`, {
+      .put<{ roles: UserRole[] }>(`${this.apiUrl}/admin/users/${memberId}/roles`, {
         roles: assignedRoles
       })
       .subscribe({
+        next: (saved) => {
+          if (generation !== this.identityGeneration) return;
+          this.communityMembersSubject.next(this.communityMembersSubject.value.map(member =>
+            member.id === memberId ? { ...member, roles: saved.roles } : member));
+          if (memberId === this.currentUserId) this.setUserRoles(saved.roles);
+        },
         error: () => {
-          this.communityMembersSubject.next(
-            this.communityMembersSubject.value.map((member) =>
-              member.id === memberId ? { ...member, roles: member.roles } : member
-            )
-          );
+          if (generation === this.identityGeneration) this.roleUpdateErrorSubject.next('Permissions were not saved. Refresh and check your access before trying again.');
         }
       });
-
-    if (updatedMember?.isCurrentUser) {
-      this.setUserRoles(updatedMember.roles);
-    }
   }
 
   setCurrentUserName(fullName: string): void {
@@ -400,50 +327,17 @@ export class RoleService {
     );
   }
 
-  private readStoredRole(): UserRole {
-    if (typeof localStorage === 'undefined') {
-      return 'Member';
-    }
-
-    const storedRole = localStorage.getItem(this.activeRoleKey(this.currentUserId));
-    return this.canAccessStoredRole(storedRole) ? storedRole : 'Member';
-  }
-
-  private canAccessStoredRole(role: string | null): role is UserRole {
-    return role !== null && this.userRolesSubject.value.includes(role as UserRole);
-  }
-
-  private rolesForUser(userId: number): UserRole[] {
-    return (
-      this.readRoleAssignments()[userId] ??
-      this.defaultAssignments[userId] ??
-      ['Member']
-    );
-  }
-
-  private readCurrentUserId(): number {
-    return Number(localStorage.getItem(this.currentUserStorageKey) || 1);
+  clearUser(): void {
+    this.identityGeneration++;
+    this.currentUserId = 0;
+    this.userRolesSubject.next([]);
+    this.activeRoleSubject.next('Member');
+    this.communityMembersSubject.next([]);
+    this.roleUpdateErrorSubject.next('');
   }
 
   private activeRoleKey(userId: number): string {
     return `duranki_active_role_${userId}`;
   }
 
-  private readRoleAssignments(): Record<number, UserRole[]> {
-    try {
-      const stored = JSON.parse(
-        localStorage.getItem(this.roleAssignmentsStorageKey) ?? '{}'
-      ) as Record<number, UserRole[]>;
-      return stored && typeof stored === 'object' ? stored : {};
-    } catch {
-      return {};
-    }
-  }
-
-  private writeRoleAssignments(assignments: Record<number, UserRole[]>): void {
-    localStorage.setItem(
-      this.roleAssignmentsStorageKey,
-      JSON.stringify(assignments)
-    );
-  }
 }

@@ -29,6 +29,7 @@ export interface ChurchBranch {
 }
 
 export interface MemberCommunity {
+  serviceConfiguration?: { id: string; tenantId: string; serviceCodes: string[] } | null;
   memberId: string;
   churchId: string;
   churchName: string;
