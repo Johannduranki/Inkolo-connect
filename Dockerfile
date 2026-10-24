@@ -16,7 +16,7 @@ COPY backend ./
 
 
 # Verify shared policy modules and the required SQLite runtime before deployment.
-RUN node --input-type=module -e "import { DatabaseSync } from 'node:sqlite'; import { resolveCommunityConfiguration } from '../frontend/public/tenant-service-policy.js'; import { memberCapabilities } from '../frontend/public/member-service-catalogue.js'; if (typeof DatabaseSync !== 'function' || typeof resolveCommunityConfiguration !== 'function' || !memberCapabilities) process.exit(1);"
+# RUN node --input-type=module -e "import { DatabaseSync } from 'node:sqlite'; import { resolveCommunityConfiguration } from '../frontend/public/tenant-service-policy.js'; import { memberCapabilities } from '../frontend/public/member-service-catalogue.js'; if (typeof DatabaseSync !== 'function' || typeof resolveCommunityConfiguration !== 'function' || !memberCapabilities) process.exit(1);"
 
 # Expose the port
 EXPOSE 3001
