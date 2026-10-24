@@ -38,7 +38,7 @@ export function createLocalServer({ target = apiTarget, directory = publicDir } 
     if(url.pathname==='/catalogue-status.js'){proxy(req,res);return;}
     if(['/join-community','/join-community.js','/community-registration-link.js'].includes(url.pathname)){proxy(req,res);return;}
     if(['/two-factor.css','/google-authenticator.png'].includes(url.pathname)){proxy(req,res);return;}
-    if(['/dashboard/trader-training','/trader-training.js','/trader-training.css','/trader-training-navigation.js'].includes(url.pathname)){proxy(req,res);return;}
+    if(['/dashboard/trader-training','/trader-training.js','/trader-training.css','/trader-training-navigation.js','/study-modules.js','/study-modules.css'].includes(url.pathname)){proxy(req,res);return;}
     if(['/dashboard/community-reports','/community-reports.js','/community-reports.css'].includes(url.pathname)){proxy(req,res);return;}
     if(['/admin-layout.js','/admin-layout.css','/admin-responsive.css'].includes(url.pathname)){proxy(req,res);return;}
     if(['/dashboard/branding','/branding.js','/branding-display.js'].includes(url.pathname)){proxy(req,res);return;}

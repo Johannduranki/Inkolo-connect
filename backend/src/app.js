@@ -20,12 +20,14 @@ import { createRegistrationCheckRouter, registrationPhone } from './registration
 import { createTenantAccessRouter } from './tenant-access.js';
 import { communityMembershipAccess } from './member-access.js';
 import { createServicePricingRouter, configuredSubscriptionPlan } from './service-pricing.js';
+import { memberServiceScope } from './service-scope.js';
 import { createBrandingRouter } from './branding.js';
 import { logger, requestLogging, errorDetails } from './logger.js';
 import { createTreasuryRouter } from './treasury-api.js';
 import { resolveTreasuryIdentity } from './treasury-identity.js';
 import { createCycleRouter } from './cycle-api.js';
 import { TrainingStore, createTrainingRouter } from './trader-training.js';
+import { createStudyRouter, ensureStudyDrafts } from './study-modules.js';
 import { CycleStore, cycleConfig } from './cycle-pay.js';
 import { CycleBilling } from './cycle-billing.js';
 import { MysqlCycleStore } from './mysql-cycle-store.js';
@@ -185,6 +187,7 @@ function mapSubscription(row) {
     planCode: row.plan_code ?? row.planCode,
     planLabel: row.plan_label ?? row.planLabel,
     amountCents: row.amount_cents ?? row.amountCents,
+    ...(row.communityId ? {communityId:row.communityId,tenantId:row.tenantId} : {}),
     status: row.status,
     subscribedAt: row.created_at ?? row.subscribedAt
   };
@@ -230,7 +233,12 @@ export function createApp({ databaseAvailable = true } = {}) {
   const sessions = authStorage === 'mariadb' ? new MysqlSessionStore(getPool()) : new SessionStore(path.join(treasuryDirectory, 'sessions.sqlite'));
   app.locals.sessions = sessions;
   const mfaStore=authStorage === 'mariadb' ? new MysqlMfaStore(getPool(),path.join(treasuryDirectory,'mfa.key')) : new MfaStore(path.join(treasuryDirectory,'mfa.sqlite'),path.join(treasuryDirectory,'mfa.key'));
-  app.locals.storageReady = Promise.all([initializePlatformStorage(getPool()),authStorage === 'mariadb' ? mfaStore.ready() : undefined,treasuryStorage === 'mariadb' ? treasuryStore.ready() : undefined]);
+  // Migrated stores also need initialization when local authentication is enabled.
+  app.locals.storageReady = Promise.all([
+        initializePlatformStorage(getPool()),
+        authStorage === 'mariadb' ? mfaStore.ready() : undefined,
+        treasuryStorage === 'mariadb' ? treasuryStore.ready() : undefined
+      ]);
   const resolveMfaUser=async id=>{
     let user;
     if(databaseAvailable){
@@ -255,6 +263,8 @@ export function createApp({ databaseAvailable = true } = {}) {
   if(!['sqlite','mariadb'].includes(trainingStorage))throw Error('Unsupported training storage.');
   const trainingStore=trainingStorage==='mariadb'?new MysqlTrainingStore(getPool()):new TrainingStore(path.join(treasuryDirectory,'trader-training.sqlite'));
   app.locals.storageReady=Promise.all([app.locals.storageReady,trainingStorage==='mariadb'?trainingStore.ready():undefined]);
+  app.locals.storageReady = Promise.resolve(app.locals.storageReady).then(() => databaseAvailable ? undefined : ensureStudyDrafts({readState:readPlatformState,updateState:updatePlatformState}));
+  app.use('/api/trader-training/study',createStudyRouter({requireAuth,readState:readPlatformState,updateState:updatePlatformState,databaseAvailable}));
   app.use('/api/trader-training',createTrainingRouter({requireAuth,resolveUser:resolveMfaUser,readState:readPlatformState,store:trainingStore,databaseAvailable}));
   app.use('/api/branding',createBrandingRouter({requireAuth,resolveUser:resolveMfaUser,readState:readPlatformState,updateState:updatePlatformState}));
   app.use('/api/service-pricing',createServicePricingRouter({requireAuth,resolveUser:resolveMfaUser,readState:readPlatformState,updateState:updatePlatformState,checkoutReady:()=>!databaseAvailable&&cycleConfig().ready&&cycleBilling.settings().recurringReady}));
@@ -307,8 +317,8 @@ export function createApp({ databaseAvailable = true } = {}) {
   app.get('/dashboard/community-reports',(_req,res)=>sendDashboard(res,'community-reports.html'));
   for(const file of ['community-reports.js','community-reports.css'])app.get('/'+file,(_req,res)=>res.set('Cache-Control','no-store').sendFile(path.join(treasuryPublic,file)));
   app.get('/dashboard/service-pricing',(_req,res)=>sendDashboard(res,'service-pricing.html'));
-  for(const route of ['/dashboard/trader-training','/dashboard/services/trader-training','/dashboard/services/grant-distribution'])app.get(route,(_req,res)=>sendDashboard(res,'trader-training.html'));
-  for(const file of ['trader-training.js','trader-training.css','trader-training-navigation.js'])app.get('/'+file,(_req,res)=>res.set('Cache-Control','no-store').sendFile(path.join(treasuryPublic,file)));
+  for(const route of ['/dashboard/trader-training','/dashboard/services/trader-training','/dashboard/services/grant-distribution'])app.get(route,(_req,res)=>{res.set('Content-Security-Policy',String(res.get('Content-Security-Policy')||"default-src 'self'")+"; media-src 'self' https:");sendDashboard(res,'trader-training.html');});
+  for(const file of ['trader-training.js','trader-training.css','trader-training-navigation.js','study-modules.js','study-modules.css'])app.get('/'+file,(_req,res)=>res.set('Cache-Control','no-store').sendFile(path.join(treasuryPublic,file)));
   app.get('/dashboard/branding',(_req,res)=>{res.set('Content-Security-Policy',"default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'self'; base-uri 'self'");sendDashboard(res,'branding.html');});
   for(const file of ['branding.js','branding-display.js'])app.get('/'+file,(_req,res)=>res.set('Cache-Control','no-store').sendFile(path.join(treasuryPublic,file)));
   for(const file of ['service-pricing.js','service-pricing.css'])app.get('/'+file,(_req,res)=>res.set('Cache-Control','no-store').sendFile(path.join(treasuryPublic,file)));
@@ -723,7 +733,7 @@ export function createApp({ databaseAvailable = true } = {}) {
       const requestedCommunity=(typeof req.query.communityId==='string'?req.query.communityId:'')||membership?.communityId||membership?.churchId||'';
       const community=requestedCommunity?joinableCommunities(readPlatformState()).find(c=>c.id===requestedCommunity||c.aliases?.includes(requestedCommunity)):null;
       const paid=databaseAvailable||!community?[]:await cycleBilling.active(req.auth.sub,community.id);
-      return res.json([...subscriptions,...(databaseAvailable?[]:await heritageStore.subscriptions(req.auth.sub)),...paid]);
+      return res.json([...subscriptions.filter(s=>!s.communityId||s.communityId===community?.id),...(databaseAvailable?[]:await heritageStore.subscriptions(req.auth.sub)),...paid]);
     } catch (error) {
       return next(error);
     }
@@ -732,7 +742,9 @@ export function createApp({ databaseAvailable = true } = {}) {
   app.post('/api/subscriptions', requireAuth, async (req, res, next) => {
     try {
       const { serviceCode, planCode, acceptance } = req.body ?? {};
-      const plan = configuredSubscriptionPlan(readPlatformState(), serviceCode, planCode);
+      const pricingState = readPlatformState();
+      const pricingScope = memberServiceScope(pricingState, req.auth.sub, req.body?.communityId);
+      const plan = configuredSubscriptionPlan(pricingState, serviceCode, planCode, pricingScope.community || {});
       if(plan.error)return res.status(plan.error).json({message:plan.message});
 
       if (!plan) {
@@ -835,7 +847,8 @@ export function createApp({ databaseAvailable = true } = {}) {
           serviceCode,
           planCode,
           planLabel: plan.label,
-          amountCents: plan.amountCents
+          amountCents: plan.amountCents,
+          ...(pricingScope.communityId ? {tenantId:pricingScope.tenantId,communityId:pricingScope.communityId} : {})
         });
       }
 

@@ -23,14 +23,19 @@ async function show(view){
       for(const row of staff){const tr=document.createElement('tr');for(const value of [row.firstName+' '+row.lastName,row.telephoneNumber,row.permissions.map(p=>labels[p]).join(', '),row.status])tr.append(text('td',value));const cell=document.createElement('td'),button=text('button','Edit access');button.onclick=()=>edit(row);cell.append(button);tr.append(cell);$('#staff-rows').append(tr);}
       if(!staff.length){const row=document.createElement('tr'),cell=text('td','No staff assigned to this tenant.');cell.colSpan=5;row.append(cell);$('#staff-rows').append(row);}
     }
-    if(ticket===generation)$('#'+view).hidden=false;
+    if(ticket===generation&&view)$('#'+view).hidden=false;
   }catch(error){if(ticket===generation)$('#status').textContent=error.message;}
 }
 function selectTenant(){
   const t=current();if(!t)return;
+  $('#service-settings').hidden=!t.permissions.some(p=>['services.manage','users.manage'].includes(p));
+  $('#service-settings').href='/dashboard/service-pricing?tenantId='+encodeURIComponent(t.id);
+  $('#wholesaler-admin').href='/dashboard/wholesaler-orders?admin=1&tenantId='+encodeURIComponent(t.id);
+  $('#community-reports-link').href='/dashboard/community-reports?tenantId='+encodeURIComponent(t.id);
+  $('#tenant-branding-link').href='/dashboard/branding?tenantId='+encodeURIComponent(t.id);
   for(const [view,permission]of [['overview','tenant.view'],['communities','communities.view'],['staff','users.manage']])$('#'+view+'-tab').hidden=!t.permissions.includes(permission);
   history.replaceState(null,'','?tenantId='+encodeURIComponent(t.id));
-  show(t.permissions.includes('users.manage')?'staff':t.permissions.includes('tenant.view')?'overview':'communities');
+  show(t.permissions.includes('users.manage')?'staff':t.permissions.includes('tenant.view')?'overview':t.permissions.includes('communities.view')?'communities':'');
 }
 function edit(row){
   editing=row;$('#staff-form').reset();$('#form-status').textContent='';$('#editor-title').textContent=row?'Edit tenant access':'Add tenant user';$('#phone').value=row?.telephoneNumber||'';$('#phone').disabled=!!row;$('#new-fields').hidden=!!row;$('#access-status').value=row?.status||'active';$('#permissions').replaceChildren();

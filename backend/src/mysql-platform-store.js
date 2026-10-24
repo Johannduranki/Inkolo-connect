@@ -45,7 +45,7 @@ export class MysqlPlatformStore {
       const [[database]] = await c.query('SELECT DATABASE() AS name');
       this.lockName='duranki-platform-'+platformDigest(`${database.name}:${this.id}`).slice(0,40);
       const [[lock]] = await c.execute('SELECT GET_LOCK(?,0) AS acquired',[this.lockName]);
-      if (Number(lock.acquired)!==1) throw Error('Another platform writer is active.');
+      if (Number(lock.acquired)!==1) throw Object.assign(Error('Another platform writer is active.'), {code:'ER_DURANKI_WRITER_ACTIVE'});
       if(this.id==='platform'){
         const [[migration]]=await c.query('SELECT id FROM duranki_platform_migration WHERE id=1');
         if(!migration)throw Error('Platform migration is not verified.');

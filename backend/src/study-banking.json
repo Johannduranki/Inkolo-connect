@@ -1,0 +1,82 @@
+{
+  "title": "Banking, Saving and Planning for the Future",
+  "course": "Trader Business Foundations",
+  "content": "Understand how a suitable bank account, regular saving, appropriate funeral cover and coordinated bulk buying can strengthen financial resilience.",
+  "lessons": [
+    {
+      "title": "Using a bank account for your business",
+      "content": "A suitable bank account can help you keep money secure, receive payments, pay suppliers and maintain a record of business activity.\n\nCompare account fees, transaction charges, cash-deposit costs and access to branches or cash services. Choose an account that suits how your business operates.\n\nKeep business transactions separate from personal spending where practical. If you use one account, maintain clear records distinguishing business income, business expenses and personal withdrawals.\n\nCheck transactions regularly. A banking record can help you understand your business and support financial applications, but it does not guarantee credit approval.\n\nKeep your PIN, password and OTP private. When receiving payment, confirm it through your own account or trusted payment system rather than relying only on a screenshot.\n\nPractical activity:\nCompare two suitable accounts using their current official fee schedules. Identify the likely monthly cost based on your usual transactions."
+    },
+    {
+      "title": "Saving a portion of your earnings",
+      "content": "Saving regularly can help you prepare for emergencies, replace equipment and manage quieter trading periods.\n\nSales are not the same as money available to save. First account for stock replacement, business expenses and other commitments.\n\nChoose an affordable amount from the money remaining. Start small if necessary and review the amount as your circumstances change.\n\nExample:\nAfter providing for stock, business costs and other commitments, you have R1,000 available.\nIf you choose to save 10%, you save R100 and have R900 remaining.\n\nThe 10% is an illustration, not a requirement. Do not borrow simply to meet a savings target.\n\nKeep emergency savings accessible in a suitable account. Check fees, withdrawal restrictions and risks before choosing a savings product.\n\nPractical activity:\nSet one affordable savings target and decide when you will review it."
+    },
+    {
+      "title": "Understanding funeral cover",
+      "content": "Funeral cover can help with specified expenses when an insured person dies. It requires regular premiums and is different from a savings account.\n\nBefore buying, check:\n- Who is covered.\n- The premium and whether it can increase.\n- The benefit amount.\n- Waiting periods and exclusions.\n- Age limits and eligibility.\n- Claim requirements.\n- What happens if premiums are missed or the policy ends.\n\nCompare existing household cover before taking another policy. Multiple policies create multiple premiums and may be unnecessary.\n\nChoose cover you can afford alongside essential household and business commitments. Ask an appropriately authorised provider or adviser to explain anything unclear.\n\nDo not assume every death is covered immediately or that premiums can be withdrawn as savings. Keep policy information where a trusted family member can find it.\n\nPractical activity:\nReview an existing policy, or request a quotation, and write down the premium, covered people, benefit and waiting periods."
+    },
+    {
+      "title": "Planning for future needs",
+      "content": "Separate your goals into three groups:\n\n1. Short term: stock purchases, upcoming bills and urgent repairs.\n2. Medium term: replacing equipment, education costs or improving your trading space.\n3. Long term: retirement, reduced working capacity and family financial security.\n\nFor each goal, record the amount needed, deadline and affordable contribution.\n\nExample:\nYou want R1,200 for equipment in 12 months.\nIgnoring interest and fees, you would need to save R100 per month.\n\nReview your plan when income or expenses change. Keep essential business and policy records organised, and ensure a trusted person knows how to locate them without sharing your account credentials.\n\nPractical activity:\nCreate one short-term, one medium-term and one long-term goal."
+    },
+    {
+      "title": "Bulk buying with other traders through Trader Connect",
+      "content": "Coordinated purchasing allows traders to combine demand and request better supplier prices or delivery terms.\n\nUse Wholesaler Orders in Buy and Sell for your Trader Connect community, where available, to review offers, indicate quantities and follow the approved ordering process.\n\nBefore committing, check:\n- Product specification and quality.\n- Delivered price per unit.\n- Minimum order quantity.\n- Your allocated quantity and payment amount.\n- Payment recipient and method.\n- Delivery location and timing.\n- Expiry dates, storage needs and returns terms.\n- How shortages, cancellations and refunds are handled.\n\nExample:\nBuying alone costs R12 per item.\nA group offer costs R9.50 per item plus R1 delivery per item.\nThe delivered cost is R10.50, saving R1.50 per item.\nFor 100 items, the saving is R150.\n\nOnly buy quantities you can afford, store and sell. A lower unit price is not a saving if stock expires or remains unsold.\n\nCoordinate purchasing while setting your own retail prices independently.\n\nPractical activity:\nCompare one group offer with your usual supplier using total delivered cost and a realistic sales quantity."
+    }
+  ],
+  "activity": "The practical activities are optional exercises. Do not upload account credentials, balances or policy documents. No financial product purchase is required to complete this module.",
+  "passPercentage": 80,
+  "resources": [],
+  "questions": [
+    {
+      "prompt": "Which is a useful benefit of using a suitable bank account?",
+      "options": [
+        "It guarantees a loan.",
+        "It provides transaction records and can make payments easier.",
+        "It removes the need to keep business records."
+      ],
+      "correctIndex": 1,
+      "explanation": "Banking records support money management, but do not replace all records or guarantee credit."
+    },
+    {
+      "prompt": "After providing for stock, expenses and commitments, you have R1,000 available. You choose to save 10%. How much do you save?",
+      "options": [
+        "R100.",
+        "R10.",
+        "R1,000."
+      ],
+      "correctIndex": 0,
+      "explanation": "10% of R1,000 is R100. The appropriate savings amount depends on affordability."
+    },
+    {
+      "prompt": "Which statement about funeral cover is correct?",
+      "options": [
+        "Every death is covered immediately.",
+        "Premiums are always available to withdraw as savings.",
+        "Cover depends on policy terms, including waiting periods and exclusions."
+      ],
+      "correctIndex": 2,
+      "explanation": "Read the policy and understand its benefits, conditions and claim requirements."
+    },
+    {
+      "prompt": "You want to save R1,200 over 12 months. Ignoring interest and fees, how much must you save monthly?",
+      "options": [
+        "R120.",
+        "R100.",
+        "R12."
+      ],
+      "correctIndex": 1,
+      "explanation": "R1,200 divided by 12 months equals R100 per month."
+    },
+    {
+      "prompt": "Your usual price is R12 per item. A group offer is R9.50 plus R1 delivery per item. What is the saving on 100 items?",
+      "options": [
+        "R150.",
+        "R250.",
+        "R100."
+      ],
+      "correctIndex": 0,
+      "explanation": "The delivered group price is R10.50. Saving R1.50 on each of 100 items totals R150."
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { randomUUID, randomBytes, createCipheriv, createDecipheriv, createHmac } from 'node:crypto';
-import { canonicalService, serviceCatalogue } from './service-pricing.js';
+import { canonicalService, serviceCatalogue, effectiveServicePrice, serviceEnabled } from './service-pricing.js';
 import { memberCapabilities } from '../../frontend/public/member-service-catalogue.js';
 import { joinableCommunities, findMembership } from './community-registration.js';
 import { signCyclePayload } from './cycle-pay.js';
@@ -43,11 +43,9 @@ export class CycleBilling {
   }
   intent(id){return this.db.prepare('SELECT * FROM cycle_intent WHERE request_id=?').get(id);}
   fulfilled(id){return this.db.prepare('SELECT request_id FROM cycle_fulfilment WHERE request_id=?').get(id);}
-  enabled(community,code){const policy=this.readState().cycleServiceAvailability;
-    const tenant=policy?.tenants?.find(t=>t.id===community.tenantId),c=policy?.communities?.find(c=>c.id===community.id||community.aliases?.includes(c.id));
-    return !!tenant&&!!c&&c.tenantId===tenant.id&&[tenant,c].every(r=>['active','configured'].includes(r.status)&&r.serviceCodes.some(s=>canonicalService(s)===code));
-  }
-  list(userId){return this.db.prepare('SELECT id,tenant_id,community_id,service_code,amount_cents,mode,state,paid_until,cancelled_at,created_at,token IS NOT NULL AS has_profile,price_revision FROM cycle_subscription WHERE user_id=? ORDER BY created_at DESC').all(String(userId)).map(s=>({...s,state:s.state==='REVIEW'?'REVIEW':s.paid_until&&s.paid_until<=this.now()?'EXPIRED':s.state,renewalStatus:s.cancelled_at?'Cancelled':s.price_revision!==this.readState().servicePricing?.[s.service_code]?.revision?'Price changed - renewed consent required':!s.has_profile?'Saved payment profile pending':!this.settings().recurringReady?'Developer configuration required':'Scheduled'}));}
+  enabled(community,code){return serviceEnabled(this.readState(),community,code);}
+  price(code,context){return effectiveServicePrice(this.readState(),code,{tenantId:context.tenantId||context.tenant_id,communityId:context.communityId||context.community_id||context.id});}
+  list(userId){return this.db.prepare('SELECT id,tenant_id,community_id,service_code,amount_cents,mode,state,paid_until,cancelled_at,created_at,token IS NOT NULL AS has_profile,price_revision FROM cycle_subscription WHERE user_id=? ORDER BY created_at DESC').all(String(userId)).map(s=>({...s,state:s.state==='REVIEW'?'REVIEW':s.paid_until&&s.paid_until<=this.now()?'EXPIRED':s.state,renewalStatus:s.cancelled_at?'Cancelled':s.price_revision!==this.price(s.service_code,s)?.revision?'Price changed - renewed consent required':!s.has_profile?'Saved payment profile pending':!this.settings().recurringReady?'Developer configuration required':'Scheduled'}));}
   active(userId,communityId){return this.list(userId).filter(s=>s.mode==='live'&&s.paid_until>this.now()&&['ACTIVE','CANCELLED'].includes(s.state)&&(!communityId||s.community_id===communityId)).map(s=>({id:s.id,serviceCode:memberCapabilities[s.service_code]?.native||s.service_code,communityId:s.community_id,tenantId:s.tenant_id,planCode:'configured-monthly',planLabel:serviceCatalogue[s.service_code]+' monthly',amountCents:s.amount_cents,status:'active',subscribedAt:s.created_at,paidUntil:s.paid_until,provider:'cycle'}));}
   async start(userId,body){
     const cfg=this.config(),settings=this.settings();if(!cfg.ready)fail(503,'Cycle Pay is awaiting developer configuration. No payment was taken.');
@@ -70,7 +68,7 @@ export class CycleBilling {
       if(!await this.serviceReady(code,c))fail(409,'The community service programme must be ready before paid enrolment.');
       const currentCommunity=this.community(id,body.communityId);
       if(currentCommunity.id!==c.id||currentCommunity.tenantId!==c.tenantId||!this.enabled(currentCommunity,code))fail(403,'This service is no longer enabled for your community.');
-      price=this.readState().servicePricing?.[code];
+      price=this.price(code,c);
       if(price?.mode!=='paid'||!Number.isSafeInteger(price.amountCents)||price.amountCents<1)fail(409,'An administrator must configure a paid monthly price.');
       if(body.priceRevision!==price.revision||body.amountCents!==price.amountCents||body.termsVersion!==billingTerms)fail(409,'The price or terms changed. Refresh and review before accepting.');
       amount=price.amountCents;description=serviceCatalogue[code]+' monthly subscription';
@@ -130,7 +128,7 @@ export class CycleBilling {
       const c=joinableCommunities(this.readState()).find(c=>c.id===sub.community_id);
       if(!c||!await this.serviceReady(sub.service_code,c))continue;
       if(!findMembership(this.readState(),sub.user_id,c)||!this.enabled(c,sub.service_code)||this.readState().users.find(u=>String(u.id)===sub.user_id)?.status!=='active')continue;
-      const price=this.readState().servicePricing?.[sub.service_code];if(price?.revision!==sub.price_revision)continue; // Re-consent to price changes; never silently charge a new amount.
+      const price=this.price(sub.service_code,sub);if(price?.revision!==sub.price_revision)continue; // Re-consent to price changes; never silently charge a new amount.
       let row;this.db.exec('BEGIN IMMEDIATE');try{
         // Eligibility checks can await SQL; cancellation must still win before dispatch.
         const current=this.db.prepare('SELECT * FROM cycle_subscription WHERE id=?').get(sub.id);

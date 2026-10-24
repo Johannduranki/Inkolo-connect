@@ -1,8 +1,9 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Service pricing | Duranki</title><link rel="stylesheet" href="/cycle.css"><link rel="stylesheet" href="/service-pricing.css"></head>
-<body><header><img src="/duranki-up-logo.png" alt="Duranki"><strong>Service pricing</strong><nav><a href="/dashboard/platform-admin">Platform Admin</a></nav></header>
-<main><div class="heading"><div><p class="eyebrow">PLATFORM CONFIGURATION</p><h1>Service pricing</h1></div><button id="refresh" type="button">Refresh</button></div>
-<p>Monthly platform access fees in ZAR. Product purchases, insurance premiums and transaction charges are separate. Changes apply to new subscriptions, not existing agreements.</p>
-<p id="notice" role="status">Loading prices...</p><p>Paid collection is not connected yet. Saving a price does not charge members or create accounting entries.</p>
-<p>Shares apply to the positive difference between sale and cost per member per month. Percentages must total 100%. A loss has no distributable share. Costs and shares are visible only to platform administrators.</p>
+<body><header><img src="/duranki-up-logo.png" alt="Duranki"><strong>Service configuration</strong><nav><a id="tenant-return" hidden href="/dashboard/tenant">Tenant workspace</a><a href="/dashboard/platform-admin">Platform Admin</a></nav></header>
+<main><div class="heading"><div><p class="eyebrow">SERVICE CONFIGURATION</p><h1>Service pricing</h1></div><button id="refresh" type="button">Refresh</button></div>
+<div class="scope-controls"><label>Configuration level<select id="tenant" aria-label="Configuration level"></select></label><label id="community-label" hidden>Community<select id="community" aria-label="Community"></select></label></div>
+<p class="pricing-intro">Subscription fees and Duranki sales commissions in ZAR. Existing agreements remain unchanged.</p>
+<p id="notice" role="status">Loading prices...</p>
+<details class="pricing-notes"><summary>Fees and collection status</summary><p>Paid collection is not connected yet. Saving a price does not charge members or create accounting entries. Product prices and insurance premiums are separate.</p><p>Monthly subscription shares apply to positive monthly margin and must total 100%. Duranki sales commission is separate and applies to the sale price, not profit. Costs and shares are restricted to authorised administrators.</p></details>
 <section id="prices" aria-label="Service prices"></section></main><script src="/service-pricing.js" defer></script></body></html>

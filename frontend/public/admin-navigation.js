@@ -29,9 +29,38 @@ export function attachPlatformReturnLink(header, roles, pathname, doc = document
   header.append(link);
 }
 
+export function attachPageLocation(groups = [], doc = document, currentLocation = location) {
+  const header=doc.querySelector('header');if(!header)return;
+  const names={'/dashboard/platform-admin':'Platform administration','/dashboard/member':'Member dashboard','/dashboard/tenant':'Tenant workspace','/dashboard/service-pricing':'Service configuration','/dashboard/wholesaler-orders':'Wholesaler Orders','/dashboard/community-reports':'Community reports','/dashboard/branding':'Tenant and community branding','/dashboard/users':'User directory','/dashboard/trader-training':'Trader Training','/dashboard/treasury':'Treasury','/dashboard/accounting':'Accounting','/dashboard/cycle':'Cycle Pay','/payments/cycle':'My payments','/dashboard/heritage':'Heritage','/community':'My community','/login':'Sign in / Register','/two-factor':'Two-step verification'};
+  const path=currentLocation.pathname,params=new URLSearchParams(currentLocation.search);
+  const title=names[path]||doc.querySelector('main h1, h1')?.textContent.trim()||path.split('/').filter(Boolean).pop()?.replaceAll('-',' ')||'Duranki';
+  const selected=(id)=>{const control=doc.getElementById(id);return control?.tagName==='SELECT'&&control.value?{id:control.value,name:control.selectedOptions[0]?.textContent.trim()}:null;};
+  const directoryName=(group,key,id)=>groups.find(g=>g.label===group)?.items.find(([,url])=>new URL(url,'http://local').searchParams.get(key)===id)?.[0];
+  const tenant=selected('tenant'),community=selected('community');
+  const tenantId=tenant?.id||params.get('tenantId'),communityId=community?.id||params.get('communityId');
+  const details=[];
+  if(tenantId)details.push('Tenant: '+(tenant?.name||directoryName('Tenants','tenantId',tenantId)||tenantId));
+  if(communityId)details.push('Community: '+(community?.name||directoryName('Communities','communityId',communityId)||communityId));
+  if(path==='/dashboard/service-pricing'&&!tenantId&&!communityId)details.push('Duranki defaults');
+  const active=doc.querySelector('#tenant-tabs [aria-current="true"]')?.textContent.trim();if(active)details.push(active);
+  let strip=doc.getElementById('duranki-page-location');
+  if(!strip){strip=doc.createElement('section');strip.id='duranki-page-location';strip.setAttribute('aria-label','Current page and workspace');header.after(strip);}
+  const signature=JSON.stringify([title,details]);if(strip.dataset.location===signature)return;
+  strip.dataset.location=signature;
+  const label=doc.createElement('span');label.className='location-label';label.textContent='You are here';
+  const heading=doc.createElement('strong');heading.textContent=title;
+  const context=doc.createElement('span');context.className='location-context';context.textContent=details.join(' / ');
+  strip.replaceChildren(label,heading,context);
+}
+
 if (typeof document !== 'undefined') {
   const style=document.createElement('style');
   style.textContent=`
+    #duranki-page-location{box-sizing:border-box;display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;width:100%;margin:0;padding:14px 24px;border:0;border-bottom:1px solid #c9dadd;border-radius:0;background:#edf5f6;color:#173b47;font:14px/1.5 'Segoe UI',Arial,sans-serif;letter-spacing:0}
+    #duranki-page-location .location-label{font-size:12px;color:#42616b}
+    #duranki-page-location strong{font-size:16px;overflow-wrap:anywhere;min-width:0}
+    #duranki-page-location .location-context{flex:1 1 260px;min-width:0;overflow-wrap:anywhere}
+    @media(max-width:600px){#duranki-page-location{padding:12px 16px;gap:6px 12px}#duranki-page-location .location-context{flex-basis:100%}}
     [data-admin-shortcuts]{box-sizing:border-box;width:min(calc(100% - 2rem),84rem);margin:20px auto;padding:20px 0;border-block:1px solid #c8ded6;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
     [data-admin-shortcuts]>div{min-width:0}
     [data-admin-shortcuts] label{display:grid;gap:8px;font-weight:600;line-height:1.4}
@@ -72,6 +101,7 @@ if (typeof document !== 'undefined') {
     summary.after(section);
   };
   const attach=()=>{
+    attachPageLocation(groups);
     if(verifiedRoles.some(role=>['Platform Admin','DURANKI_ADMIN'].includes(role))&&location.pathname==='/dashboard/platform-admin'){
       const nav=document.querySelector('nav');
       if(nav&&!nav.querySelector('[data-branding-link]')){const link=document.createElement('a');link.dataset.brandingLink='true';link.href='/dashboard/branding';link.textContent='Tenant & Community Logos';nav.append(link);}
@@ -157,5 +187,8 @@ if (typeof document !== 'undefined') {
     }catch{if(active===token){if(!roleVerified)verifiedRoles=[];groups=buildAdminDestinations(verifiedRoles,[],[]);remove();attach();}}finally{pending=false;}
   }
   new MutationObserver(attach).observe(document.body,{subtree:true,childList:true});
+  document.addEventListener('change',()=>attachPageLocation(groups));
+  document.addEventListener('click',()=>queueMicrotask(()=>attachPageLocation(groups)));
+  window.addEventListener('popstate',()=>attachPageLocation(groups));
   setInterval(refresh,5000);window.addEventListener('storage',()=>{lastCheck=0;refresh();});refresh();
 }

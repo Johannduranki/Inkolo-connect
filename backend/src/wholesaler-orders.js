@@ -2,6 +2,7 @@ import express from 'express';
 import { randomUUID } from 'node:crypto';
 import { permissionsFor, tenantDirectory, platformAdmin } from './tenant-access.js';
 import { resolveCommunityConfiguration } from '../../frontend/public/tenant-service-policy.js';
+import { serviceScope, serviceEnabled } from './service-scope.js';
 
 const fail = (status, message) => { throw Object.assign(Error(message), { status }); };
 const text = (value, max, required = true) => {
@@ -23,7 +24,9 @@ function memberScope(state, user, communityId) {
   if (!membership || !tenantDirectory(state).some(t => t.id === membership.tenantId)) fail(403, 'Join this community before browsing wholesalers.');
   // A missing published payment policy must not hide manual browsing from existing members.
   // Once published, explicit tenant/community restrictions remain authoritative.
-  if (policy && !config?.serviceCodes?.some(c => ['marketplace', 'build-up-balance'].includes(c))) fail(403, 'Buy and Sell is not enabled for this community.');
+  const hasOverrides=state.tenantServicePricing?.[membership.tenantId]||state.communityServicePricing||state.servicePricing?.marketplace?.enabled===false;
+  const enabled=hasOverrides?serviceEnabled(state,serviceScope(state,{communityId}).community,'marketplace'):!policy||config?.serviceCodes?.some(c=>['marketplace','build-up-balance'].includes(c));
+  if (!enabled) fail(403, 'Buy and Sell is not enabled for this community.');
   return membership.tenantId;
 }
 function find(rows, id) { const row = rows.find(r => r.id === id); if (!row) fail(404, 'Record not found.'); return row; }

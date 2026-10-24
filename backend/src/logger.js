@@ -16,7 +16,10 @@ export function safeLog(info){
   if(typeof info.errorCode==='string'&&/^(E[A-Z_]{2,40}|ER_[A-Z_]{2,40}|LIMIT_[A-Z_]{2,40})$/.test(info.errorCode))safe.errorCode=info.errorCode;
   return safe;
 }
-export const errorDetails=error=>({errorType:error?.name,errorCode:error?.code});
+export const errorDetails=error=>({
+  errorType:error?.name,
+  errorCode:error?.code
+});
 export function createLogger({directory=process.env.LOG_DIRECTORY||fileURLToPath(new URL('../logs/',import.meta.url)),level=process.env.LOG_LEVEL||'info',transports}={}){
   const validLevel=Object.hasOwn(winston.config.npm.levels,level)?level:'info';
   if(!transports && process.env.LOG_DESTINATION==='stdout') transports=[new winston.transports.Console()];

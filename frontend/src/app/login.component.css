@@ -679,3 +679,144 @@ button:disabled {
   font: inherit;
   line-height: 1.6;
 }
+
+/* Restore the established Duranki sign-in branding without changing authentication. */
+.brand-photo-bubbles {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.photo-bubble {
+  position: absolute;
+  width: var(--bubble-size, 5.2rem);
+  height: var(--bubble-size, 5.2rem);
+  border: 3px solid rgba(255, 255, 255, 0.88);
+  border-radius: 50%;
+  background-image: url('/duranki-people-faces.png');
+  background-repeat: no-repeat;
+  background-size: 400% 300%;
+  box-shadow: 0 1.1rem 2.5rem rgba(3, 18, 34, 0.26);
+  opacity: var(--bubble-opacity, 0.96);
+  transform: rotate(var(--bubble-rotate, 0deg));
+}
+
+.photo-bubble::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.18), transparent 44%);
+  content: "";
+}
+
+.photo-bubble.small {
+  --bubble-size: 5rem;
+  --bubble-opacity: 0.82;
+}
+
+.photo-bubble.tiny {
+  --bubble-size: 4rem;
+  --bubble-opacity: 0.78;
+}
+
+.face-1 { top: 3%; left: 5%; --bubble-size: 6.2rem; --bubble-rotate: -7deg; background-position: 0% 0%; }
+.face-2 { top: 7%; right: 12%; --bubble-size: 5.8rem; --bubble-rotate: 5deg; background-position: 33.333% 0%; }
+.face-3 { top: 23%; right: 4%; --bubble-size: 6.5rem; --bubble-rotate: -4deg; background-position: 66.666% 0%; }
+.face-4 { top: 38%; left: 8%; --bubble-size: 5.7rem; --bubble-rotate: 8deg; background-position: 100% 0%; }
+.face-5 { bottom: 24%; left: 2%; --bubble-size: 6.4rem; --bubble-rotate: -2deg; background-position: 0% 50%; }
+.face-6 { bottom: 18%; right: 3%; --bubble-size: 6.7rem; --bubble-rotate: 6deg; background-position: 33.333% 50%; }
+.face-7 { top: 18%; left: 25%; --bubble-size: 5.2rem; --bubble-opacity: 0.9; --bubble-rotate: 11deg; background-position: 66.666% 50%; }
+.face-8 { bottom: 13%; right: 14%; --bubble-size: 5.9rem; --bubble-opacity: 0.92; --bubble-rotate: -9deg; background-position: 100% 50%; }
+.face-9 { bottom: 15%; left: 34%; --bubble-size: 5.8rem; --bubble-opacity: 0.9; --bubble-rotate: 4deg; background-position: 0% 100%; }
+.face-10 { top: 58%; left: 15%; --bubble-size: 5rem; --bubble-opacity: 0.86; --bubble-rotate: -11deg; background-position: 33.333% 100%; }
+.face-11 { top: 54%; right: 12%; --bubble-size: 4.8rem; --bubble-opacity: 0.88; --bubble-rotate: 12deg; background-position: 66.666% 100%; }
+.face-12 { bottom: 11%; left: 5%; --bubble-size: 5.2rem; --bubble-opacity: 0.88; --bubble-rotate: 7deg; background-position: 100% 100%; }
+.face-13,
+.face-14,
+.face-15,
+.face-16 {
+  background-image: url('/duranki-people-faces-extra.png');
+  background-size: 200% 200%;
+}
+
+.face-13 { top: 5%; left: 45%; --bubble-size: 5rem; --bubble-rotate: -13deg; --bubble-opacity: 0.86; background-position: 0% 0%; }
+.face-14 { bottom: 37%; right: 31%; --bubble-size: 4rem; --bubble-rotate: 14deg; --bubble-opacity: 0.8; background-position: 100% 0%; }
+.face-15 { top: 62%; left: 28%; --bubble-size: 5.4rem; --bubble-opacity: 0.9; --bubble-rotate: 6deg; background-position: 0% 100%; }
+.face-16 { top: 66%; right: 29%; --bubble-size: 4.9rem; --bubble-opacity: 0.88; --bubble-rotate: -10deg; background-position: 100% 100%; }
+
+.brand-photo-bubbles .photo-bubble {
+  opacity: 0.96;
+}
+
+.brand-panel {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  padding: clamp(2rem, 5vw, 5rem);
+  color: #fff;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(65, 223, 244, 0.25), transparent 28rem),
+    radial-gradient(circle at 85% 85%, rgba(36, 143, 229, 0.18), transparent 24rem),
+    linear-gradient(145deg, #081f39, var(--inkolo-navy) 55%, #164f80);
+}
+
+.brand-center {
+  display: grid;
+  width: min(100%, 31rem);
+  place-self: center;
+  place-items: center;
+  text-align: center;
+  transform: translateY(-2rem);
+}
+
+.brand-panel > :not(.brand-photo-bubbles) {
+  position: relative;
+  z-index: 4;
+}
+
+.logo-frame {
+  display: flex;
+  width: min(76vw, 15.5rem);
+  height: min(76vw, 15.5rem);
+  margin-bottom: 1.35rem;
+  padding: 1.2rem;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid rgba(255, 255, 255, 0.88);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1rem 2.5rem rgba(3, 21, 39, 0.26);
+}
+
+.inkolo-logo {
+  display: block;
+  width: 14.8rem;
+  height: 9.8rem;
+  object-fit: contain;
+}
+
+.inkolo-logo.mobile {
+  width: 7rem;
+  height: 4.5rem;
+}
+
+
+.brand-slogan {
+  max-width: 26rem;
+  margin: 0;
+  color: #eaf8ff;
+  font-family: "Arial Black", "Segoe UI", sans-serif;
+  font-size: 1.65rem;
+  font-weight: 900;
+  line-height: 1.28;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+.login-card{font-family:"Segoe UI Variable Text","Segoe UI",sans-serif;letter-spacing:0}
+.login-card h2{letter-spacing:0}
+.face-4,.face-7,.face-10,.face-11,.face-14,.face-15,.face-16{display:none}
+#accountPassword{margin-bottom:1.25rem}
+@media(max-width:800px){.brand-panel{display:none}}

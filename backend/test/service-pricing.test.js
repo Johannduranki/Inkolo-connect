@@ -19,7 +19,7 @@ test('only configured free access activates; paid and stale plans cannot bypass 
   assert.equal(configuredSubscriptionPlan(state,'catch-a-ride','configured-free').amountCents,0);
 });
 test('pricing API persists, audits, validates amounts, protects edits and rejects stale revisions',async t=>{
-  let state={serviceSubscriptions:[{amountCents:700}]};
+  let state={users:[{id:'admin',status:'active',roles:['Platform Admin']},{id:'member',status:'active',roles:['Member']}],serviceSubscriptions:[{amountCents:700}]};
   const app=express();app.use(express.json());app.use('/pricing',createServicePricingRouter({requireAuth:(req,res,next)=>{if(!req.get('x-user'))return res.sendStatus(401);req.auth={sub:req.get('x-user')};next();},resolveUser:async id=>({id,status:'active',roles:[id==='admin'?'Platform Admin':'Member']}),readState:()=>state,updateState:fn=>{const copy=structuredClone(state);fn(copy);state=copy;}}));
   const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));t.after(()=>{server.closeAllConnections();server.close();});
   const call=(user,path='',body)=>fetch('http://127.0.0.1:'+server.address().port+'/pricing'+path,{method:body?'PUT':'GET',headers:{'x-user':user,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});

@@ -2,8 +2,9 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tenant Administration | Duranki</title><link rel="stylesheet" href="/tenant-access.css"></head>
 <body><header><img src="/duranki-up-logo.png" alt="Duranki"><strong>Tenant Administration</strong><a href="/dashboard/member">Member dashboard</a><a href="/login">Sign in</a></header>
 <main><div class="heading"><h1>Tenant workspace</h1><label>Tenant<select id="tenant" aria-label="Tenant"></select></label></div>
-<p id="status" role="status"></p><a href="/dashboard/community-reports">Community reports</a> <a id="wholesaler-admin" href="/dashboard/wholesaler-orders?admin=1">Wholesaler Orders</a>
-<nav aria-label="Tenant dashboards"><button id="overview-tab" type="button">Overview</button><button id="communities-tab" type="button">Communities</button><button id="staff-tab" type="button">Users &amp; Permissions</button><a href="/dashboard/branding">Tenant &amp; Community Logos</a></nav>
+<p id="status" role="status"></p>
+<nav id="tenant-tabs" aria-label="Tenant workspace sections"><button id="overview-tab" type="button">Overview</button><button id="communities-tab" type="button">Communities</button><a id="service-settings" hidden href="/dashboard/service-pricing">Service configuration</a><button id="staff-tab" type="button">Users &amp; Permissions</button></nav>
+<nav class="tenant-tools" aria-label="Tenant tools"><a id="community-reports-link" href="/dashboard/community-reports">Community reports</a><a id="wholesaler-admin" href="/dashboard/wholesaler-orders?admin=1">Wholesaler Orders</a><a id="tenant-branding-link" href="/dashboard/branding">Tenant &amp; Community Logos</a></nav>
 <section id="overview" hidden><h2>Tenant overview</h2><dl><dt>Tenant</dt><dd id="tenant-name"></dd><dt>Identifier</dt><dd id="tenant-id"></dd></dl></section>
 <section id="communities" hidden><h2>Communities</h2><ul id="community-list"></ul></section>
 <section id="staff" hidden><div class="heading"><h2>Users &amp; Permissions</h2><button id="add" type="button">Add User</button></div><div class="table-wrap"><table><thead><tr><th>Name</th><th>Telephone</th><th>Dashboards</th><th>Access</th><th></th></tr></thead><tbody id="staff-rows"></tbody></table></div></section>

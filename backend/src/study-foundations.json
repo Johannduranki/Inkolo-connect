@@ -1,0 +1,446 @@
+[
+  {
+    "title": "Getting Started with Duranki",
+    "course": "Trader Business Foundations",
+    "content": "Understand how to use the platform safely and find training, support and transaction information.",
+    "lessons": [
+      {
+        "title": "Your account and business profile",
+        "content": "Your Duranki account gives you access to the services enabled for your community or tenant. These may include training, business services and transaction information.\n\nCheck that your name, contact number and business details are correct. Incorrect details can make it difficult to contact you or resolve a problem.\n\nOnly submit information that is accurate. If your number or business information changes, update it through the available process or contact authorised support."
+      },
+      {
+        "title": "Protecting your account",
+        "content": "Keep your password, PIN and one-time password private. Do not share them with someone who offers to help you receive money or access a service.\n\nUse a screen lock on your phone and sign out when using a shared device. If your phone is lost or you suspect someone has accessed your account, contact authorised support promptly.\n\nNever assume a message is genuine just because it mentions Duranki. Open the platform through your usual trusted route and verify unexpected requests."
+      },
+      {
+        "title": "Training, transactions and support",
+        "content": "Open Trader Training to view your modules and progress. Complete the lessons before attempting the quiz.\n\nWhere transaction history is available, check the amount, date, reference and status. A pending transaction is not confirmation that money has reached its destination.\n\nWhen reporting a problem, provide the reference, approximate time and a short description. Do not include your PIN or password in screenshots."
+      }
+    ],
+    "activity": "Check your profile, locate Trader Training and identify the official support channel.",
+    "passPercentage": 80,
+    "resources": [],
+    "questions": [
+      {
+        "prompt": "Someone asks for your OTP to help you access funding. What should you do?",
+        "options": [
+          "Share it if they know your name.",
+          "Keep it private and verify the request through authorised support.",
+          "Post it in the trader group."
+        ],
+        "correctIndex": 1,
+        "explanation": "An OTP protects access to your account and must remain private."
+      },
+      {
+        "prompt": "You notice that your contact number is incorrect. What should you do?",
+        "options": [
+          "Leave it unchanged.",
+          "Create several accounts.",
+          "Correct it through the available process or contact support."
+        ],
+        "correctIndex": 2,
+        "explanation": "Accurate contact details help with account access and communication."
+      },
+      {
+        "prompt": "A transaction shows “pending”. What does this mean?",
+        "options": [
+          "Its final outcome is not yet confirmed.",
+          "It definitely failed.",
+          "The recipient definitely received the money."
+        ],
+        "correctIndex": 0,
+        "explanation": "Check the final status before treating the transaction as completed."
+      },
+      {
+        "prompt": "What should you include when reporting a transaction problem?",
+        "options": [
+          "Your PIN.",
+          "The transaction reference, time and description.",
+          "Your password."
+        ],
+        "correctIndex": 1,
+        "explanation": "These details help support investigate without exposing your credentials."
+      },
+      {
+        "prompt": "What should you do on a shared phone after using your account?",
+        "options": [
+          "Save your PIN in a message.",
+          "Leave the account open.",
+          "Sign out."
+        ],
+        "correctIndex": 2,
+        "explanation": "Signing out reduces the risk of another person accessing your account."
+      }
+    ]
+  },
+  {
+    "title": "Financial Literacy and Business Records",
+    "course": "Trader Business Foundations",
+    "content": "Keep simple records and distinguish sales, profit, cash flow and personal withdrawals.",
+    "lessons": [
+      {
+        "title": "Sales are not the same as profit",
+        "content": "Sales are the money earned from selling products or services.\n\nGross profit is sales minus the cost of the goods sold. Other business expenses must still be deducted to calculate the profit for the period.\n\nExample:\nYou sell 20 items for R15 each.\nSales: 20 × R15 = R300.\nThe items cost R10 each.\nCost of goods sold: 20 × R10 = R200.\nGross profit: R300 − R200 = R100.\nIf other business expenses are R30, profit is R70."
+      },
+      {
+        "title": "Keep a daily record",
+        "content": "Record the date, sales, stock purchases, other expenses and personal withdrawals. Keep receipts and payment references where available.\n\nSeparate business money from personal money using a suitable account, wallet or clearly maintained records.\n\nMoney taken for personal use reduces business cash. Record it as a personal withdrawal rather than hiding it among stock expenses."
+      },
+      {
+        "title": "Understand cash flow",
+        "content": "Cash flow tracks money entering and leaving your business.\n\nA business can make a profit but still run short of cash. For example, customers may owe money while suppliers require payment immediately.\n\nBefore spending, check what must be reserved for stock, rent, transport and other commitments. Borrowed money brings cash into the business but is not sales income."
+      }
+    ],
+    "activity": "Create a daily record with columns for sales, purchases, expenses, personal withdrawals and closing cash.",
+    "passPercentage": 80,
+    "resources": [],
+    "questions": [
+      {
+        "prompt": "You sell 20 items at R15 each. Each item cost R10. What is your gross profit?",
+        "options": [
+          "R300.",
+          "R100.",
+          "R200."
+        ],
+        "correctIndex": 1,
+        "explanation": "R300 sales minus R200 cost of goods sold equals R100 gross profit."
+      },
+      {
+        "prompt": "You take R100 from business cash for groceries at home. How should you record it?",
+        "options": [
+          "Personal withdrawal.",
+          "Sales income.",
+          "Stock purchase."
+        ],
+        "correctIndex": 0,
+        "explanation": "The withdrawal is for personal use and reduces business cash."
+      },
+      {
+        "prompt": "Why should you keep receipts?",
+        "options": [
+          "They guarantee business growth.",
+          "They replace all other records.",
+          "They support records and help check what was spent."
+        ],
+        "correctIndex": 2,
+        "explanation": "Receipts provide evidence of purchases and expenses."
+      },
+      {
+        "prompt": "Why might a profitable business run short of cash?",
+        "options": [
+          "Profit always guarantees cash is available.",
+          "Customers have not paid, but suppliers must be paid now.",
+          "It records its expenses."
+        ],
+        "correctIndex": 1,
+        "explanation": "The timing of receipts and payments affects cash availability."
+      },
+      {
+        "prompt": "Is a loan received sales income?",
+        "options": [
+          "Yes.",
+          "Only if it enters a digital wallet.",
+          "No, it is borrowed money that must be managed separately."
+        ],
+        "correctIndex": 2,
+        "explanation": "Borrowing is a financing inflow, not a sale."
+      }
+    ]
+  },
+  {
+    "title": "Pricing, Costs and Profit",
+    "course": "Trader Business Foundations",
+    "content": "Set prices using costs, understand markup and margin, and calculate a simple break-even point.",
+    "lessons": [
+      {
+        "title": "Know your product costs",
+        "content": "Include the purchase cost and relevant costs needed to get a product ready for sale, such as transport and packaging.\n\nExample:\nTen items cost R100.\nTransport costs R20.\nPackaging costs R10.\nTotal cost: R130.\nCost per item: R130 ÷ 10 = R13.\n\nSelling below this cost creates a loss before other business expenses are considered."
+      },
+      {
+        "title": "Markup and margin are different",
+        "content": "Markup compares gross profit with cost.\nMargin compares gross profit with selling price.\n\nExample:\nAn item costs R10 and sells for R15.\nGross profit: R5.\nMarkup: R5 ÷ R10 × 100 = 50%.\nMargin: R5 ÷ R15 × 100 = approximately 33.3%.\n\nCheck the effect of discounts before offering them. A lower price reduces the money available to cover expenses."
+      },
+      {
+        "title": "Cover your fixed expenses",
+        "content": "Some expenses, such as monthly stall rental, continue even when sales are low.\n\nContribution per item is the selling price minus the variable cost per item.\n\nExample:\nSelling price: R20.\nVariable cost: R12.\nContribution: R8.\nFixed expenses for the month: R800.\nBreak-even quantity: R800 ÷ R8 = 100 items.\n\nIn this simplified example, selling 100 items covers those costs. Additional costs would change the calculation."
+      }
+    ],
+    "activity": "Calculate the full cost, selling price and contribution for three products.",
+    "passPercentage": 80,
+    "resources": [],
+    "questions": [
+      {
+        "prompt": "Ten items cost R100, transport is R20 and packaging is R10. What is the cost per item?",
+        "options": [
+          "R10.",
+          "R12.",
+          "R13."
+        ],
+        "correctIndex": 2,
+        "explanation": "Total cost is R130, divided by ten items."
+      },
+      {
+        "prompt": "An item costs R10 and sells for R15. What is the markup?",
+        "options": [
+          "50%.",
+          "33.3%.",
+          "5%."
+        ],
+        "correctIndex": 0,
+        "explanation": "R5 profit divided by R10 cost equals 50%."
+      },
+      {
+        "prompt": "For that same item, what is the gross margin?",
+        "options": [
+          "50%.",
+          "Approximately 33.3%.",
+          "15%."
+        ],
+        "correctIndex": 1,
+        "explanation": "R5 profit divided by R15 selling price is approximately 33.3%."
+      },
+      {
+        "prompt": "You reduce the price from R15 to R12 while cost remains R10. What is the gross profit per item?",
+        "options": [
+          "R5.",
+          "R12.",
+          "R2."
+        ],
+        "correctIndex": 2,
+        "explanation": "R12 minus R10 equals R2."
+      },
+      {
+        "prompt": "Contribution is R8 per item and fixed expenses are R800. How many items cover those fixed expenses?",
+        "options": [
+          "100.",
+          "80.",
+          "800."
+        ],
+        "correctIndex": 0,
+        "explanation": "R800 divided by R8 equals 100 items."
+      }
+    ]
+  },
+  {
+    "title": "Stock Control and Bulk Buying",
+    "course": "Trader Business Foundations",
+    "content": "Track stock, reduce losses and compare purchasing options.",
+    "lessons": [
+      {
+        "title": "Track what enters and leaves",
+        "content": "A simple stock record shows opening stock, stock received, units sold, losses and closing stock.\n\nExample:\nOpening stock: 50 units.\nReceived: 30 units.\nSold: 60 units.\nDamaged: 2 units.\nExpected closing stock: 50 + 30 − 60 − 2 = 18 units.\n\nCompare the record with a physical count. Investigate differences rather than changing figures without explanation."
+      },
+      {
+        "title": "Buy the right amount",
+        "content": "Use sales records to identify fast-moving and slow-moving products. Consider supplier delivery time when deciding when to reorder.\n\nBuying too little can cause lost sales. Buying too much ties up cash and can increase damage or expiry losses.\n\nFor goods with expiry dates, sell the earliest-expiring suitable stock first. Never sell unsafe or expired products."
+      },
+      {
+        "title": "Compare bulk purchases properly",
+        "content": "Bulk buying can reduce unit costs, but compare the total delivered cost.\n\nSupplier A offers 100 items for R900 plus R150 delivery.\nDelivered cost per item: R1,050 ÷ 100 = R10.50.\n\nSupplier B offers the same items at R10 each with free delivery.\nFor 100 items, the delivered cost is R1,000.\n\nAlso compare quality, expiry dates, supplier reliability and how quickly you can sell the stock."
+      }
+    ],
+    "activity": "Count five products and compare the physical count with your records.",
+    "passPercentage": 80,
+    "resources": [],
+    "questions": [
+      {
+        "prompt": "Opening stock is 50, received stock is 30, sales are 60 and damage is 2. What should remain?",
+        "options": [
+          "20.",
+          "18.",
+          "22."
+        ],
+        "correctIndex": 1,
+        "explanation": "50 + 30 − 60 − 2 equals 18."
+      },
+      {
+        "prompt": "Which suitable stock should normally sell first when expiry dates differ?",
+        "options": [
+          "Earliest-expiring stock.",
+          "Latest-expiring stock.",
+          "The stock delivered most recently, regardless of expiry."
+        ],
+        "correctIndex": 0,
+        "explanation": "This helps reduce expiry losses."
+      },
+      {
+        "prompt": "What is one risk of buying too much slow-moving stock?",
+        "options": [
+          "It guarantees higher profit.",
+          "It removes the need for records.",
+          "It ties up cash needed elsewhere."
+        ],
+        "correctIndex": 2,
+        "explanation": "Unsold stock holds money that cannot be used for other needs."
+      },
+      {
+        "prompt": "Which offer is cheaper for 100 identical items?",
+        "options": [
+          "R900 plus R150 delivery.",
+          "R10 per item with free delivery.",
+          "They cost the same."
+        ],
+        "correctIndex": 1,
+        "explanation": "The totals are R1,050 and R1,000 respectively."
+      },
+      {
+        "prompt": "Your physical stock count differs from your records. What should you do?",
+        "options": [
+          "Ignore the difference.",
+          "Investigate sales, deliveries, damage and recording errors.",
+          "Always blame the supplier."
+        ],
+        "correctIndex": 1,
+        "explanation": "Differences can have several causes and need evidence-based checking."
+      }
+    ]
+  },
+  {
+    "title": "Customer Service and Marketing",
+    "course": "Trader Business Foundations",
+    "content": "Build customer trust, handle complaints and measure simple promotions.",
+    "lessons": [
+      {
+        "title": "Build trust through consistent service",
+        "content": "Display clear prices, describe products honestly and treat customers respectfully.\n\nKeep your trading area clean and organised. Explain any relevant product limitations before a sale.\n\nReliable service encourages repeat purchases. Avoid promising availability, quality or delivery times you cannot provide."
+      },
+      {
+        "title": "Handle complaints constructively",
+        "content": "Listen without interrupting. Ask what happened and check the product, receipt or transaction details where relevant.\n\nExplain the available next steps and follow the applicable returns process and customer rights.\n\nRecord recurring complaints. They may reveal a supplier, product or service problem that needs fixing."
+      },
+      {
+        "title": "Market with a purpose",
+        "content": "Choose a clear audience and a specific offer. Use suitable channels such as signage or messages to customers who have agreed to receive them.\n\nRespect customer contact preferences and provide a way to stop promotional messages.\n\nMeasure results using additional contribution, not sales alone.\n\nExample:\nA promotion costs R100.\nIt generates 20 additional sales.\nEach additional sale contributes R8 after variable costs.\nAdditional contribution: R160.\nLess promotion cost: R100.\nRemaining contribution: R60, before any other additional costs."
+      }
+    ],
+    "activity": "Plan one promotion with a budget, target audience, offer and method for measuring results.",
+    "passPercentage": 80,
+    "resources": [],
+    "questions": [
+      {
+        "prompt": "Which practice helps build customer trust?",
+        "options": [
+          "Changing prices without explanation.",
+          "Promising stock you do not have.",
+          "Displaying clear prices and giving accurate information."
+        ],
+        "correctIndex": 2,
+        "explanation": "Customers can make informed decisions when information is clear."
+      },
+      {
+        "prompt": "What should you do first when a customer complains?",
+        "options": [
+          "Listen and clarify the problem.",
+          "Argue immediately.",
+          "Delete their message."
+        ],
+        "correctIndex": 0,
+        "explanation": "Understanding the complaint helps identify a fair response."
+      },
+      {
+        "prompt": "A customer asks to stop promotional messages. What should you do?",
+        "options": [
+          "Send more messages.",
+          "Respect the request and stop the promotions.",
+          "Add them to another promotional group."
+        ],
+        "correctIndex": 1,
+        "explanation": "Customer communication preferences should be respected."
+      },
+      {
+        "prompt": "A promotion costs R100 and generates R160 additional contribution. What remains before other additional costs?",
+        "options": [
+          "R160.",
+          "R260.",
+          "R60."
+        ],
+        "correctIndex": 2,
+        "explanation": "R160 minus R100 equals R60."
+      },
+      {
+        "prompt": "Several customers report the same product defect. What should you do?",
+        "options": [
+          "Record and investigate the pattern with the supplier.",
+          "Ignore it.",
+          "Hide the complaints."
+        ],
+        "correctIndex": 0,
+        "explanation": "Repeated complaints may indicate a problem affecting other customers."
+      }
+    ]
+  },
+  {
+    "title": "Business Growth and Sustainability",
+    "course": "Trader Business Foundations",
+    "content": "Set achievable goals, manage borrowing and build a practical improvement plan.",
+    "lessons": [
+      {
+        "title": "Grow from evidence",
+        "content": "Review sales, gross profit, expenses, stock losses and available cash before expanding.\n\nMore sales do not automatically mean more profit. Expansion may require extra rent, transport, staff or stock.\n\nTest a new product or sales channel on a small scale. Compare results before committing more money."
+      },
+      {
+        "title": "Understand grants and loans",
+        "content": "A grant and a loan are different. A loan creates a repayment obligation. A grant may have conditions governing how it is used and what evidence must be kept.\n\nDo not assume funding is approved because you registered on a platform or completed training.\n\nBefore accepting a loan, understand the amount received, total repayment, fees, interest, payment dates and consequences of missed payments.\n\nExample:\nYou receive R2,000 and the agreement requires total repayment of R2,300.\nThe difference is R300.\nWhether this is affordable depends on your cash flow and repayment schedule."
+      },
+      {
+        "title": "Build a 90-day improvement plan",
+        "content": "Choose a small number of measurable actions.\n\nExamples:\n- Record sales and expenses every trading day.\n- Count key stock items weekly.\n- Compare delivered prices from two suppliers.\n- Review profit and cash at the end of each month.\n\nKeep money available for essential commitments where possible. Review the plan regularly with your trainer or mentor."
+      }
+    ],
+    "activity": "Write three actions for the next 90 days. Give each action a deadline and a way to measure completion.",
+    "passPercentage": 80,
+    "resources": [],
+    "questions": [
+      {
+        "prompt": "What should you check before expanding?",
+        "options": [
+          "Only the number of followers you have.",
+          "Profit, cash flow, costs and customer demand.",
+          "Only whether a competitor expanded."
+        ],
+        "correctIndex": 1,
+        "explanation": "Growth decisions need financial and customer evidence."
+      },
+      {
+        "prompt": "What is a sensible way to introduce an unfamiliar product?",
+        "options": [
+          "Spend all available cash on it.",
+          "Borrow immediately without checking terms.",
+          "Test a small quantity and review the results."
+        ],
+        "correctIndex": 2,
+        "explanation": "A small test limits exposure while providing useful evidence."
+      },
+      {
+        "prompt": "Which statement about grants is correct?",
+        "options": [
+          "They may have usage and reporting conditions.",
+          "They never have conditions.",
+          "Platform registration guarantees approval."
+        ],
+        "correctIndex": 0,
+        "explanation": "The specific grant agreement determines its conditions."
+      },
+      {
+        "prompt": "You receive R2,000 and must repay R2,300 in total. What is the difference?",
+        "options": [
+          "R2,300.",
+          "R300.",
+          "R200."
+        ],
+        "correctIndex": 1,
+        "explanation": "R2,300 minus R2,000 equals R300."
+      },
+      {
+        "prompt": "Which is the clearest improvement goal?",
+        "options": [
+          "“Become successful.”",
+          "“Sell more someday.”",
+          "“Record sales and expenses every trading day for the next 30 days.”"
+        ],
+        "correctIndex": 2,
+        "explanation": "It is specific, measurable and time-bound."
+      }
+    ]
+  }
+]

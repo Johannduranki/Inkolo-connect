@@ -9,7 +9,7 @@ const fail=(status,message)=>{throw Object.assign(Error(message),{status});};
 export class MysqlCycleBilling extends CycleBilling {
   async list(userId){
     const rows=await this.store.all('SELECT id,tenant_id,community_id,service_code,amount_cents,mode,state,paid_until,cancelled_at,created_at,token IS NOT NULL AS has_profile,price_revision FROM cycle_subscription WHERE user_id=? ORDER BY created_at DESC',String(userId));
-    return rows.map(s=>({...s,state:s.state==='REVIEW'?'REVIEW':s.paid_until&&s.paid_until<=this.now()?'EXPIRED':s.state,renewalStatus:s.cancelled_at?'Cancelled':s.price_revision!==this.readState().servicePricing?.[s.service_code]?.revision?'Price changed - renewed consent required':!s.has_profile?'Saved payment profile pending':!this.settings().recurringReady?'Developer configuration required':'Scheduled'}));
+    return rows.map(s=>({...s,state:s.state==='REVIEW'?'REVIEW':s.paid_until&&s.paid_until<=this.now()?'EXPIRED':s.state,renewalStatus:s.cancelled_at?'Cancelled':s.price_revision!==this.price(s.service_code,s)?.revision?'Price changed - renewed consent required':!s.has_profile?'Saved payment profile pending':!this.settings().recurringReady?'Developer configuration required':'Scheduled'}));
   }
   async active(userId,communityId){return (await this.list(userId)).filter(s=>s.mode==='live'&&s.paid_until>this.now()&&['ACTIVE','CANCELLED'].includes(s.state)&&(!communityId||s.community_id===communityId)).map(s=>({id:s.id,serviceCode:memberCapabilities[s.service_code]?.native||s.service_code,communityId:s.community_id,tenantId:s.tenant_id,planCode:'configured-monthly',planLabel:serviceCatalogue[s.service_code]+' monthly',amountCents:s.amount_cents,status:'active',subscribedAt:s.created_at,paidUntil:s.paid_until,provider:'cycle'}));}
   intent(id){return this.store.get('SELECT * FROM cycle_intent WHERE request_id=?',id);}
@@ -35,7 +35,7 @@ export class MysqlCycleBilling extends CycleBilling {
         if(!settings.recurringReady)fail(503,'Recurring payments are awaiting developer configuration.');
         if(!Object.hasOwn(serviceCatalogue,code)||memberCapabilities[code]?.issue)fail(409,'This service is not ready for paid enrolment.');
         if(!this.enabled(c,code))fail(403,'This service is not enabled for this tenant and community.');
-        price=this.readState().servicePricing?.[code];
+        price=this.price(code,c);
         if(price?.mode!=='paid'||!Number.isSafeInteger(price.amountCents)||price.amountCents<1)fail(409,'An administrator must configure a paid monthly price.');
         if(body.priceRevision!==price.revision||body.amountCents!==price.amountCents||body.termsVersion!==billingTerms)fail(409,'The price or terms changed. Refresh and review before accepting.');
         amount=price.amountCents;description=serviceCatalogue[code]+' monthly subscription';
@@ -102,7 +102,7 @@ export class MysqlCycleBilling extends CycleBilling {
         const current=await this.store.get('SELECT * FROM cycle_subscription WHERE id=?',sub.id);
         if(!current||current.cancelled_at||current.state!=='ACTIVE'||current.token!==sub.token||current.paid_until!==sub.paid_until)return null;
         if(!findMembership(this.readState(),sub.user_id,community)||!this.enabled(community,sub.service_code)||this.readState().users.find(u=>String(u.id)===sub.user_id)?.status!=='active')return null;
-        if(this.readState().servicePricing?.[sub.service_code]?.revision!==sub.price_revision)return null;
+        if(this.price(sub.service_code,sub)?.revision!==sub.price_revision)return null;
         if(await this.store.get('SELECT request_id FROM cycle_intent WHERE subscription_id=? AND period_start=?',sub.id,sub.paid_until))return null;
         const request=await this.store.create({userId:sub.user_id,tenantId:sub.tenant_id,communityId:sub.community_id,amountCents:sub.amount_cents,description:serviceCatalogue[sub.service_code]+' renewal',reference:'RENEW-'+randomUUID()},'cycle-renewal',cfg.mode);
         await this.store.run('INSERT INTO cycle_intent VALUES(?,?,?,?,?,?)',request.id,'subscription',sub.id,sub.paid_until,randomUUID(),sub.user_id);

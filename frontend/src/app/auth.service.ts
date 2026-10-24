@@ -107,6 +107,7 @@ export class AuthService {
     return this.http.post<ServiceSubscription>(`${this.apiUrl}/subscriptions`, {
       serviceCode,
       planCode,
+      communityId: new URLSearchParams(window.location.search).get('communityId') || '',
       acceptance: {
         accepted: acceptedTerms
       }

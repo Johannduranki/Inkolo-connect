@@ -17,6 +17,8 @@ import { editAdminProfile, profileVersion } from './admin-profile.js';
 import { userContributions } from './user-contributions.js';
 import { selectMemberCommunity } from './community-selection.js';
 import { resolveCommunityConfiguration } from '../../frontend/public/tenant-service-policy.js';
+import { serviceCatalogue, serviceEnabled } from './service-pricing.js';
+import { memberServiceScope } from './service-scope.js';
 import {communityPeerIds,requireCommunityPeer,participantMessage} from './community-messaging-security.js';
 import {conversationListing,writableConversation} from './conversation-security.js';
 import {activeRideUser,rideLocation,rideOfferInput,visibleRideOffers,requestableLift,rideRequestView,visibleRideRequests} from './ride-security.js';
@@ -1010,7 +1012,14 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false, a
       return res.status(403).json({ message: 'You are not registered in the selected community.' });
     }
     const policy = readPlatformState().cycleServiceAvailability;
-    const configuration = membership ? resolveCommunityConfiguration(membership, policy?.communities, policy?.tenants) : null;
+    let configuration = membership ? resolveCommunityConfiguration(membership, policy?.communities, policy?.tenants) : null;
+    if (membership) {
+      const state = readPlatformState();
+      try {
+        const scope = memberServiceScope(state, currentUserId(req), communityId);
+        if (scope.community) configuration = {id:scope.communityId,tenantId:scope.tenantId,serviceCodes:Object.keys(serviceCatalogue).filter(code=>serviceEnabled(state,scope.community,code))};
+      } catch (error) { if (!error.status) throw error; configuration = null; }
+    }
     res.json(membership ? { ...membership, serviceConfiguration: configuration ? {
       id: configuration.id, tenantId: configuration.tenantId,
       serviceCodes: configuration.serviceCodes

@@ -1,0 +1,13 @@
+import { readFileSync, writeFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
+const source = readFileSync(process.argv[2], 'utf8').replaceAll('\r\n', '\n');
+assert(source.startsWith('MODULE 7: BANKING, SAVING AND PLANNING FOR THE FUTURE'));
+const content = source.match(/Learning objective:\n([\s\S]*?)\nLesson 1:/)[1].trim();
+const lessons = [...source.matchAll(/^Lesson \d: (.+)\n([\s\S]*?)(?=^Lesson \d:|^Quiz:)/gm)].map(m => ({ title: m[1], content: m[2].trim() }));
+const questions = [...source.matchAll(/^Q\d\. (.+)\nA\. (.+)\nB\. (.+)\nC\. (.+)\nCorrect answer: ([ABC])\.\nExplanation: (.+)/gm)].map(q => ({ prompt: q[1], options: q.slice(2, 5), correctIndex: 'ABC'.indexOf(q[5]), explanation: q[6] }));
+assert.equal(lessons.length, 5); assert.equal(questions.length, 5);
+assert(lessons.every(l => l.content.includes('Practical activity:')));
+lessons[4].content = lessons[4].content.replace('Use the Trader Connect bulk-buying service, where available,', 'Use Wholesaler Orders in Buy and Sell for your Trader Connect community, where available,');
+const module = { title: 'Banking, Saving and Planning for the Future', course: 'Trader Business Foundations', content, lessons, activity: 'The practical activities are optional exercises. Do not upload account credentials, balances or policy documents. No financial product purchase is required to complete this module.', passPercentage: 80, resources: [], questions };
+writeFileSync(new URL('../backend/src/study-banking.json', import.meta.url), JSON.stringify(module, null, 2) + '\n');
+console.log('Generated Module 7 with five lessons, five activities and five explained quiz questions.');

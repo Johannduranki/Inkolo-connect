@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { hashPassword } from './password-security.js';
 
 export const tenantPermissions = {
+  'services.manage': 'Tenant and community service configuration',
+  'training.manage': 'Study modules and learner results',
   'reports.view': 'Community reports',
   'tenant.view': 'Tenant overview',
   'branding.manage': 'Tenant and community logos',

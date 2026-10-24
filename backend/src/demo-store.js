@@ -34,16 +34,14 @@ export function getDemoUserById(id) {
   const platformUser = readPlatformState().users.find(
     (item) => String(item.id) === String(id)
   );
-  if (!user && !platformUser) return null;
-  const preferDemoAccount = String(id) === '1000001' && !platformUser;
-  return {
-    id: preferDemoAccount ? user.id : platformUser?.id ?? user.id,
-    telephone_number: preferDemoAccount ? user.telephone_number : platformUser?.telephoneNumber ?? user.telephone_number,
-    first_name: preferDemoAccount ? user.first_name : platformUser?.firstName ?? user.first_name,
-    last_name: preferDemoAccount ? user.last_name : platformUser?.lastName ?? user.last_name,
-    email: preferDemoAccount ? user.email : platformUser?.email ?? user?.email ?? null,
-    roles: preferDemoAccount ? user.roles : platformUser?.roles ?? user?.roles ?? ['Member'],
-    status: preferDemoAccount ? user.status : platformUser?.status ?? user?.status ?? 'active',
+  if (!user && !platformUser) return null;  return {
+    id: platformUser?.id ?? user.id,
+    telephone_number: platformUser?.telephoneNumber ?? user.telephone_number,
+    first_name: platformUser?.firstName ?? user.first_name,
+    last_name: platformUser?.lastName ?? user.last_name,
+    email: platformUser?.email ?? user?.email ?? null,
+    roles: platformUser?.roles ?? user?.roles ?? ['Member'],
+    status: platformUser?.status ?? user?.status ?? 'active',
     membership_type: user?.membership_type ?? null
   };
 }
@@ -89,7 +87,8 @@ export async function saveDemoSubscription(userId, subscription) {
     const index = state.serviceSubscriptions.findIndex(
       (item) =>
         String(item.userId) === String(userId) &&
-        item.serviceCode === subscription.serviceCode
+        item.serviceCode === subscription.serviceCode &&
+        (item.communityId || '') === (subscription.communityId || '')
     );
     if (index >= 0) {
       state.serviceSubscriptions[index] = saved;
@@ -97,7 +96,7 @@ export async function saveDemoSubscription(userId, subscription) {
       state.serviceSubscriptions.push(saved);
     }
   });
-  demoSubscriptions.set(`${userId}:${subscription.serviceCode}`, saved);
+  demoSubscriptions.set(`${userId}:${subscription.serviceCode}:${subscription.communityId || ''}`, saved);
   return saved;
 }
 

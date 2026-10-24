@@ -6,5 +6,61 @@
 .price-row .row-status,.price-preview{grid-column:1/-1;margin:0;font-size:14px;line-height:1.6;overflow-wrap:anywhere}
 .price-preview{padding:12px 0;color:#24533e}
 .price-row button{min-height:42px;align-self:end}
+.scope-controls{display:flex;flex-wrap:wrap;gap:16px;border-bottom:1px solid #d5dfdf;padding:16px 0}.scope-controls label{flex:1;min-width:220px}.scope-controls select{display:block;width:100%;margin-top:8px}.price-row input[type=checkbox]{width:auto;margin-right:8px}.price-row .inherit-label{grid-column:1/-1}.price-source{display:block;font:400 13px/1.5 Segoe UI,sans-serif;color:#24533e;margin-top:8px}
+.price-row .inherit-label{display:flex;align-items:center;gap:8px}.price-row .inherit-label input{display:inline-block;flex:0 0 18px;width:18px;height:18px;min-height:0;margin:0;padding:0}
+.commission-settings{grid-column:1/-1;min-width:0;margin:8px 0 0;padding:16px 0;border:0;border-top:1px solid #d5dfdf}.commission-settings legend{font-weight:600;padding:0 8px 0 0}.commission-settings label{display:block;max-width:320px}.commission-settings p{font-size:14px;overflow-wrap:anywhere}.commission-settings button{width:auto}
 @media(max-width:750px){.price-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:420px){.price-row{grid-template-columns:minmax(0,1fr)}}
+
+/* Keep the workspace unframed; colour distinguishes settings, context and fees. */
+:root{font-family:'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;font-size:15px;line-height:1.55;color:#203b48;background:#fff;letter-spacing:0;-webkit-font-smoothing:antialiased}
+body{background:#fff}
+header{border-top:4px solid #087c9a;border-bottom:1px solid #dce6ec;padding:12px 28px;gap:16px 24px}
+header strong{font-size:17px;color:#124a70}
+header nav{gap:12px 24px;align-items:center}
+a{color:#056b87;text-underline-offset:4px}
+main{max-width:1200px;margin:30px auto;padding:0 28px 48px}
+.heading{padding-bottom:20px;border-bottom:1px solid #dce6ec}
+.heading h1{font-family:'Segoe UI Variable Display','Segoe UI',system-ui,sans-serif;font-size:30px;font-weight:650;color:#16466a;line-height:1.25}
+.heading .eyebrow{color:#087f83;font-size:12px;letter-spacing:0;margin:0 0 8px}
+#refresh{background:#fff;color:#14607b;border-color:#a9c4d1;min-width:96px}
+#refresh:hover{background:#edf8fa;border-color:#087c9a}
+.scope-controls{margin:0;padding:22px 0 24px;gap:20px;border-bottom:2px solid #b5e1df;background:#fff}
+.scope-controls label{font-size:14px;color:#25566b;min-width:min(220px,100%)}
+.scope-controls select{border-color:#9fbdcc;background:#f5fafc;margin-top:2px;min-height:46px}
+.pricing-intro{color:#536875;font-size:14px;margin:18px 0 12px}
+#notice{background:#eef8f4;color:#24594d;border-left:3px solid #2c9a79;border-radius:6px;padding:12px 16px;font-size:14px;margin:12px 0}
+.pricing-notes{border:0;border-bottom:1px solid #dce6ec;padding:8px 0 18px;margin:0;font-size:13px;color:#536875}
+.pricing-notes summary{color:#79521b;font-weight:600;padding:4px 0;min-height:30px}
+.pricing-notes p{max-width:900px;line-height:1.7}
+.price-row{padding:28px 0 30px;gap:18px 20px;border-bottom:1px solid #cddde5}
+.price-row h2{font-family:'Segoe UI Variable Display','Segoe UI',system-ui,sans-serif;font-weight:650;border-left:4px solid #0897a5;border-radius:3px;padding:1px 0 1px 12px;color:#16466a;font-size:20px;line-height:1.4}
+.price-row:nth-child(3n+2) h2{border-left-color:#d98259}
+.price-row:nth-child(3n) h2{border-left-color:#379b76}
+.price-source{color:#32665b;font-size:13px;margin-top:6px}
+.price-row h2 small{font-family:'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif!important}
+.price-row h2 small:not(.price-source){color:#5d717d}
+.price-row label{font-weight:600;color:#304e5c;font-size:14px;line-height:1.5}
+.price-row label span{margin-bottom:0}
+input,select,button{font-family:inherit;border-radius:8px;letter-spacing:0;min-height:44px}
+input,select{border:1px solid #b6cbd6;background:#fff;color:#203b48;box-shadow:0 1px 2px #203b4808;transition:border-color .16s,box-shadow .16s,background-color .16s}
+input:not(:disabled):focus,select:not(:disabled):focus{border-color:#087f8c;box-shadow:0 0 0 3px #087f8c14}
+input:not(:disabled):hover,select:not(:disabled):hover{border-color:#3989a1}
+input:disabled,select:disabled{background:#f1f5f7;color:#536b77;border-color:#d5e1e7;opacity:1;cursor:not-allowed}
+button{background:#087f8c;border-color:#087f8c;font-size:14px;box-shadow:0 2px 4px #16466a12;transition:background .16s,box-shadow .16s}
+button:not(:disabled):hover{background:#086573;border-color:#086573}
+button:disabled{background:#e7eef1;color:#637985;border-color:#d5e1e7;box-shadow:none;cursor:not-allowed}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #e6ae45;outline-offset:3px}
+.price-row .inherit-label{background:#f0f7fa;border-radius:6px;padding:12px 14px;color:#295c71;gap:10px;min-height:44px}
+.inherit-label input{accent-color:#087f8c}
+.price-preview{font-size:13px;color:#416b5d;padding:4px 0}
+.row-status:empty{display:none}
+.commission-settings{border-top:1px solid #ead4ae;border-bottom:1px solid #ead4ae;padding:16px 0 20px;margin:8px 0 2px}
+.commission-settings legend{color:#80541d;font-size:14px;padding-right:12px}
+.commission-settings label{color:#6f522e}
+.commission-settings input:not(:disabled){border-color:#c9ad79;background:#fffcf5}
+.commission-settings p{font-size:13px;color:#626e75;line-height:1.6;margin:10px 0}
+.commission-settings .commission-example{color:#78551c}
+.commission-settings button{margin-top:4px}
+@media(prefers-reduced-motion:reduce){button,input,select{transition:none}}
+@media(max-width:650px){header{padding:12px 16px}main{padding:0 16px 32px;margin-top:22px}.heading h1{font-size:26px}.scope-controls{gap:16px}.price-row{gap:16px;padding:24px 0}.price-row h2{font-size:19px}.price-row button{width:100%}.commission-settings label{max-width:none}}

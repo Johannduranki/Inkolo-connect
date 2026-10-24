@@ -1,4 +1,4 @@
-/* Duranki Network palette; scoped to administration, not member/tenant branding. */
+/* Shared dashboard presentation. Tenant logos, data and permission rules are unchanged. */
 .platform-page .form-panel{scroll-margin-top:24px}
 .platform-page{--active-primary:#071a2d!important;--active-secondary:#007b96!important;--active-accent:#38e078!important;--active-background:#f5f7fa!important;background:#f5f7fa!important;color:#243747!important;font-family:Arial,Helvetica,sans-serif;letter-spacing:0}
 .platform-page *{box-sizing:border-box;letter-spacing:0!important}
@@ -71,3 +71,52 @@
 @media(max-width:540px){.platform-page input:not([type=checkbox]):not([type=radio]):not([type=color]),.platform-page select,.platform-page textarea{font-size:16px!important}.platform-page .heading h2,.platform-page .panel h2{font-size:21px!important}.platform-page .form-grid{gap:16px!important}}
 @media(max-width:900px){.platform-page .topbar{grid-template-columns:minmax(0,1fr)!important;padding:16px 20px 0!important}.platform-page .platform-account{grid-column:1;grid-row:2;justify-content:space-between!important}.platform-page .topbar nav{grid-row:3}.platform-page .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(max-width:540px){.platform-page .topbar{padding:16px 16px 0!important}.platform-page .platform-account{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:8px}.platform-page .platform-account app-role-switcher{min-width:0!important}.platform-page .role-switcher{flex-wrap:wrap!important;gap:8px!important}.platform-page .role-identity{text-align:left!important}.platform-page .platform-account select{width:100%}.platform-page .topbar nav>button{padding:10px!important;font-size:13px!important}.platform-page .topbar-community-picker{min-width:0;max-width:none;flex-basis:100%;margin:4px 0!important}.platform-page .topbar nav>a{padding:6px 8px!important;font-size:12px}.platform-page .hero h1{font-size:26px!important}.platform-page .summary-grid{gap:10px!important}.platform-page .summary-grid article{padding:14px!important}.platform-page .summary-grid strong{font-size:22px!important}.platform-page .layout{grid-template-columns:minmax(0,1fr)!important}.platform-page [data-admin-shortcuts],.platform-page [data-live-presence]{grid-template-columns:minmax(0,1fr)!important}}
+
+/* Common visual language; intentionally no changes to grids, visibility or positioning. */
+body.duranki-dashboard-theme{--duranki-ink:#203b48;--duranki-teal:#087f8c;--duranki-line:#c9dce5;font-family:'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;color:var(--duranki-ink);background:#fff;line-height:1.55;letter-spacing:0;-webkit-font-smoothing:antialiased}
+.duranki-dashboard-theme :where(main,section,article,aside,header,dialog,form,.platform-page){font-family:'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif!important;letter-spacing:0}
+.duranki-dashboard-theme :where(h1,h2,h3){font-family:'Segoe UI Variable Display','Segoe UI',system-ui,sans-serif!important;font-weight:650;letter-spacing:0;line-height:1.3}
+.duranki-dashboard-theme :where(button,input,select,textarea){font-family:'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif!important;letter-spacing:0}
+.duranki-dashboard-theme :where(button,select,textarea,input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color])){border-radius:8px!important}
+.duranki-dashboard-theme :where(select,textarea,input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color])){border-color:var(--duranki-line);box-shadow:0 1px 2px #203b4808;transition:border-color .16s,box-shadow .16s}
+.duranki-dashboard-theme :where(input,select,textarea):not(:disabled):focus{border-color:#087f8c;box-shadow:0 0 0 3px #087f8c14}
+.duranki-dashboard-theme :where(input[type=checkbox],input[type=radio]){accent-color:#087f8c}
+.duranki-dashboard-theme :where(button){transition:background-color .16s,box-shadow .16s}
+.duranki-dashboard-theme :where(button[type=submit]:not(.danger):not(.delete),button.primary:not(.danger):not(.delete)){background:#087f8c;color:#fff;border-color:#087f8c;box-shadow:0 2px 4px #16466a12}
+.duranki-dashboard-theme :where(button):disabled{box-shadow:none;cursor:not-allowed}
+.duranki-dashboard-theme :where(button,a,input,select,textarea,summary):focus-visible{outline:3px solid #e6ae45!important;outline-offset:3px}
+.duranki-dashboard-theme :where(dialog){border-radius:8px;border-color:var(--duranki-line);box-shadow:0 16px 48px #203b4826}
+.duranki-dashboard-theme :where(main>header,.heading h1,.heading h2){color:#16466a}
+.duranki-dashboard-theme :where(main a){color:#056b87;text-underline-offset:4px}
+.duranki-dashboard-theme :where(th){background:#eef6f7;color:#285260}
+.duranki-dashboard-theme :where(th,td){border-bottom-color:#dce6ec}
+.duranki-dashboard-theme :where(.eyebrow){color:#087f83;letter-spacing:0}
+.duranki-dashboard-theme :where(#notice,.notice){border-radius:6px}
+.duranki-dashboard-theme .platform-page{--active-primary:#16466a!important;--active-secondary:#087f8c!important;--active-accent:#2c9a79!important;--active-background:#fff!important;background:#fff!important}
+.duranki-dashboard-theme .platform-page .topbar{background:#fff!important;color:#203b48;border-top:4px solid #087c9a!important;border-bottom:1px solid #dce6ec!important}
+.duranki-dashboard-theme .platform-page .topbar .brand,.duranki-dashboard-theme .platform-page .role-identity strong{color:#16466a!important}
+.duranki-dashboard-theme .platform-page .role-identity span,.duranki-dashboard-theme .platform-page .topbar-community-picker{color:#526d7b!important}
+.duranki-dashboard-theme .platform-page .platform-account select,.duranki-dashboard-theme .platform-page .topbar-community-picker select{background:#f5fafc!important;color:#203b48!important;border-color:#b6cbd6!important}
+.duranki-dashboard-theme .platform-page .platform-account select option,.duranki-dashboard-theme .platform-page .topbar-community-picker select option{background:#fff;color:#203b48}
+.duranki-dashboard-theme .platform-page .topbar nav>button{color:#285b70!important}
+.duranki-dashboard-theme .platform-page .topbar nav>button.active{background:#087f8c!important;color:#fff!important}
+.duranki-dashboard-theme .platform-page .topbar nav>a,.duranki-dashboard-theme .platform-page .signout,.duranki-dashboard-theme .platform-page .topbar a[href^="/payments/cycle"]{color:#056b87!important}
+.duranki-dashboard-theme .platform-page .topbar nav>a:hover{background:#eef8f4!important;color:#16466a!important}
+.duranki-dashboard-theme .platform-page .topbar nav::after{border-color:#dce6ec}
+.duranki-dashboard-theme .platform-page .summary-grid article{border-radius:8px!important;border-top-color:#0897a5!important}
+.duranki-dashboard-theme .platform-page .summary-grid article:nth-child(2){border-top-color:#379b76!important}
+.duranki-dashboard-theme .platform-page .summary-grid article:nth-child(3){border-top-color:#d98259!important}
+.duranki-dashboard-theme .platform-page .summary-grid article:nth-child(4){border-top-color:#d6a141!important}
+.duranki-dashboard-theme .platform-page .hero h1,.duranki-dashboard-theme .platform-page .panel h2{color:#16466a!important}
+@media(prefers-reduced-motion:reduce){.duranki-dashboard-theme :where(button,input,select,textarea){transition:none}}
+
+/* Larger platform-admin typography without changing dashboard behaviour. */
+body.duranki-dashboard-theme .platform-page{font-size:24px;line-height:1.6}
+body.duranki-dashboard-theme .platform-page :is(p,label,button,input,select,textarea,th,td,dd,dt,nav a,.brand,.service-selector,.role-identity strong,.catalogue-list dd){font-size:24px!important;line-height:1.5!important}
+body.duranki-dashboard-theme .platform-page :is(small,.hint,.eyebrow,.role-identity span,.summary-grid span,.heading p,.hero p,[data-real-data-notice],[data-live-presence] span,.catalogue-list dt,.service-row small,.toggle small,.topbar-community-picker,[data-admin-shortcuts] a){font-size:22px!important;line-height:1.5!important}
+body.duranki-dashboard-theme .platform-page :is(.heading h2,.panel h2,[data-live-presence] h2){font-size:32px!important}
+body.duranki-dashboard-theme .platform-page .hero h1{font-size:42px!important}
+body.duranki-dashboard-theme .platform-page .summary-grid strong{font-size:38px!important}
+body.duranki-dashboard-theme .platform-page :is(button,select,input){min-height:56px}
+body.duranki-dashboard-theme .platform-page :is(input[type=checkbox],input[type=radio],input[type=color]){min-height:initial}
+body.duranki-dashboard-theme .platform-page :is(nav a,button,label,th,td){overflow-wrap:anywhere}

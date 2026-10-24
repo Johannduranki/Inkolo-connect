@@ -4,6 +4,7 @@ import { getPool } from './database.js';
 import { assertDatabaseReady } from './database-readiness.js';
 import { existsSync, readFileSync } from 'node:fs';
 import { logger, errorDetails, installFatalLogging } from './logger.js';
+import { assertPortAvailable } from './startup-port.js';
 
 installFatalLogging();
 
@@ -14,6 +15,8 @@ async function start(databaseAvailable) {
   app.listen(config.port,()=>logger.info('api_listening',{port:config.port}));
 }
 
+async function main() {
+await assertPortAvailable(config.port);
 if (config.forceDemoMode && config.allowDemoAuth) {
   logger.warn('persistent_local_storage_enabled');
   await start(false);
@@ -35,3 +38,16 @@ if (config.forceDemoMode && config.allowDemoAuth) {
     }
   }
 }
+}
+
+main().catch(error => {
+  logger.error(error.code === 'EADDRINUSE' ? 'api_port_already_in_use' : 'api_startup_failed', {
+    ...errorDetails(error), port: config.port
+  });
+  if (error.code === 'EADDRINUSE') {
+    process.stderr.write(`Port ${config.port} is already in use. Do not start a second API; check the running service first.\n`);
+  }
+  logger.once('finish', () => process.exit(1));
+  logger.end();
+  setTimeout(() => process.exit(1), 2000).unref();
+});

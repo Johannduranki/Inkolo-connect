@@ -967,7 +967,8 @@ export class DashboardComponent implements OnInit {
     this.services.splice(0,this.services.length,...reconcileMemberCatalogue(this.services,fallback,false));
     try {
       const token = this.auth.getToken() || '';
-      const response = await fetch('/api/service-pricing', { headers: { Authorization: 'Bearer ' + token }, cache: 'no-store' });
+      const selectedCommunity = new URLSearchParams(window.location.search).get('communityId') || this.memberCommunity()?.churchId || '';
+      const response = await fetch('/api/service-pricing?member=true&communityId=' + encodeURIComponent(selectedCommunity), { headers: { Authorization: 'Bearer ' + token }, cache: 'no-store' });
       if (!response.ok) throw new Error('Pricing unavailable');
       const data = await response.json() as { services: Array<{ code: string; mode: string; amountCents: number }> };
       const training=await fetch('/api/trader-training/access',{headers:{Authorization:'Bearer '+token},cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);

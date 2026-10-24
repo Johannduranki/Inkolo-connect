@@ -4,7 +4,17 @@ import { Writable } from 'node:stream';
 import { once } from 'node:events';
 import express from 'express';
 import winston from 'winston';
-import { createLogger, safeLog, requestLogging } from '../src/logger.js';
+import { createLogger, safeLog, requestLogging, errorDetails } from '../src/logger.js';
+
+test('error metadata preserves event names without exposing exception text',async()=>{
+  const lines=[];const stream=new Writable({write(chunk,_encoding,done){lines.push(chunk.toString());done();}});
+  const log=createLogger({transports:[new winston.transports.Stream({stream})]});
+  log.error('api_startup_failed',errorDetails(Object.assign(new Error('private credential'),{code:'ECONNREFUSED'})));
+  const finished=once(log,'finish');log.end();await finished;
+  const entry=JSON.parse(lines[0]);
+  assert.equal(entry.message,'api_startup_failed');assert.equal(entry.errorCode,'ECONNREFUSED');
+  assert.equal(lines.join('').includes('private credential'),false);
+});
 
 test('Winston emits JSON and drops secrets, payloads and arbitrary error text',async()=>{
   const lines=[];const stream=new Writable({write(chunk,_encoding,done){lines.push(chunk.toString());done();}});
