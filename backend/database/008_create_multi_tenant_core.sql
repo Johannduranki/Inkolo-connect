@@ -69,7 +69,9 @@ CREATE TABLE IF NOT EXISTS user_tenant_role (
     ON DELETE CASCADE,
   CONSTRAINT fk_user_tenant_role_tenant
     FOREIGN KEY (tenant_id) REFERENCES tenant(tenant_id)
-    ON DELETE CASCADE ON UPDATE CASCADE
+    -- MariaDB cannot cascade updates into a generated column's source.
+    -- Keep referenced tenant IDs stable while roles exist.
+    ON DELETE CASCADE ON UPDATE RESTRICT
 );
 
 CREATE TABLE IF NOT EXISTS user_community_role (

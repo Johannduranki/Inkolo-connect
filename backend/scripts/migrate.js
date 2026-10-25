@@ -37,7 +37,7 @@ try {
     if (await applySchemaMigration(connection,file,sql)) console.log(`Applied database migration ${file}`);
   }
 } catch(error) {
-  console.error(JSON.stringify({status:'MIGRATION_FAILED',code:/^[A-Z_]+$/.test(error.code||'')?error.code:'UNKNOWN'}));
+  console.error(JSON.stringify({status:'MIGRATION_FAILED',code:/^[A-Z_]+$/.test(error.code||'')?error.code:'UNKNOWN',errno:Number.isInteger(error.errno)?error.errno:undefined,sqlState:/^[A-Z0-9]{5}$/.test(error.sqlState||'')?error.sqlState:undefined}));
   process.exitCode=1;
 } finally {
   await connection.end();

@@ -1,5 +1,5 @@
 import { hashIdNumber } from './id-number.js';
-import { readPlatformState, updatePlatformState } from './platform-store.js';
+import { readPlatformState, updatePlatformState, platformStorage } from './platform-store.js';
 
 const demoUsers = [
   { id: 1, telephone_number: '0712345678', first_name: 'Jeremy', last_name: 'Shabalala', email: 'jeremy@inkoloconnect.local', roles: ['Member'], status: 'active', membership_type: null },
@@ -22,7 +22,7 @@ export function findDemoUser(telephoneNumber, pepper) {
     (user) => hashIdNumber(user.telephoneNumber, pepper) === suppliedHash
   );
   if (platformUser) return getDemoUserById(platformUser.id);
-  if (readPlatformState().demoUsersDisabled) return null;
+  if (platformStorage === 'mariadb' || readPlatformState().demoUsersDisabled) return null;
   const user = demoUsers.find(
     (user) => hashIdNumber(user.telephone_number, pepper) === suppliedHash
   );
@@ -30,7 +30,7 @@ export function findDemoUser(telephoneNumber, pepper) {
 }
 
 export function getDemoUserById(id) {
-  const user = readPlatformState().demoUsersDisabled ? undefined : demoUsers.find((item) => String(item.id) === String(id));
+  const user = platformStorage === 'mariadb' || readPlatformState().demoUsersDisabled ? undefined : demoUsers.find((item) => String(item.id) === String(id));
   const platformUser = readPlatformState().users.find(
     (item) => String(item.id) === String(id)
   );

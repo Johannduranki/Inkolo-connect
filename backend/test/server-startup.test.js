@@ -10,7 +10,7 @@ function startup(scenario) {
     import {readFileSync} from 'node:fs';
     const events=[];
     const scenario=${JSON.stringify(scenario)};
-    const config={port:3001,allowDemoAuth:false,forceDemoMode:false};
+    const config={port:3001,allowDemoAuth:scenario==='format-error',forceDemoMode:false};
     const pool={query:async sql=>{
       events.push(sql);
       if(scenario==='connection-error')throw Object.assign(new Error('private'),{code:'ECONNREFUSED'});
@@ -20,6 +20,10 @@ function startup(scenario) {
     const modules={
       './config.js':{getConfig:()=>config},
       './database.js':{getPool:()=>pool},
+      './account-storage.js':{selectAccountStorage:async()=> {
+        if(scenario==='format-error')throw Object.assign(Error('private'),{code:'ACCOUNT_STORAGE_AMBIGUOUS'});
+        return 'relational';
+      }},
       './startup-port.js':{assertPortAvailable:async()=>events.push('port-checked')},
       './logger.js':{
         installFatalLogging:()=>{},
@@ -34,14 +38,17 @@ function startup(scenario) {
         })},listen:()=>events.push('listening')};
       }}
     };
-    const entry=new vm.SourceTextModule(readFileSync(new URL('./src/server.js',import.meta.url),'utf8'));
-    await entry.link(specifier=>{
+    const link=specifier=>{
       const exports=modules[specifier];
       if(!exports)throw Error('Unexpected startup dependency: '+specifier);
       return new vm.SyntheticModule(Object.keys(exports),function(){
         for(const [key,value] of Object.entries(exports))this.setExport(key,value);
       });
+    };
+    const entry=new vm.SourceTextModule(readFileSync(new URL('./src/server.js',import.meta.url),'utf8'),{
+      importModuleDynamically:async specifier=>{const module=link(specifier);await module.link(link);await module.evaluate();return module;}
     });
+    await entry.link(link);
     await entry.evaluate();
     await new Promise(resolve=>setImmediate(resolve));
     console.log(JSON.stringify({events,exitCode:process.exitCode||0}));
@@ -69,5 +76,11 @@ test('database connection failures still prevent listening without demo fallback
 test('configured storage readiness failures still prevent listening',()=>{
   const result=startup('store-error');
   assert.deepEqual(result.events,['port-checked','SELECT 1',['create',true],['api_startup_failed','ER_STORE_NOT_READY'],'log-ended']);
+  assert.equal(result.exitCode,1);
+});
+
+test('an account format failure never falls back to demo authentication',()=>{
+  const result=startup('format-error');
+  assert.deepEqual(result.events,['port-checked','SELECT 1',['api_startup_failed','ACCOUNT_STORAGE_AMBIGUOUS'],'log-ended']);
   assert.equal(result.exitCode,1);
 });

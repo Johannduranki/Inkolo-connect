@@ -193,8 +193,14 @@ function mapSubscription(row) {
   };
 }
 
-export function createApp({ databaseAvailable = true } = {}) {
+export function createApp({ databaseAvailable = true, accountStorage = 'relational' } = {}) {
   const config = getConfig();
+  const documentAccounts = accountStorage === 'platform';
+  if (documentAccounts && (!databaseAvailable || platformStorage !== 'mariadb')) throw Error('Platform accounts require MariaDB.');
+  // Existing routers use this flag to select the relational users schema versus
+  // platform documents. Document persistence is still MariaDB, not demo storage.
+  if (documentAccounts) databaseAvailable = false;
+  const allowPlatformAccounts = documentAccounts || config.allowDemoAuth;
   const app = express();
   const abuseProtection = createAuthenticatedAbuseProtection();
   const requireAuth = (req, res, next) => authenticate(req, res, error => error ? next(error) : abuseProtection(req, res, next));
@@ -241,7 +247,7 @@ export function createApp({ databaseAvailable = true } = {}) {
         UNION SELECT role FROM user_community_role WHERE user_id=? AND status='ACTIVE'
         UNION SELECT 'Service Provider Admin' AS role FROM service_dashboard_admin WHERE user_id=? AND status='ACTIVE'`,[id,id,id,id]);
       user.roles=roles.map(r=>r.role);
-    }else if(config.allowDemoAuth){user=getDemoUserById(id);}
+    }else if(allowPlatformAccounts){user=getDemoUserById(id);}
     if(!user)return null;
     const staff=await treasuryStore.staffById(id);
     return {...user,roles:[...(user.roles||[]),...(staff && staff.version !== 'revoked'?[staff.role]:[])]};
@@ -363,7 +369,8 @@ export function createApp({ databaseAvailable = true } = {}) {
     if(platformStorage==='mariadb')readPlatformState();
     res.json({
       status: 'ok',
-      storage: databaseAvailable ? 'mariadb' : 'persistent-demo',
+      storage: databaseAvailable || documentAccounts ? 'mariadb' : 'persistent-demo',
+      accountStorage: documentAccounts ? 'platform-document' : databaseAvailable ? 'relational' : 'local',
       authenticationStorage: authStorage,
       treasuryStorage,
       platformStorage,
@@ -379,7 +386,7 @@ export function createApp({ databaseAvailable = true } = {}) {
       const [rows]=await getPool().execute('SELECT id FROM users WHERE id_number_hash = ? LIMIT 1',[hashIdNumber(phone,config.idPepper)]);
       return rows.length > 0;
     }
-    if(!config.allowDemoAuth)throw Object.assign(new Error('Registration check is unavailable.'),{status:503});
+    if(!allowPlatformAccounts)throw Object.assign(new Error('Registration check is unavailable.'),{status:503});
     return readPlatformState().users.some(user=>registrationPhone(user.telephoneNumber)===phone);
   }}));
 
@@ -487,7 +494,7 @@ export function createApp({ databaseAvailable = true } = {}) {
           } finally {
             connection.release();
           }
-        } else if (config.allowDemoAuth) {
+        } else if (allowPlatformAccounts) {
           const existing = readPlatformState().users.find(
             (candidate) =>
               normalizeTelephoneNumber(candidate.telephoneNumber) === telephoneNumber
@@ -630,7 +637,7 @@ export function createApp({ databaseAvailable = true } = {}) {
             [hashIdNumber(telephoneNumber, config.idPepper)]
           );
           user = rows[0];
-        } else if (config.allowDemoAuth) {
+        } else if (allowPlatformAccounts) {
           user = findDemoUser(telephoneNumber, config.idPepper);
         }
 
@@ -643,14 +650,14 @@ export function createApp({ databaseAvailable = true } = {}) {
         const treasuryStaff = !databaseAvailable ? await treasuryStore.staffById(user.id) : null;
         const localUser = !databaseAvailable ? readPlatformState().users.find(u=>String(u.id)===String(user.id)) : null;
         const storedHash = databaseAvailable ? user.password_hash
-          : String(user.id)==='1000001' && user.roles?.includes('Platform Admin') ? process.env.LOCAL_ADMIN_PASSWORD_HASH
+          : String(user.id)==='1000001' && user.roles?.includes('Platform Admin') ? localUser?.passwordHash || process.env.LOCAL_ADMIN_PASSWORD_HASH
           : treasuryStaff?.password_hash || localUser?.passwordHash;
         if (!await verifyPassword(req.body?.password, storedHash, config.idPepper)) {
           logger.warn('authentication_failed', { requestId: req.requestId });
           return res.status(401).json({ message: 'Telephone number or password is incorrect.' });
         }
 
-        const verifiedClaims=!databaseAvailable && String(user.id)==='1000001' ? {treasury:'admin'} : treasuryStaff && treasuryStaff.version !== 'revoked' ? {treasury:treasuryStaff.version} : {};
+        const verifiedClaims=!databaseAvailable && String(user.id)==='1000001' && user.roles?.includes('Platform Admin') ? {treasury:'admin'} : treasuryStaff && treasuryStaff.version !== 'revoked' ? {treasury:treasuryStaff.version} : {};
         if(needsMfa(policyUser)){
           logger.info('authentication_mfa_challenge', { requestId: req.requestId });
           const jti=await mfaStore.begin(user.id,verifiedClaims);
@@ -680,7 +687,7 @@ export function createApp({ databaseAvailable = true } = {}) {
           [req.auth.sub]
         );
         user = rows[0];
-      } else if (config.allowDemoAuth) {
+      } else if (allowPlatformAccounts) {
         user = getDemoUserById(req.auth.sub);
       }
 
@@ -714,7 +721,7 @@ export function createApp({ databaseAvailable = true } = {}) {
           const plan = servicePlans[row.service_code]?.[row.plan_code];
           return mapSubscription({ ...row, plan_label: plan?.label ?? row.plan_code });
         });
-      } else if (config.allowDemoAuth) {
+      } else if (allowPlatformAccounts) {
         subscriptions = getDemoSubscriptions(req.auth.sub).map(mapSubscription);
       } else {
         subscriptions = [];
@@ -826,7 +833,7 @@ export function createApp({ databaseAvailable = true } = {}) {
           status: 'active',
           subscribedAt: new Date().toISOString()
         };
-      } else if (config.allowDemoAuth) {
+      } else if (allowPlatformAccounts) {
         acceptingUser = getDemoUserById(req.auth.sub);
         const evidence = createAcceptanceEvidence({
           user: acceptingUser,
@@ -857,7 +864,7 @@ export function createApp({ databaseAvailable = true } = {}) {
   app.delete('/api/subscriptions', requireAuth, async (req, res, next) => {
     try {
       await resetUserServiceData(req.auth.sub, databaseAvailable, {actorId:req.auth.sub,mode:'self'});
-      if (!databaseAvailable && config.allowDemoAuth) {
+      if (!databaseAvailable && allowPlatformAccounts) {
         resetDemoUserServices(req.auth.sub);
       }
 
@@ -904,7 +911,7 @@ export function createApp({ databaseAvailable = true } = {}) {
             status: 'submitted',
             submittedAt: new Date().toISOString()
           };
-        } else if (config.allowDemoAuth) {
+        } else if (allowPlatformAccounts) {
           application = await saveDemoApplication(req.auth.sub, {
             serviceCode: 'step-up-boost',
             bankConfirmationPath: bankConfirmation.path,

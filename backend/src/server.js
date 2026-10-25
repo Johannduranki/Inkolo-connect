@@ -1,4 +1,4 @@
-import { createApp } from './app.js';
+import { selectAccountStorage } from './account-storage.js';
 import { getConfig } from './config.js';
 import { getPool } from './database.js';
 import { logger, errorDetails, installFatalLogging } from './logger.js';
@@ -7,8 +7,9 @@ import { assertPortAvailable } from './startup-port.js';
 installFatalLogging();
 
 const config = getConfig();
-async function start(databaseAvailable) {
-  const app=createApp({databaseAvailable});
+async function start(databaseAvailable, accountStorage = 'relational') {
+  const {createApp} = await import('./app.js');
+  const app=createApp({databaseAvailable, accountStorage});
   await app.locals.storageReady;
   app.listen(config.port,()=>logger.info('api_listening',{port:config.port}));
 }
@@ -19,13 +20,15 @@ if (config.forceDemoMode && config.allowDemoAuth) {
   logger.warn('persistent_local_storage_enabled');
   await start(false);
 } else {
+  let connected = false;
   try {
     await getPool().query('SELECT 1');
+    connected = true;
     // Migration reconciliation is an operator task, not a prerequisite for
     // restarting an existing database. start() still awaits configured stores.
-    await start(true);
+    await start(true, await selectAccountStorage(getPool()));
   } catch (error) {
-    if (config.allowDemoAuth) {
+    if (config.allowDemoAuth && !connected) {
       logger.warn('database_unavailable_local_fallback',errorDetails(error));
       await start(false);
     } else {

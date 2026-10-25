@@ -18,6 +18,7 @@ function fixture(state){
   const saved=[],acceptances=[];
   const context={servicePlans:vm.runInNewContext('('+plans+')'),databaseAvailable:false,config:{allowDemoAuth:true},getDemoUserById:()=>({id:7,status:'active'}),createAcceptanceEvidence:data=>({serviceCode:data.serviceCode,planCode:data.planCode}),saveDemoAcceptance:value=>acceptances.push(value),saveDemoSubscription:(userId,value)=>{const subscription={...value,userId,status:'active'};saved.push(subscription);return subscription;},mapSubscription:value=>value};
   context.configuredSubscriptionPlan=configuredSubscriptionPlan;
+  context.allowPlatformAccounts=true;
   context.memberServiceScope=memberServiceScope;
   context.readPlatformState=()=>state||({servicePricing:{'trader-training':{mode:'free',amountCents:0},'grant-distribution':{mode:'free',amountCents:0}}});
   const run=vm.runInNewContext('('+handler+')',context);
