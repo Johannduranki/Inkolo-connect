@@ -6,6 +6,7 @@ import { finalize } from 'rxjs';
 import { Router } from '@angular/router';
 import { AuthService } from './auth.service';
 import { RoleService, UserRole } from './core/services/role.service';
+import { parseIdentityText } from './identity-ocr';
 
 @Component({
   selector: 'app-login',
@@ -80,19 +81,30 @@ export class LoginComponent {
     this.idScanStatus.set('Reading ID on this device...');
     const version = this.scanVersion;
     try {
-      const { recognize } = await import('tesseract.js');
+      // Check the bundled model before allocating the OCR worker. A missing
+      // model must offer manual entry rather than leave worker startup pending.
+      const model = await fetch('/tesseract-data/eng.traineddata.gz', {
+        method: 'HEAD', signal: AbortSignal.timeout(15000)
+      });
+      if (!model.ok) throw new Error('OCR model is unavailable.');
+      if (version !== this.scanVersion) return;
+      const module = await import('tesseract.js');
+      const { recognize } = module.default ?? module;
       const result = await recognize(file, 'eng', {
-        workerPath: window.location.origin + '/tesseract/worker.min.js', corePath: window.location.origin + '/tesseract-core'
+        workerPath: window.location.origin + '/tesseract/worker.min.js',
+        corePath: window.location.origin + '/tesseract-core',
+        langPath: window.location.origin + '/tesseract-data',
+        cacheMethod: 'none',
+        errorHandler: () => { /* Show the existing safe manual-entry fallback. */ }
       });
       if (version !== this.scanVersion) return;
-      const text = result.data.text;
-      const number = text.match(/\b\d{13}\b/)?.[0];
-      const surname = text.match(/(?:Surname|Last name)\s*:?\s*([A-Za-z][A-Za-z '-]*)/i)?.[1]?.trim();
-      const names = text.match(/(?:First names?|Forenames?|Names)\s*:?\s*([A-Za-z][A-Za-z '-]*)/i)?.[1]?.trim();
-      if (number && !this.idNumber.value) this.idNumber.setValue(number);
-      if (surname && !this.lastName.value) this.lastName.setValue(surname);
-      if (names && !this.firstName.value) this.firstName.setValue(names);
-      this.idScanStatus.set('Check all details below. The document will be saved when you register and will need review.');
+      const fields = parseIdentityText(result.data.text);
+      for (const key of ['firstName','lastName','idNumber','dateOfBirth','gender'] as const) {
+        if (fields[key] && !this[key].value) this[key].setValue(fields[key]);
+      }
+      this.idScanStatus.set(Object.values(fields).some(Boolean)
+        ? 'Check all details below. The document will be saved when you register and will need review.'
+        : 'No ID details could be read clearly. Enter the details below; your selected document will be saved when you register.');
     } catch {
       if (version === this.scanVersion) this.idScanStatus.set('Automatic reading was unavailable. Enter the details below; your selected document will still be saved on registration.');
     } finally {

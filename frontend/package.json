@@ -8,6 +8,7 @@
     "build": "ng build",
     "postbuild": "node scripts/static-routes.mjs",
     "test:routing": "node --test scripts/static-routes.test.mjs",
+    "test:ocr": "node --test scripts/identity-ocr.test.mjs",
     "test": "ng test --watch=false",
     "android:sync": "npm run build && cap sync android",
     "android:apk": "npm run android:sync && cd android && gradlew.bat assembleDebug"
@@ -23,6 +24,7 @@
     "@capacitor/android": "^7.6.6",
     "@capacitor/cli": "^7.6.6",
     "@capacitor/core": "^7.6.6",
+    "@tesseract.js-data/eng": "1.0.0",
     "cytoscape": "3.34.3",
     "duranki-id-login-module": "file:..",
     "rxjs": "~7.8.2",
