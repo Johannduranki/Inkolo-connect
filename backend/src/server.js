@@ -1,8 +1,6 @@
 import { createApp } from './app.js';
 import { getConfig } from './config.js';
 import { getPool } from './database.js';
-import { assertDatabaseReady } from './database-readiness.js';
-import { existsSync, readFileSync } from 'node:fs';
 import { logger, errorDetails, installFatalLogging } from './logger.js';
 import { assertPortAvailable } from './startup-port.js';
 
@@ -23,9 +21,8 @@ if (config.forceDemoMode && config.allowDemoAuth) {
 } else {
   try {
     await getPool().query('SELECT 1');
-    const store = new URL('../data/platform-store.json', import.meta.url);
-    const localUsers = existsSync(store) ? JSON.parse(readFileSync(store, 'utf8')).users ?? [] : [];
-    await assertDatabaseReady(getPool(), localUsers);
+    // Migration reconciliation is an operator task, not a prerequisite for
+    // restarting an existing database. start() still awaits configured stores.
     await start(true);
   } catch (error) {
     if (config.allowDemoAuth) {
