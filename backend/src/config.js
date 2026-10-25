@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateProduction } from './production-security.js';
+import { frontendOrigins as resolveFrontendOrigins } from './frontend-origins.js';
 
 dotenv.config({
   path: resolve(dirname(fileURLToPath(import.meta.url)), "../.env"),
@@ -20,13 +21,7 @@ export function getConfig() {
   }
 
   const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:4200";
-  const frontendOrigins = [
-    ...String(process.env.FRONTEND_ORIGINS || frontendOrigin)
-      .split(",")
-      .map((origin) => origin.trim())
-      .filter(Boolean),
-    ...(process.env.NODE_ENV === 'production' ? [] : ['https://localhost', 'capacitor://localhost'])
-  ];
+  const frontendOrigins = resolveFrontendOrigins(process.env);
 
   return {
     port: Number(process.env.PORT || 3001),

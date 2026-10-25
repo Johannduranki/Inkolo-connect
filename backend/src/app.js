@@ -1,7 +1,7 @@
 import express from 'express';
 import { registrationDetails, ensureRegistrationStorage, saveSqlRegistrationDetails, savePlatformRegistrationDetails } from './registration-details.js';
 import { createWholesalerRouter } from './wholesaler-orders.js';
-import cors from 'cors';
+import { createFrontendCors } from './frontend-origins.js';
 import helmet from 'helmet';
 import multer from 'multer';
 import path from 'node:path';
@@ -206,15 +206,7 @@ export function createApp({ databaseAvailable = true } = {}) {
     res.set('Cache-Control', 'no-store');
     next();
   });
-  app.use(cors({
-    origin(origin, callback) {
-      if (!origin || config.frontendOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
-      callback(Object.assign(new Error('Origin is not allowed by Duranki.'), { status: 403 }));
-    }
-  }));
+  app.use(createFrontendCors(config.frontendOrigins));
   app.use('/api/cycle/notifications',express.raw({type:'application/json',limit:'128kb'}));
   app.use(express.json({ limit: '2mb' }));
   const treasuryDirectory = fileURLToPath(new URL('../data/', import.meta.url));
