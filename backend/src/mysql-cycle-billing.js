@@ -1,12 +1,23 @@
 import {randomUUID,createHmac} from 'node:crypto';
-import {CycleBilling,billingTerms,nextMonth,encrypt,decrypt} from './cycle-billing.js';
-import {canonicalService,serviceCatalogue} from './service-pricing.js';
+import {billingConfig,billingTerms,nextMonth,encrypt,decrypt} from './cycle-billing.js';
+import {canonicalService,serviceCatalogue,effectiveServicePrice,serviceEnabled} from './service-pricing.js';
 import {memberCapabilities} from '../../frontend/public/member-service-catalogue.js';
 import {joinableCommunities,findMembership} from './community-registration.js';
 import {signCyclePayload} from './cycle-pay.js';
 const fail=(status,message)=>{throw Object.assign(Error(message),{status});};
 
-export class MysqlCycleBilling extends CycleBilling {
+export class MysqlCycleBilling {
+  constructor({store,readState,updateState,config,settings=billingConfig,fetcher=fetch,now=()=>new Date().toISOString(),serviceReady=()=>true}){
+    if (!store) throw Error('A MariaDB cycle store is required.');
+    Object.assign(this,{store,readState,updateState,config,settings,fetcher,now,serviceReady});
+  }
+  community(userId,id){const state=this.readState();const user=state.users.find(u=>String(u.id)===String(userId));
+    if(user?.status!=='active')fail(403,'Active account required.');
+    const c=joinableCommunities(state).find(c=>c.id===id||c.aliases?.includes(id));
+    if(!c||!findMembership(state,userId,c))fail(403,'Join this community before making a payment.');return c;
+  }
+  enabled(community,code){return serviceEnabled(this.readState(),community,code);}
+  price(code,context){return effectiveServicePrice(this.readState(),code,{tenantId:context.tenantId||context.tenant_id,communityId:context.communityId||context.community_id||context.id});}
   async list(userId){
     const rows=await this.store.all('SELECT id,tenant_id,community_id,service_code,amount_cents,mode,state,paid_until,cancelled_at,created_at,token IS NOT NULL AS has_profile,price_revision FROM cycle_subscription WHERE user_id=? ORDER BY created_at DESC',String(userId));
     return rows.map(s=>({...s,state:s.state==='REVIEW'?'REVIEW':s.paid_until&&s.paid_until<=this.now()?'EXPIRED':s.state,renewalStatus:s.cancelled_at?'Cancelled':s.price_revision!==this.price(s.service_code,s)?.revision?'Price changed - renewed consent required':!s.has_profile?'Saved payment profile pending':!this.settings().recurringReady?'Developer configuration required':'Scheduled'}));

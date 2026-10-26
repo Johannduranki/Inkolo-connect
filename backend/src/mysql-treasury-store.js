@@ -4,7 +4,7 @@ export class MysqlTreasuryStore {
   constructor(pool) { this.pool = pool; }
   async ready() {
     const [rows] = await this.pool.execute('SELECT id FROM duranki_treasury_migration WHERE id=1');
-    if (!rows.length) throw Error('Treasury requires a verified migration before activation.');
+    if (!rows.length) throw Error('Treasury storage metadata must be initialized before activation.');
   }
   async transaction(work) {
     const connection = await this.pool.getConnection();

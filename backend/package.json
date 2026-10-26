@@ -7,6 +7,8 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "migrate": "node scripts/migrate.js",
+    "bootstrap": "node scripts/bootstrap.js",
+    "provision-admin": "node scripts/provision-admin.js",
     "seed": "node scripts/seed-user.js",
     "test": "node --test test/*.test.js",
     "test:integration": "node --test integration/*.test.js"

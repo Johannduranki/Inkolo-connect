@@ -1,42 +1,55 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createHash} from 'node:crypto';
-import {selectAccountStorage} from '../src/account-storage.js';
+import { platformDigest } from '../src/mysql-platform-store.js';
+import { selectAccountStorage } from '../src/account-storage.js';
+import { platformStorage, readPlatformState } from '../src/platform-store.js';
 
-function fixture({relational=false,document=true,empty=false,verified=true,disabled=true,corrupt=false}={}) {
-  const bytes=Buffer.from(JSON.stringify({users:[],demoUsersDisabled:disabled}));
-  let released=false;
-  const pool={query:async sql=>{
-    if(sql.includes('information_schema'))return [[...(relational?[{name:'users'}]:[]),...(document?[{name:'duranki_platform_document'}]:[])]];
-    if(sql.includes('duranki_platform_migration'))return [verified?[{id:1}]:[]];
-    return [empty?[]:[{id:'platform'}]];
-  },getConnection:async()=>({
-    beginTransaction:async()=>{},rollback:async()=>{},release:()=>{released=true;},
-    execute:async sql=>sql.includes('SELECT *')?[[{chunk_count:1,byte_length:bytes.length,sha256:corrupt?'bad':createHash('sha256').update(bytes).digest('hex'),revision:1}]]:[[{chunk_index:0,payload:bytes}]]
-  })};
-  return {pool,released:()=>released};
+function fixture({ missing = false, disabled = true, corrupt = false, rollbackError = false } = {}) {
+  const bytes = Buffer.from(JSON.stringify({ users: [], demoUsersDisabled: disabled }));
+  let released = false;
+  return {
+    pool: { getConnection: async () => ({
+      beginTransaction: async () => {},
+      rollback: async () => { if (rollbackError) throw Error('rollback failed'); },
+      release: () => { released = true; },
+      execute: async sql => sql.includes('SELECT *')
+        ? [missing ? [] : [{ chunk_count: 1, byte_length: bytes.length, sha256: corrupt ? 'bad' : platformDigest(bytes), revision: 1 }]]
+        : [[{ chunk_index: 0, payload: bytes }]]
+    }) },
+    released: () => released
+  };
 }
-test('legacy schemas and empty document tables retain relational accounts',async()=>{
-  for(const options of [{relational:true,document:false},{relational:true,empty:true}]) {
-    const env={};assert.equal(await selectAccountStorage(fixture(options).pool,env),'relational');assert.deepEqual(env,{});
+
+test('platform storage is always MariaDB and never reads local state before initialization', () => {
+  assert.equal(platformStorage, 'mariadb');
+  assert.throws(readPlatformState, { status: 503 });
+});
+test('canonical document selects MariaDB without detecting relational tables', async () => {
+  const f = fixture(), env = {};
+  assert.equal(await selectAccountStorage(f.pool, env), 'platform');
+  assert.equal(f.released(), true);
+  assert.equal(Object.keys(env).length, 6);
+  assert.ok(Object.values(env).every(value => value === 'mariadb'));
+  assert.equal(env.ALLOW_DEMO_AUTH, undefined);
+});
+test('missing, corrupt and demo-enabled documents fail closed without fallback', async () => {
+  for (const options of [{ missing: true }, { corrupt: true }, { disabled: false }]) {
+    const f = fixture(options), env = {};
+    await assert.rejects(selectAccountStorage(f.pool, env));
+    assert.equal(f.released(), true);
+    assert.deepEqual(env, {});
   }
 });
-test('verified document selects only MariaDB stores and releases snapshot connection',async()=>{
-  const f=fixture(),env={};assert.equal(await selectAccountStorage(f.pool,env),'platform');
-  assert.equal(f.released(),true);assert.equal(Object.keys(env).length,6);
-  assert.ok(Object.values(env).every(value=>value==='mariadb'));
-  assert.equal(env.ALLOW_DEMO_AUTH,undefined);
-});
-test('ambiguous, unverified, corrupt and demo-enabled documents fail closed',async()=>{
-  for(const options of [{relational:true},{verified:false},{corrupt:true},{disabled:false}]) {
-    const env={};await assert.rejects(selectAccountStorage(fixture(options).pool,env));assert.deepEqual(env,{});
+test('explicit non-MariaDB configuration is rejected before connecting', async () => {
+  for (const feature of ['PLATFORM', 'AUTH', 'TREASURY', 'TRAINING', 'CYCLE', 'HERITAGE']) {
+    const env = { [feature + '_STORAGE']: 'sqlite' };
+    await assert.rejects(selectAccountStorage({}, env), { code: 'ACCOUNT_STORAGE_CONFLICT' });
+    assert.equal(env[feature + '_STORAGE'], 'sqlite');
   }
 });
-test('explicit non-MariaDB configuration is not silently overwritten',async()=>{
-  const env={AUTH_STORAGE:'sqlite'};
-  await assert.rejects(selectAccountStorage(fixture().pool,env),{code:'ACCOUNT_STORAGE_CONFLICT'});
-  assert.deepEqual(env,{AUTH_STORAGE:'sqlite'});
-});
-test('database failures are not treated as an empty or local account store',async()=>{
-  await assert.rejects(selectAccountStorage({query:async()=>{throw Error('offline');}},{}),/offline/);
+test('database failures do not fall back and rollback failures still release', async () => {
+  await assert.rejects(selectAccountStorage({ getConnection: async () => { throw Error('offline'); } }, {}), /offline/);
+  const f = fixture({ rollbackError: true });
+  await assert.rejects(selectAccountStorage(f.pool, {}), /rollback failed/);
+  assert.equal(f.released(), true);
 });

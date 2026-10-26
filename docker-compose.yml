@@ -1,3 +1,31 @@
+x-backend: &backend
+  image: ${DURANKI_IMAGE:-ghcr.io/johannduranki/inkolo-connect:latest}
+  environment:
+    NODE_ENV: ${NODE_ENV:-production}
+    PORT: '3001'
+    DB_HOST: db
+    DB_PORT: '3306'
+    DB_USER: ${DB_USER:?Set a non-root application database user}
+    DB_PASSWORD: ${DB_PASSWORD:?Set the application database password}
+    DB_NAME: ${DB_NAME:?Set the database name}
+    ID_PEPPER: ${ID_PEPPER:?Set the existing identity pepper}
+    JWT_SECRET: ${JWT_SECRET:?Set a private JWT signing secret}
+    MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:?Set the canonical base64 encoding of the existing 32-byte MFA key}
+    JWT_EXPIRES_IN: '1h'
+    FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?Set the exact browser origin}
+    ALLOW_DEMO_AUTH: 'false'
+    FORCE_DEMO_MODE: 'false'
+    PLATFORM_STORAGE: mariadb
+    AUTH_STORAGE: mariadb
+    TREASURY_STORAGE: mariadb
+    TRAINING_STORAGE: mariadb
+    CYCLE_STORAGE: mariadb
+    HERITAGE_STORAGE: mariadb
+  volumes:
+    - backend_uploads:/usr/src/app/uploads
+  networks:
+    - webnet
+
 services:
 
   db:
@@ -5,35 +33,40 @@ services:
     container_name: durankidemo_mariadb
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: "A!kFbv08SdfY1EC1Ek@Yo"
-      MYSQL_DATABASE: durankidemo_core
-    ports:
-      - "3309:3306"
+      MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?Set a private MariaDB root password}
+      MYSQL_DATABASE: ${DB_NAME:?Set the database name}
+      MYSQL_USER: ${DB_USER:?Set a non-root application database user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set the application database password}
+    healthcheck:
+      test: [CMD-SHELL, 'MYSQL_PWD="$$MYSQL_PASSWORD" mysql --protocol=tcp -h 127.0.0.1 -u "$$MYSQL_USER" "$$MYSQL_DATABASE" -e "SELECT 1" >/dev/null']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     volumes:
       - mariadb_data:/var/lib/mysql
     networks:
       - webnet
 
+  migrate:
+    <<: *backend
+    restart: 'no'
+    command: [sh, -c, 'npm run migrate && npm run bootstrap']
+    depends_on:
+      db:
+        condition: service_healthy
+
   backend:
-    image: ghcr.io/johannduranki/inkolo-connect:latest
+    <<: *backend
     container_name: durankidemo_backend
     restart: always
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "4001:3001"
-    environment:
-      PORT: 3001
-      DB_HOST: db
-      DB_USER: root
-      DB_PASSWORD: "A!kFbv08SdfY1EC1Ek@Yo"
-      DB_NAME: durankidemo_core
-      ID_PEPPER: "replace-with-a-long-random-secret"
-      JWT_SECRET: "3e64bd41692af630198d8a0861970a2645e41b62a06d3b2d6210e1544edcad48"
-      JWT_EXPIRES_IN: "1h"
-      FRONTEND_ORIGIN: "http://localhost:8080"
-    networks:
-      - webnet
 
   frontend:
     image: httpd:latest
@@ -49,6 +82,7 @@ services:
 volumes:
   mariadb_data:
   frontend:
+  backend_uploads:
 
 networks:
   webnet:

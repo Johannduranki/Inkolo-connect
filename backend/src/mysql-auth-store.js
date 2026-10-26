@@ -1,5 +1,4 @@
 import {randomBytes,randomUUID,createCipheriv,createDecipheriv,createHash} from 'node:crypto';
-import {readFileSync} from 'node:fs';
 import {authenticator} from '@otplib/v12-adapter';
 import {needsMfa} from './mfa.js';
 
@@ -26,14 +25,21 @@ export class MysqlSessionStore {
 }
 
 export class MysqlMfaStore {
-  constructor(pool,keyFile,testKey) {
+  constructor(pool,_keyFile,testKey) {
     this.pool=pool;
-    this.key=testKey||readFileSync(keyFile);
-    if(this.key.length!==32)throw Error('Invalid MFA encryption key. Restore the existing key.');
+    if (testKey !== undefined) {
+      if (!Buffer.isBuffer(testKey) || testKey.length !== 32) throw Error('Invalid MFA encryption key.');
+      this.key=Buffer.from(testKey);
+    } else {
+      const encoded=process.env.MFA_ENCRYPTION_KEY;
+      if (typeof encoded !== 'string' || !/^[A-Za-z0-9+/]{43}=$/.test(encoded)) throw Error('MFA_ENCRYPTION_KEY must be canonical base64 encoding of 32 bytes.');
+      this.key=Buffer.from(encoded,'base64');
+      if (this.key.length !== 32 || this.key.toString('base64') !== encoded) throw Error('MFA_ENCRYPTION_KEY must be canonical base64 encoding of 32 bytes.');
+    }
   }
   async ready() {
     const [rows]=await this.pool.execute('SELECT key_sha256 FROM duranki_auth_migration WHERE id=1');
-    if(rows.length!==1||rows[0].key_sha256!==hash(this.key))throw Error('Verified authentication migration and the original MFA key are required.');
+    if(rows.length!==1||rows[0].key_sha256!==hash(this.key))throw Error('Authentication storage must be initialized with the matching MFA key.');
   }
   seal(value){const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',this.key,iv);return Buffer.concat([iv,cipher.update(value,'utf8'),cipher.final(),cipher.getAuthTag()]).toString('base64');}
   open(value){const bytes=Buffer.from(value,'base64'),cipher=createDecipheriv('aes-256-gcm',this.key,bytes.subarray(0,12));cipher.setAuthTag(bytes.subarray(-16));return Buffer.concat([cipher.update(bytes.subarray(12,-16)),cipher.final()]).toString('utf8');}

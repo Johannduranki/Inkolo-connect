@@ -19,7 +19,7 @@ function startup(scenario) {
     }};
     const modules={
       './config.js':{getConfig:()=>config},
-      './database.js':{getPool:()=>pool},
+      './database.js':{getPool:()=>pool,verifyDatabase:()=>pool.query('SELECT 1')},
       './account-storage.js':{selectAccountStorage:async()=> {
         if(scenario==='format-error')throw Object.assign(Error('private'),{code:'ACCOUNT_STORAGE_AMBIGUOUS'});
         return 'relational';
@@ -28,7 +28,7 @@ function startup(scenario) {
       './logger.js':{
         installFatalLogging:()=>{},
         errorDetails:e=>({errorCode:e.code}),
-        logger:{info:()=>{},warn:()=>{},error:(name,details)=>events.push([name,details.errorCode]),end:()=>events.push('log-ended')}
+        logger:{info:()=>{},warn:()=>{},error:(name,details)=>events.push([name,details.errorCode]),once:()=>{},end:()=>events.push('log-ended')}
       },
       './app.js':{createApp:({databaseAvailable})=>{
         events.push(['create',databaseAvailable]);

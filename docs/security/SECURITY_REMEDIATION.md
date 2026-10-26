@@ -1,5 +1,11 @@
 # Security Remediation
 
+> Historical implementation/results below are not current acceptance. Local-store
+> setup and migration instructions are retired. Follow [MariaDB-only setup](../MARIADB_ONLY.md).
+> Preserve all existing security, privacy, authorization and payment-approval gates.
+> Back up MariaDB, private uploads and matching MFA_ENCRYPTION_KEY before changes.
+
+
 ## Latest Activated Changes - 2026-10-15
 
 Ride/reset/report fixes formerly marked pending below are now live. `scripts/local-proxy-security.mjs` and `local-demo-server.mjs` pin proxy destinations, reject absolute/network-path request targets, remove spoofed forwarding headers, suppress upstream internals, enforce timeouts and add baseline static response headers. Full script CSP is deliberately not claimed until source/bundle parity is resolved. `api-abuse-protection.js` runs only after authentication/session/account/MFA validation: 30 financial writes, 90 other writes, 30 reports and 60 searches per user per minute. Existing Cycle notification/IP limits are untouched; logout/presence and ordinary dashboard reads remain available.
@@ -21,14 +27,6 @@ Activation was verified with 51/51 identical SQL table fingerprints and unchange
 
 ## Activation safety
 
-- Back up and restore-test the database using the approved protected backup process; never put credentials in reports or Git.
-- Apply SQL migration 016 before SQL registration uses the new hash format. Existing hashes remain valid; do not truncate them on rollback.
-- Restart API and web proxy together so private-downloads.js is routed correctly. Token contract changes deliberately require sign-in again.
-- Sessions, MFA, Treasury, Training, Cycle Pay and Heritage use native MariaDB adapters; platform/wallet use transactional SQL document storage. Include SQL tables, mfa.key and storage-mode markers in the protected backup policy. Old SQLite/JSON files remain preserved but must not be reactivated without a verified reverse migration. A database named lock still limits the platform adapter to one writer; horizontal scaling is not approved.
-- Do not replace the deployed Angular bundle until all historical patches are ported and full user journeys tested. The current patch updates logout only; dependency remediation must reach a verified release build to protect deployed client code.
-- Never restore phone-only login as an availability workaround. Hashless users need identity-verified credential enrolment; do not invent credentials or ask users to paste passwords into chat.
-- Review SEC-005/006/007 before enabling tenant/provider administration or real wallet transfers on the internet.
-
 ## Changed files in this batch
 
 Ride/reset/report follow-up (TESTED, NOT LIVE, 2026-10-15): ride-security.js and platform-api.js add active shared-community ride scope, allowlisted private-data projections, participant checks and queued authority/input checks. user-reset.js and its app/platform-api callers require explicit actor/mode, revalidate reset authority, preserve shared document references and audit reset counts. community-reports.js rechecks access and tenant ownership after financial reads. The frontend ride model permits omitted private fields; no deployed bundle is replaced. Twenty-four added tests bring the suite to 252 passed, including 8 MariaDB integrations. No real ride/reset/payment was submitted. API/proxy health and frontend TypeScript checks pass. Current processes stay running; activation requires a separately approved API-only restart with SQL/configuration fingerprint comparison. Cycle Pay settings are unchanged. Cross-store reset atomicity/retention, ride operational correctness and the wider review remain open.
@@ -37,13 +35,7 @@ Agreement/legacy administration follow-up (LIVE, 2026-10-15): platform-api.js, a
 
 Staff/branding follow-up (LIVE, 2026-10-15): tenant-access.js, treasury-api.js, branding.js and the two staff HTML forms. New tenant/Treasury credentials now use the shared asynchronous scrypt-v1 hash and password policy; existing accounts keep their credentials. Hashing occurs before entering the synchronous platform write queue. Tenant staff, tenant/branding directory registration and logo mutations check current authority at persistence time; directory uniqueness/parent scope and logo tenant ownership are rechecked. Treasury assignment refreshes actor/target after hashing; broader cross-store financial authorization remains under review. Focused tests pass, and the complete suite is now 205 regressions + 8 SQL integration tests = 213 passed. Operator approved an API-only restart; MariaDB and the proxy stayed running. Read-only authenticated screens and unchanged service/configuration fingerprints verified activation. No Cycle settings or real accounts/payments were edited.
 
-Cycle/Heritage follow-up (LIVE): schemas 022/023, mysql-service-store.js, mysql-cycle-store.js, mysql-cycle-billing.js, mysql-heritage-store.js and mysql-heritage-api.js; asynchronous shared callers; service-migration.js and migrate-service-storage.js; exact source/committed-row checks; fingerprint-sql-data.js. Operator-approved backups and all preservation checks are recorded in MARIADB_MIGRATION.md. Two new SQL integration suites cover financial replay and privacy/concurrency. Existing Cycle collection and Heritage enablement settings are unchanged.
-
 Additional hardening: marketplace/property message writes recheck current participants, active accounts and conversation status inside the queued mutation. Global-role updates, provider-access grants and Cycle availability changes reject administrators revoked while queued. Cycle availability changes append an audit event. Local backups now apply explicit Windows ACLs before copying credentials/keys; existing backup directory permissions were tightened and inheritance tested. No real users, roles, messages or financial data were changed by these tests. Current total: 196 regressions + 8 SQL integration tests = 204 passed. Complete endpoint review, deployed frontend parity, credential rotation, TLS/restore testing and provider acceptance remain outstanding.
-
-Platform/wallet follow-up (LIVE): schema 020, mysql-platform-store.js, platform-store.js, migrate-platform-storage.js and async platform writers. Both sides of a wallet transfer and its durable idempotency record commit together. Cycle fulfilment awaits wallet persistence; overlapping callbacks cannot duplicate fulfilment. wallet-request-key.js is served through API/proxy and injected into the deployed index. Native platform integration test and wallet API/client-key regressions pass.
-
-LIVE after approved maintenance: schema 021, mysql-training-store.js, training-migration.js, migrate-training-storage.js, async Training router/Cycle eligibility calls, cancellation/access rechecks before recurring dispatch, community-messaging-security.js and scoped contacts/search/messages. No existing contact or message is deleted; unauthorized peers are rejected, and participant checks protect conversation reads. Migration source tests refuse unknown fields and orphan progress. Native Training integration testing passed before migration and after activation; authenticated Training reload succeeded. Latest backend regressions: 190 passed; installed SQL adapter tests: 6 passed. Backup locations and exact migration counts are in MARIADB_MIGRATION.md.
 
 Native SQL follow-up: database/018_native_auth_storage.sql, 019_native_treasury_storage.sql; mysql-auth-store.js, mysql-treasury-store.js; async callers in auth/app/server/MFA/Treasury/community reports; verified migration scripts; integration/mysql-auth.test.js and mysql-treasury.test.js; auth-storage-failure.test.js. API/proxy were restarted and authenticated dashboards verified. Original data and MFA key retained; no real payment made. Full migration and the security programme remain incomplete.
 

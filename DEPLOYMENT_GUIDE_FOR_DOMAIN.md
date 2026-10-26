@@ -1,5 +1,9 @@
 # Duranki full domain deployment guide
 
+> Retired deployment guide: do not run the old setup commands below. They do not
+> describe the MariaDB-only candidate or the active dev/test workflow. Follow
+> [current setup](docs/MARIADB_ONLY.md). No production deployment is authorized.
+
 This guide explains how to publish Duranki on a real domain from start to finish.
 
 It is written for a non-developer. You do not need to understand the code to follow it, but you do need access to:

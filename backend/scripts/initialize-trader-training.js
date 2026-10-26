@@ -1,12 +1,21 @@
-import {readFileSync} from 'node:fs';
-import {fileURLToPath} from 'node:url';
-import {TrainingStore,trainingCommunities} from '../src/trader-training.js';
-const state=JSON.parse(readFileSync(new URL('../data/platform-store.json',import.meta.url),'utf8'));
-const store=new TrainingStore(fileURLToPath(new URL('../data/trader-training.sqlite',import.meta.url)));
+import {getPool} from '../src/database.js';
+import {readSqlDocument} from '../src/mysql-platform-store.js';
+import {MysqlTrainingStore} from '../src/mysql-training-store.js';
+import {trainingCommunities} from '../src/trader-training.js';
+
+const pool=getPool();
 try{
+  const {state}=await readSqlDocument(pool);
+  const store=new MysqlTrainingStore(pool);
+  await store.ready();
+  const existing=new Set((await store.list()).map(programme=>programme.community_id));
   for(const community of trainingCommunities(state)){
-    if(store.list().some(p=>p.community_id===community.id))continue;
-    store.create(community,'system:requested-trader-training-setup');
-    console.log('Created unfunded draft for '+community.name+' under Trader Connect.');
+    if(existing.has(community.id))continue;
+    await store.create(community,'system:requested-trader-training-setup');
+    existing.add(community.id);
+    console.log('Created an unfunded Trader Connect draft.');
   }
-}finally{store.db.close();}
+}catch{
+  console.error('MariaDB training initialization failed. Check schema readiness and database configuration.');
+  process.exitCode=1;
+}finally{await pool.end();}

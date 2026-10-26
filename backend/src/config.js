@@ -11,6 +11,12 @@ dotenv.config({
 const required = ["DB_HOST", "DB_USER", "DB_NAME", "ID_PEPPER", "JWT_SECRET"];
 
 export function getConfig() {
+  for (const name of ['PLATFORM_STORAGE', 'AUTH_STORAGE', 'TREASURY_STORAGE', 'TRAINING_STORAGE', 'CYCLE_STORAGE', 'HERITAGE_STORAGE']) {
+    if (process.env[name] && process.env[name] !== 'mariadb') throw new Error(`${name} must be mariadb.`);
+  }
+  if (process.env.ALLOW_DEMO_AUTH === 'true' || process.env.FORCE_DEMO_MODE === 'true') {
+    throw new Error('Local authentication modes are no longer supported. Configure MariaDB.');
+  }
   validateProduction(process.env);
   const missing = required.filter((name) => !process.env[name]);
 
@@ -38,7 +44,5 @@ export function getConfig() {
     idPepper: process.env.ID_PEPPER,
     jwtSecret: process.env.JWT_SECRET,
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || "1h",
-    allowDemoAuth: process.env.ALLOW_DEMO_AUTH === "true",
-    forceDemoMode: process.env.FORCE_DEMO_MODE === "true",
   };
 }

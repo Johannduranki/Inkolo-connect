@@ -1,77 +1,15 @@
-# Duranki Demo Docker Image
+# Local Docker Testing
 
-This Docker setup packages the working demo into one container.
+Database-free demo images are no longer supported. The original application
+requires MariaDB, real password authentication and privileged-account MFA.
 
-It runs:
+Use synthetic accounts and documents in a dedicated test database. Never copy
+real identity documents into test images or commit private environment files.
 
-- The Duranki backend API inside the container on port `3000`.
-- The Duranki frontend demo inside the container on port `4200`.
-- Demo mode authentication, so you do not need a live database for the local demo image.
-
-## 1. Install Docker Desktop
-
-Install Docker Desktop for Windows from:
-
-https://www.docker.com/products/docker-desktop/
-
-After installing it, open Docker Desktop and wait until it says Docker is running.
-
-## 2. Open the project folder
-
-Open PowerShell and run:
-
-```powershell
-cd C:\Users\johan\Documents\Codex\2026-06-25\ca\inkolo-connect
-```
-
-## 3. Build the Docker image
-
-Run:
-
-```powershell
-docker build -f Dockerfile.demo -t duranki-demo:latest .
-```
-
-This creates a Docker image called `duranki-demo`.
-
-## 4. Start the demo
-
-Run:
-
-```powershell
-docker run --rm -p 4200:4200 --name duranki-demo duranki-demo:latest
-```
-
-Then open:
-
-```text
-http://127.0.0.1:4200/login
-```
-
-## 5. Stop the demo
-
-In the PowerShell window where Docker is running, press:
-
-```text
-Ctrl + C
-```
-
-## Alternative: Start with Docker Compose
-
-You can also run:
-
-```powershell
-docker compose -f docker-compose.demo.yml up --build
-```
-
-To stop it:
-
-```powershell
-docker compose -f docker-compose.demo.yml down
-```
-
-## Important Note
-
-This is a demo Docker image. It is made to show the full frontend and backend locally without needing MySQL.
-
-For a real AWS production deployment, you should use a real database such as AWS RDS MySQL, production secrets, HTTPS, and a production domain.
+See [MariaDB-only deployment](docs/MARIADB_ONLY.md) for the current Docker
+configuration, required secrets, migration/bootstrap ordering and safeguards.
+Use compose.local.yml for the self-contained local frontend/backend/MariaDB build.
+Start it with `npm start -- --env-file /private/duranki-local.env`, using a filled
+copy of deploy/local.env.example outside the checkout. DURANKI_ENV_FILE is the
+alternative to --env-file. The old start entry points now launch this same stack.
+The root Compose file separately retains the existing Apache/backend deployment.

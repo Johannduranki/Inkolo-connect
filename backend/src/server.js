@@ -1,6 +1,6 @@
 import { selectAccountStorage } from './account-storage.js';
 import { getConfig } from './config.js';
-import { getPool } from './database.js';
+import { getPool, verifyDatabase } from './database.js';
 import { logger, errorDetails, installFatalLogging } from './logger.js';
 import { assertPortAvailable } from './startup-port.js';
 
@@ -16,31 +16,12 @@ async function start(databaseAvailable, accountStorage = 'relational') {
 
 async function main() {
 await assertPortAvailable(config.port);
-if (config.forceDemoMode && config.allowDemoAuth) {
-  logger.warn('persistent_local_storage_enabled');
-  await start(false);
-} else {
-  let connected = false;
-  try {
-    await getPool().query('SELECT 1');
-    connected = true;
-    // Migration reconciliation is an operator task, not a prerequisite for
-    // restarting an existing database. start() still awaits configured stores.
-    await start(true, await selectAccountStorage(getPool()));
-  } catch (error) {
-    if (config.allowDemoAuth && !connected) {
-      logger.warn('database_unavailable_local_fallback',errorDetails(error));
-      await start(false);
-    } else {
-      logger.error('api_startup_failed',errorDetails(error));
-      logger.end();
-      process.exitCode = 1;
-    }
-  }
-}
+await verifyDatabase();
+await start(true, await selectAccountStorage(getPool()));
 }
 
 main().catch(error => {
+  process.exitCode = 1;
   logger.error(error.code === 'EADDRINUSE' ? 'api_port_already_in_use' : 'api_startup_failed', {
     ...errorDetails(error), port: config.port
   });

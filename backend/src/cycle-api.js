@@ -1,18 +1,18 @@
 import express from 'express';
 import { rateLimit } from 'express-rate-limit';
-import { CycleStore, cycleConfig, publicCycleConfig, signCyclePayload } from './cycle-pay.js';
+import { cycleConfig, publicCycleConfig, signCyclePayload } from './cycle-pay.js';
 import { billingTerms } from './cycle-billing.js';
 import { joinableCommunities, findMembership } from './community-registration.js';
 import { serviceCatalogue } from './service-pricing.js';
 import { memberCapabilities } from '../../frontend/public/member-service-catalogue.js';
 import { readPlatformState } from './platform-store.js';
-import { fileURLToPath } from 'node:url';
 import {platformAdmin} from './tenant-access.js';
 
-export function createCycleRouter({requireAuth,resolveUser,store=new CycleStore(fileURLToPath(new URL('../data/cycle.sqlite',import.meta.url))),readState=readPlatformState,config=cycleConfig,billing,databaseAvailable=false}={}){
+export function createCycleRouter({requireAuth,resolveUser,store,readState=readPlatformState,config=cycleConfig,billing}={}){
+  if (!store) throw Error('A MariaDB cycle store is required.');
   const router=express.Router();
   router.post('/notifications',rateLimit({windowMs:60000,limit:300,standardHeaders:'draft-7',legacyHeaders:false}),async (req,res,next)=>{
-    try{const result=await store.notify(req.body,req.get('x-callback-signature'),config());const event=JSON.parse(req.body.toString('utf8'));if(databaseAvailable&&await billing?.intent(event.id))return res.status(503).json({message:'Billing allocation requires the SQL storage adapter.'});await billing?.fulfil(event.id,event);res.json(result);}catch(error){next(error);}
+    try{const result=await store.notify(req.body,req.get('x-callback-signature'),config());const event=JSON.parse(req.body.toString('utf8'));await billing?.fulfil(event.id,event);res.json(result);}catch(error){next(error);}
   });
   router.use(requireAuth);
   router.use(async(req,res,next)=>{
@@ -21,22 +21,22 @@ export function createCycleRouter({requireAuth,resolveUser,store=new CycleStore(
   const requests=async(userId,tenantId)=>{const result=[];for(const row of await store.list(userId,tenantId))result.push({...row,allocation:await billing?.fulfilled(row.id)?row.mode==='sandbox'?'Sandbox only':'Applied':row.status==='CHARGED'?'Allocation pending':'Awaiting payment'});return result;};
   router.get('/requests',async(req,res)=>res.json({requests:await requests(req.auth.sub),ready:config().ready}));
   router.get('/billing',async(req,res)=>{
-    if(!billing||databaseAvailable)return res.status(503).json({message:'The payment storage adapter must be configured before database cutover.'});
+    if(!billing)return res.status(503).json({message:'The payment storage adapter must be configured before database cutover.'});
     const state=readState(),settings=billing.settings(),cfg=config();
     res.json({ready:cfg.ready,mode:cfg.mode,recurringReady:settings.recurringReady,topUpsEnabled:settings.topUpsEnabled,termsVersion:billingTerms,
       communities:joinableCommunities(state).filter(c=>findMembership(state,req.auth.sub,c)).map(c=>({id:c.id,name:c.name,tenantName:c.tenantName,aliases:c.aliases,walletEnabled:billing.enabled(c,'wallet'),services:Object.entries(serviceCatalogue).filter(([code])=>billing.enabled(c,code)).map(([code,name])=>({code,name,mode:billing.price(code,c)?.mode||'unconfigured',amountCents:billing.price(code,c)?.amountCents,revision:billing.price(code,c)?.revision,issue:memberCapabilities[code]?.issue||''}))})),subscriptions:await billing.list(req.auth.sub)});
   });
   router.post('/billing',rateLimit({windowMs:60000,limit:10,standardHeaders:true,legacyHeaders:false}),async (req,res)=>{
-    if(!billing||databaseAvailable)return res.status(503).json({message:'Payment storage is not configured.'});
+    if(!billing)return res.status(503).json({message:'Payment storage is not configured.'});
     res.status(201).json(await billing.start(req.auth.sub,req.body||{}));
   });
   router.post('/subscriptions/:id/cancel',async(req,res)=>{
-    if(!billing||databaseAvailable)return res.status(503).json({message:'Payment storage is not configured.'});
+    if(!billing)return res.status(503).json({message:'Payment storage is not configured.'});
     res.json(await billing.cancel(req.auth.sub,req.params.id));
   });
   router.put('/availability',async (req,res)=>{
     if(!req.cycleAdmin)return res.sendStatus(403);
-    if(!billing||databaseAvailable)return res.status(503).json({message:'Payment storage is not configured.'});
+    if(!billing)return res.status(503).json({message:'Payment storage is not configured.'});
     const body=req.body||{},state=readState(),communities=joinableCommunities(state),tenantIds=new Set(communities.map(c=>c.tenantId));
     if(!Array.isArray(body.tenants)||!Array.isArray(body.communities)||body.tenants.length>200||body.communities.length>2000)return res.status(400).json({message:'Invalid service availability.'});
     const clean=(rows,kind)=>rows.map(r=>{

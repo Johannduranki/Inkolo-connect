@@ -19,7 +19,7 @@ Open `/dashboard/treasury` using your signed-in Duranki platform administrator s
 - Community and member identifiers are manually registered, not yet enforced against the platform directory. Each receipt has one stakeholder allocation; multi-party distribution rules are not implemented.
 - Amounts use integer ZAR cents. Allocation percentages are snapshotted on receipts; existing receipts are not repriced.
 - No demo receipts are imported. Duplicate receipt references, payment allocations and settlement references are constrained in the database.
-- Records are in `backend/data/treasury.sqlite` with WAL enabled. Back up using SQLite's online backup API, or stop the backend before copying the database and its WAL files. Do not delete the data directory or commit financial data.
+- Records must use MariaDB. Take consistent database backups with matching private keys and metadata; see [MariaDB-only deployment](MARIADB_ONLY.md). Do not delete private data or commit financial records.
 - Production deployment, bank reconciliation imports, corrections/reversals, immutable audit storage and integration into the accounting general ledger remain required before using this for real disbursements.
 
 ## Verification

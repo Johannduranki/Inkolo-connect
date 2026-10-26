@@ -1,5 +1,11 @@
 Duranki real-data cleanup - 13 October 2026
 
+> Historical implementation/results below are not current acceptance. Local-store
+> setup and migration instructions are retired. Follow [MariaDB-only setup](MARIADB_ONLY.md).
+> Preserve all existing security, privacy, authorization and payment-approval gates.
+> Back up MariaDB, private uploads and matching MFA_ENCRYPTION_KEY before changes.
+
+
 STATUS: PARTIAL CLEANUP APPLIED. NOT A PRODUCTION-READINESS CERTIFICATION.
 
 Preserved
@@ -33,14 +39,6 @@ Applied to frontend source and existing served bundle
 - Browser tenant/community settings are archived locally before migration.
   Unknown custom records are preserved rather than assumed to be mock data.
 
-Backups
-backend/data/backups/real-data-cleanup-2026-10-13T08-45-13.396Z/
-  Full backend data directory files, including MFA key/database and SQLite WAL.
-  The API was stopped before the snapshot and migration.
-tmp/ui-before-real-data-cleanup/
-  Frontend source and served-bundle backups.
-These backups contain private data. Never publish or commit them.
-
 Verification
 - 35 backend tests passed, including two new cleanup tests.
 - TypeScript check and a separate development build passed.
@@ -63,9 +61,3 @@ Still required before claiming ALL mock data has been removed
 - Some settings remain browser-local; this is not a production multi-tenant
   configuration store. The live storage adapter still reports persistent-demo,
   although fixture seeding is disabled and the user records are real.
-
-Recovery
-Stop the API before restoring backend/data files from the matching backup.
-Restore the SQLite databases together with their matching WAL/SHM files and
-retain the matching MFA encryption key. Do not restore into a running process.
-The cleanup scripts are one-off migration tools, not a daily reset command.

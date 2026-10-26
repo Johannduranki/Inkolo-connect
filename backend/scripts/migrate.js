@@ -3,6 +3,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import mysql from 'mysql2/promise';
 import { activeMigrationFiles, applySchemaMigration } from '../src/schema-migration.js';
+import { verifyDatabase } from '../src/database.js';
 
 const databaseName = process.env.DB_NAME;
 
@@ -22,6 +23,7 @@ const connection = await mysql.createConnection({
 });
 
 try {
+  await verifyDatabase(connection);
   await connection.query(`CREATE DATABASE IF NOT EXISTS \`${databaseName}\``);
   await connection.query(`USE \`${databaseName}\``);
   await connection.query(`

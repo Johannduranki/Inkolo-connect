@@ -3,7 +3,7 @@ import {draftModules,validateModules,trainingMemberView} from './trader-training
 const fail=(status,message)=>{throw Object.assign(Error(message),{status});};
 export class MysqlTrainingStore {
   constructor(pool){this.pool=pool;}
-  async ready(){const [[row]]=await this.pool.query('SELECT id FROM duranki_training_migration WHERE id=1');if(!row)throw Error('Training migration must be verified first.');}
+  async ready(){const [[row]]=await this.pool.query('SELECT id FROM duranki_training_migration WHERE id=1');if(!row)throw Error('Training storage metadata must be initialized before activation.');}
   async tx(work){const c=await this.pool.getConnection();try{await c.beginTransaction();const result=await work(c);await c.commit();return result;}catch(error){await c.rollback().catch(()=>{});throw error;}finally{c.release();}}
   async get(id,c=this.pool,lock=false){const [[row]]=await c.execute('SELECT * FROM duranki_training_programme WHERE id=?'+(lock?' FOR UPDATE':''),[id]);return row?{...row,modules:JSON.parse(row.modules)}:null;}
   async list(){const [rows]=await this.pool.query('SELECT * FROM duranki_training_programme ORDER BY created_at');return rows.map(row=>({...row,modules:JSON.parse(row.modules)}));}

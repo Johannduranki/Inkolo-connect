@@ -21,9 +21,9 @@ On later logins, enter the current authenticator code or one unused recovery cod
 
 ## Operations
 
-Persist and back up BOTH `backend/data/mfa.sqlite` (including a consistent WAL snapshot) and `backend/data/mfa.key`. Keep the encryption key separately protected and restrict filesystem permissions to the backend service account. Losing the key makes stored authenticators unreadable. Never commit either file to Git.
+Persist and back up MariaDB MFA records together with the matching private MFA_ENCRYPTION_KEY environment secret (canonical base64 of exactly 32 bytes). No runtime keyfile is used. Losing or replacing the key makes existing authenticators unreadable. Never commit private backups or keys to Git.
 
-This implementation uses one local SQLite-backed service. Multi-instance production deployment needs a shared MFA store and shared rate limiting. Database-mode role tables require the existing platform migrations; that mode has not been verified against a live MySQL server in this task.
+MariaDB is the required MFA store. Multi-instance deployment still requires shared rate limiting and explicit acceptance; shared persistence alone does not approve scaling. See [MariaDB-only deployment](MARIADB_ONLY.md) for initialization and verification requirements.
 
 There is deliberately no unauthenticated reset or administrator bypass. Lost-phone access uses recovery codes. If all recovery codes are lost, a separately audited identity-verification/reset process must be implemented before production rollout. Do not delete the MFA database as a reset procedure.
 

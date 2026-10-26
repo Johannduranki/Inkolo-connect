@@ -5,6 +5,9 @@ import { createPlatformRouter } from '../src/platform-api.js';
 
 test('member configuration returns only the selected membership and tenant/community intersection', async t => {
   const state = {users:[{id:'member',status:'active',roles:['Member']}],
+    tenantAccessDirectory:[{id:'t',name:'Synthetic tenant',status:'active'}],
+    brandingDirectory:[{kind:'community',id:'a',name:'Synthetic A',tenantId:'t'},
+      {kind:'community',id:'b',name:'Synthetic B',tenantId:'t'}],
     memberCommunities:[{memberId:'member',churchId:'a'},{memberId:'other',churchId:'b'}],
     cycleServiceAvailability:{tenants:[{id:'t',status:'active',serviceCodes:['wallet','jobs']}],
       communities:[{id:'a',tenantId:'t',status:'active',serviceCodes:['wallet','loans']}]} };
@@ -23,5 +26,8 @@ test('member configuration returns only the selected membership and tenant/commu
   state.cycleServiceAvailability.tenants[0].status='inactive';
   assert.deepEqual((await (await fetch(base+'?communityId=a')).json()).serviceConfiguration.serviceCodes,[]);
   delete state.cycleServiceAvailability;
+  // A registered scope still resolves without policy, but enables no services.
+  assert.deepEqual((await (await fetch(base+'?communityId=a')).json()).serviceConfiguration,{id:'a',tenantId:'t',serviceCodes:[]});
+  state.brandingDirectory=[];
   assert.equal((await (await fetch(base+'?communityId=a')).json()).serviceConfiguration,null);
 });

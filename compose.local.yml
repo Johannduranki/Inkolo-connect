@@ -1,0 +1,85 @@
+name: duranki-local
+
+x-app: &app
+  image: duranki-local:development
+  build:
+    context: .
+    dockerfile: Dockerfile.release
+  environment:
+    NODE_ENV: development
+    PORT: '3000'
+    LOG_DESTINATION: stdout
+    DB_HOST: db
+    DB_PORT: '3306'
+    DB_NAME: ${DB_NAME:?Set a dedicated local database name}
+    DB_USER: ${DB_USER:?Set a non-root local database user}
+    DB_PASSWORD: ${DB_PASSWORD:?Set a private local database password}
+    ID_PEPPER: ${ID_PEPPER:?Set a private local identity pepper}
+    JWT_SECRET: ${JWT_SECRET:?Set a private local JWT secret}
+    MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:?Set canonical base64 encoding of 32 random bytes}
+    FRONTEND_ORIGIN: http://localhost:${LOCAL_PORT:-3000}
+    FRONTEND_ORIGINS: http://127.0.0.1:${LOCAL_PORT:-3000}
+    ALLOW_DEMO_AUTH: 'false'
+    FORCE_DEMO_MODE: 'false'
+    PLATFORM_STORAGE: mariadb
+    AUTH_STORAGE: mariadb
+    TREASURY_STORAGE: mariadb
+    TRAINING_STORAGE: mariadb
+    CYCLE_STORAGE: mariadb
+    HERITAGE_STORAGE: mariadb
+  volumes:
+    - uploads:/app/backend/uploads
+  networks: [local]
+
+services:
+  db:
+    image: mariadb:10.5.15
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?Set a private local root password}
+      MYSQL_DATABASE: ${DB_NAME:?Set a dedicated local database name}
+      MYSQL_USER: ${DB_USER:?Set a non-root local database user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set a private local database password}
+    healthcheck:
+      test: [CMD-SHELL, 'MYSQL_PWD="$$MYSQL_PASSWORD" mysql --protocol=tcp -h 127.0.0.1 -u "$$MYSQL_USER" "$$MYSQL_DATABASE" -e "SELECT 1" >/dev/null']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    volumes:
+      - mariadb:/var/lib/mysql
+    networks: [local]
+
+  migrate:
+    <<: *app
+    restart: 'no'
+    command: [sh, -c, 'npm run migrate && npm run bootstrap']
+    healthcheck:
+      disable: true
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    <<: *app
+    restart: unless-stopped
+    init: true
+    # A bridge network makes the loopback-published app reachable on Docker Desktop.
+    # MariaDB remains only on the internal service network.
+    networks: [local, web]
+    ports:
+      - '127.0.0.1:${LOCAL_PORT:-3000}:3000'
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  mariadb:
+  uploads:
+
+networks:
+  local:
+    internal: true
+  web:

@@ -1,48 +1,33 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cpSync, mkdtempSync, mkdirSync, readFileSync, symlinkSync } from 'node:fs';
-import path from 'node:path';
-import os from 'node:os';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { integrationEnvironment } from '../integration/http-harness.js';
 
-test('isolated registration saves all details and private bytes, rejects duplicates and enforces document ownership', async t => {
-  const root = fileURLToPath(new URL('../../', import.meta.url));
-  const temp = mkdtempSync(path.join(os.tmpdir(), 'duranki-registration-test-'));
-  cpSync(path.join(root,'backend/src'),path.join(temp,'backend/src'),{recursive:true});
-  cpSync(path.join(root,'backend/package.json'),path.join(temp,'backend/package.json'));
-  cpSync(path.join(root,'package.json'),path.join(temp,'package.json'));
-  mkdirSync(path.join(temp,'frontend'));
-  symlinkSync(path.join(root,'frontend/public'),path.join(temp,'frontend/public'),'junction');
-  symlinkSync(path.join(root,'backend/node_modules'),path.join(temp,'backend/node_modules'),'junction');
-  Object.assign(process.env,{NODE_ENV:'test',DB_HOST:'127.0.0.1',DB_USER:'unused-test',DB_NAME:'unused-test',DB_PORT:'1',ID_PEPPER:'synthetic-registration-pepper',JWT_SECRET:'synthetic-registration-secret-only-for-tests',ALLOW_DEMO_AUTH:'true',FORCE_DEMO_MODE:'true',PLATFORM_STORAGE:'json',AUTH_STORAGE:'sqlite',TREASURY_STORAGE:'sqlite',TRAINING_STORAGE:'sqlite',CYCLE_STORAGE:'sqlite',HERITAGE_STORAGE:'sqlite',LOG_DESTINATION:'stdout'});
-  process.chdir(temp);
-  const {createApp}=await import(pathToFileURL(path.join(temp,'backend/src/app.js')));
-  const app=createApp({databaseAvailable:false}); await app.locals.storageReady;
-  const server=app.listen(0,'127.0.0.1'); await new Promise(resolve=>server.once('listening',resolve));
-  t.after(()=>{app.locals.stopCycleBilling?.();server.closeAllConnections();server.close();});
-  const url='http://127.0.0.1:'+server.address().port;
-  const document=Buffer.from('%PDF-1.4\nSynthetic identity document, not a real ID.');
-  const form=(phone,consent=true,attach=true)=>{
-    const data=new FormData();
-    for(const [key,value] of Object.entries({telephoneNumber:phone,firstName:'Test',lastName:'Member',password:'synthetic-password-for-tests',idNumber:'9001015009087',dateOfBirth:'1990-01-01',gender:'Female',privacyAccepted:String(consent)}))data.append(key,value);
-    if(attach)data.append('idDocument',new Blob([document],{type:'application/pdf'}),'synthetic.pdf');
-    return data;
-  };
-  const register=body=>fetch(url+'/api/auth/register',{method:'POST',body});
-  assert.equal((await register(form('0600000111',false))).status,400);
-  const response=await register(form('0600000111')); assert.equal(response.status,201);
-  const account=await response.json(),headers={Authorization:'Bearer '+account.accessToken};
-  const saved=await (await fetch(url+'/api/auth/registration-details',{headers})).json();
-  assert.equal(saved.idNumber,'9001015009087');assert.equal(saved.dateOfBirth,'1990-01-01');assert.equal(saved.gender,'Female');assert.equal(saved.privacy.accepted,true);
-  const download=await fetch(url+'/api/auth/registration-document',{headers});
-  assert.equal(download.status,200);assert.deepEqual(Buffer.from(await download.arrayBuffer()),document);
-  assert.match(download.headers.get('content-disposition'),/^attachment/);
-  assert.equal((await fetch(url+'/api/auth/registration-document')).status,401);
-  const duplicate=await register(form('0600000111'));assert.equal(duplicate.status,409);
-  const other=await(await register(form('0600000222',true,false))).json();
-  assert.equal((await fetch(url+'/api/auth/registration-document',{headers:{Authorization:'Bearer '+other.accessToken}})).status,404);
-  const state=JSON.parse(readFileSync(path.join(temp,'backend/data/platform-store.json'),'utf8'));
-  assert.equal(state.users.filter(user=>user.telephoneNumber==='0600000111').length,1);
-  const persisted=state.registrationDetails.find(row=>row.userId===account.user.id);
-  assert.deepEqual(persisted.details,saved);assert.deepEqual(Buffer.from(persisted.documentBase64,'base64'),document);
+// Registration behavior now lives in integration/mariadb-http.test.js.
+const valid = { MARIADB_HTTP_TEST: '1', DB_HOST: '127.0.0.1', DB_PORT: '33306',
+  DB_NAME: 'duranki_test_http', DB_USER: 'test', DB_PASSWORD: '',
+  MFA_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64') };
+
+test('HTTP integration refuses implicit or non-test database targets', () => {
+  assert.throws(() => integrationEnvironment({}), /MARIADB_HTTP_TEST/);
+  for (const DB_NAME of ['duranki', 'production', 'latest', 'test', 'test-prod;DROP DATABASE x']) {
+    assert.throws(() => integrationEnvironment({ ...valid, DB_NAME }), /DB_NAME/);
+  }
+  assert.throws(() => integrationEnvironment({ ...valid, DB_HOST: 'app-dev.duranki.network' }), /DB_HOST/);
+  assert.throws(() => integrationEnvironment({ ...valid, DB_PASSWORD: undefined }), /DB_PASSWORD/);
+});
+
+test('HTTP integration requires the bootstrap canonical base64 MFA key', () => {
+  for (const MFA_ENCRYPTION_KEY of ['', 'abc', Buffer.alloc(31).toString('base64'), 'a'.repeat(64)]) {
+    assert.throws(() => integrationEnvironment({ ...valid, MFA_ENCRYPTION_KEY }), /MFA_ENCRYPTION_KEY/);
+  }
+});
+
+test('HTTP child receives only explicit test settings, never inherited app configuration', () => {
+  const env = integrationEnvironment({ ...valid, LOCAL_ADMIN_PASSWORD_HASH: 'private',
+    NODE_OPTIONS: '--require private.js', AUTH_STORAGE: 'other', JWT_SECRET: 'private' });
+  assert.equal(env.AUTH_STORAGE, 'mariadb');
+  assert.equal(env.LOCAL_ADMIN_PASSWORD_HASH, undefined);
+  assert.equal(env.NODE_OPTIONS, undefined);
+  assert.notEqual(env.JWT_SECRET, 'private');
+  assert.equal(env.MFA_ENCRYPTION_KEY, valid.MFA_ENCRYPTION_KEY);
 });

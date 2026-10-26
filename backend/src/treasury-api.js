@@ -1,17 +1,9 @@
 import express from 'express';
-import path from 'node:path';
-import { mkdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { hashPassword } from './password-security.js';
-import { TreasuryStore } from './treasury-store.js';
 
 export function createTreasuryRouter({ requireAuth, resolveUser, findUser, store }) {
-  if (!store) {
-    const directory = fileURLToPath(new URL('../data/', import.meta.url));
-    mkdirSync(directory, { recursive: true });
-    store = new TreasuryStore(path.join(directory, 'treasury.sqlite'));
-  }
+  if (!store) throw Error('A MariaDB treasury store is required.');
   const router = express.Router();
   router.use(requireAuth);
   router.use(async (req, res, next) => {
@@ -94,7 +86,7 @@ export function createTreasuryRouter({ requireAuth, resolveUser, findUser, store
   });
   router.use((error,req,res,next) => {
     if ([400,403,409,503].includes(error.status)) return res.status(error.status).json({message:error.message});
-    if (error.code?.startsWith('ERR_SQLITE') || ['ER_DUP_ENTRY','ER_NO_REFERENCED_ROW_2','ER_CHECK_CONSTRAINT_VIOLATED','ER_CONSTRAINT_FAILED'].includes(error.code)) return res.status(409).json({ message: 'This reference or receipt is already recorded, or the record conflicts with a database constraint.' });
+    if (['ER_DUP_ENTRY','ER_NO_REFERENCED_ROW_2','ER_CHECK_CONSTRAINT_VIOLATED','ER_CONSTRAINT_FAILED'].includes(error.code)) return res.status(409).json({ message: 'This reference or receipt is already recorded, or the record conflicts with a database constraint.' });
     if (error.code) return res.status(503).json({ message: 'Treasury storage is temporarily unavailable. No success has been confirmed.' });
     res.status(400).json({ message: error.message || 'Unable to save treasury record.' });
   });

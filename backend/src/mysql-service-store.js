@@ -21,6 +21,6 @@ export class MysqlServiceStore {
   async ready(){
     const row=await this.get('SELECT service FROM duranki_service_migration WHERE service=?',this.service);
     const lock=await this.get('SELECT service FROM duranki_service_write_lock WHERE service=?',this.service);
-    if(!row||!lock)throw Error('Service migration must be verified before activation.');
+    if(!row||!lock)throw Error('Service storage metadata and write lock must be initialized before activation.');
   }
 }

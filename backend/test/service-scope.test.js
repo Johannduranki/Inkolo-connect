@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import express from 'express';
 import { createServicePricingRouter } from '../src/service-pricing.js';
 import { serviceScope, memberServiceScope, storeServiceSetting, effectiveServicePrice, serviceEnabled } from '../src/service-scope.js';
-import { CycleBilling } from '../src/cycle-billing.js';
 import { MysqlCycleBilling } from '../src/mysql-cycle-billing.js';
 
 export function fixture() {
@@ -55,9 +54,9 @@ test('availability is independent by community and cannot bypass parent disablem
   s.servicePricing.deliveries.enabled=false;
   assert.equal(serviceEnabled(s,serviceScope(s,{communityId:'community-c'}).community,'deliveries'),false);
 });
-test('both billing adapters resolve the scoped price and revision',()=>{
+test('MariaDB billing resolves the scoped price and revision',()=>{
   const s=fixture();storeServiceSetting(s,'staff','deliveries',{communityId:'community-a'},{revision:0},price(2000));
-  for(const Prototype of [CycleBilling.prototype,MysqlCycleBilling.prototype]){
+  for(const Prototype of [MysqlCycleBilling.prototype]){
     const billing=Object.create(Prototype);billing.readState=()=>s;
     assert.equal(billing.price('deliveries',{tenant_id:'tenant-a',community_id:'community-a'}).amountCents,2000);
     assert.equal(billing.price('deliveries',{tenantId:'tenant-b',id:'community-c'}).amountCents,3000);

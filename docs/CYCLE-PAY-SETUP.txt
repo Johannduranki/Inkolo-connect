@@ -1,4 +1,10 @@
 CYCLE PAY / DURANKI
+
+> Historical implementation/results below are not current acceptance. Local-store
+> setup and migration instructions are retired. Follow [MariaDB-only setup](MARIADB_ONLY.md).
+> Preserve all existing security, privacy, authorization and payment-approval gates.
+> Back up MariaDB, private uploads and matching MFA_ENCRYPTION_KEY before changes.
+
 Integration status: implemented foundation; live collection NOT activated.
 
 Dashboard: /dashboard/cycle (active Platform Admin with MFA)
@@ -30,23 +36,6 @@ server first. Restart the backend after environment changes.
 Hosted checkout does not use API caller credentials; those are needed for a
 separately implemented direct API/reconciliation integration.
 
-WHAT WORKS
-- Platform administrators can create uniquely referenced payment requests for
-  active members of an imported community. These do not charge cards.
-- Members can see only their own requests. Once checkout is enabled, the server
-  signs the stored amount and identity; the browser cannot substitute a price.
-- Card data is entered on Cycle's hosted payment page, not on Duranki.
-- Callback validation uses the exact raw request body and timing-safe HMAC
-  verification. Amount, currency, merchant and stored mode must match.
-- Provider IDs and event hashes have database uniqueness constraints. Only a
-  complete approved charge marks the request CHARGED. Repeated notifications
-  cannot create a second record. Other statuses are flagged for review.
-- Redirects and browser messages never mark a payment successful.
-- Dashboard totals separate sandbox and live records; exports contain displayed
-  records only (latest 500 loaded). Full totals are calculated by the database.
-- Secret values and full provider payloads are not returned or stored in the
-  reporting dashboard. cycle.sqlite contains requests, normalized events/audit.
-
 SANDBOX ACCEPTANCE
 1. Obtain separate sandbox credentials from Cycle and configure the HTTPS URL.
 2. Confirm with Cycle that notification id corresponds to the submitted chargeId
@@ -58,18 +47,6 @@ SANDBOX ACCEPTANCE
    callbacks. Test invalid signatures, duplicate delivery and delayed callbacks.
 7. Reconcile the register against Cycle's merchant portal; confirm exact amounts,
    references and callback retry handling. No real member payment is a test.
-
-REMAINING BEFORE FULL PLATFORM PAYMENT ROLLOUT
-Existing wallet top-ups, membership charges and service subscription payments
-are NOT automatically routed through this new register yet. Implement their
-authoritative invoice/price bindings and atomic, idempotent fulfillment before
-enabling those entry points. Do not treat CHARGED as wallet credit, activated
-subscription, reconciled bank settlement or stakeholder payout.
-Treasury allocations, accounting postings, refunds/chargebacks, recurring
-mandates, settlement reconciliation and provider status recovery remain to be
-integrated. This dashboard does not claim to make stakeholder payouts.
-Current deployment uses a local SQLite register; include it in tested backups
-and recovery. Multiple backend hosts need shared production storage/migration.
 
 LIVE ACTIVATION
 Only after sandbox acceptance, fulfillment integration and explicit release

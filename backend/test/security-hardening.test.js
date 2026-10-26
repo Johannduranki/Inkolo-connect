@@ -9,6 +9,7 @@ import jwt from 'jsonwebtoken';
 import { randomBytes } from 'node:crypto';
 import { validFileBytes, canReadUpload } from '../src/upload-security.js';
 import { SessionStore } from '../src/session-security.js';
+import { authSqlDouble } from './helpers/auth-sql-double.js';
 
 test('password verification rejects absent credentials and short new passwords', async () => {
   for (const value of [undefined, null, '', '1234', { password: 'long enough password' }]) assert.equal(passwordPolicy(value), false);
@@ -73,25 +74,23 @@ test('private file access requires an active owner or platform administrator', (
   assert.equal(canReadUpload(state, member, '/../test.pdf'), false);
 });
 
-test('session revocation, owner checks and idle expiry reject old tokens', () => {
+test('session revocation, owner checks and idle expiry reject old tokens', async () => {
   let now = 1000000;
-  const store = new SessionStore(':memory:', () => now);
-  try {
-    const claims = { jti: 'test-session', sub: 'a', exp: (now + 7200000) / 1000 };
-    store.register(claims);
-    assert.equal(store.allowed(claims), true);
-    assert.equal(store.allowed({ ...claims, sub: 'b' }), false);
-    now += 1800001;
-    assert.equal(store.allowed(claims, false), false);
-    const next = { ...claims, jti: 'next-session' };
-    store.register(next);
-    store.revoke(next.jti);
-    assert.equal(store.allowed(next), false);
-    const third = { ...claims, jti: 'third-session' };
-    store.register(third);
-    store.revokeUser('a');
-    assert.equal(store.allowed(third), false);
-  } finally { store.close(); }
+  const store = new SessionStore(authSqlDouble(), () => now);
+  const claims = { jti: 'test-session', sub: 'a', exp: (now + 7200000) / 1000 };
+  await store.register(claims);
+  assert.equal(await store.allowed(claims), true);
+  assert.equal(await store.allowed({ ...claims, sub: 'b' }), false);
+  now += 1800001;
+  assert.equal(await store.allowed(claims, false), false);
+  const next = { ...claims, jti: 'next-session' };
+  await store.register(next);
+  await store.revoke(next.jti);
+  assert.equal(await store.allowed(next), false);
+  const third = { ...claims, jti: 'third-session' };
+  await store.register(third);
+  await store.revokeUser('a');
+  assert.equal(await store.allowed(third), false);
 });
 
 test('tokens reject expiry, wrong issuer/audience, algorithms, malformed and manipulated claims', () => {

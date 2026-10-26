@@ -1,5 +1,11 @@
 # Security Operations
 
+> Historical implementation/results below are not current acceptance. Local-store
+> setup and migration instructions are retired. Follow [MariaDB-only setup](../MARIADB_ONLY.md).
+> Preserve all existing security, privacy, authorization and payment-approval gates.
+> Back up MariaDB, private uploads and matching MFA_ENCRYPTION_KEY before changes.
+
+
 ## Current Handover - 2026-10-17
 
 Use [Production sign-off](PRODUCTION_SIGNOFF.md) for remaining gates and owners.
@@ -29,10 +35,6 @@ The earlier local runtime pass activated ride/reset/report and proxy/abuse fixes
 - Review immutable CI action/image references, protected branches, deployment approvals, limited SSH keys and host-key pinning with the repository/server owner.
 
 ## Local recovery evidence
-
-Local backup: backend/data/backups/connection-repair-2026-10-15T09-31-15.384Z. All 2,753 users retained; six SQLite recovery copies passed integrity checks. MariaDB cold backup: backend/data/backups/mariadb-cold-20261015T093614260; all copied files SHA-256 verified while the service was stopped. Cold-backup ACLs are restricted. Root credentials and pre-existing databases were not reset or replaced. Temporary initialization SQL was removed and original my.ini restored. Cold backup file verification is not a full MariaDB restore drill.
-
-Do not rerun the elevated recovery script routinely: its default mode provisions a new account and requires Windows approval. Its explicit -PrepareAuthSchema/-PrepareTreasurySchema modes preserve credentials and prepare only those schemas after a cold backup. Use backend/scripts/probe-mariadb.js for read-only connectivity checks. Latest cold backup: mariadb-cold-20261015T101825907. Latest local-file backup: connection-repair-2026-10-15T10-18-12.095Z. Include both SQL and local stores in recovery planning; local-file backup alone no longer captures active sessions, MFA or Treasury. Never delete storage-mode markers to force a stale local fallback. The startup guard is not full reconciliation.
 
 ## Monitoring
 

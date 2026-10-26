@@ -12,6 +12,8 @@ COPY package.json ./
 COPY backend/package*.json backend/
 RUN npm --prefix backend ci --omit=dev
 COPY backend/src backend/src
+COPY backend/scripts backend/scripts
+COPY backend/database backend/database
 COPY frontend/public frontend/public
 COPY --from=build /app/frontend/dist frontend/dist
 COPY scripts/release-health.mjs scripts/release-health.mjs

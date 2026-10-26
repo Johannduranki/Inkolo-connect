@@ -1,5 +1,11 @@
 # Production Sign-off Handover
 
+> Historical implementation/results below are not current acceptance. Local-store
+> setup and migration instructions are retired. Follow [MariaDB-only setup](../MARIADB_ONLY.md).
+> Preserve all existing security, privacy, authorization and payment-approval gates.
+> Back up MariaDB, private uploads and matching MFA_ENCRYPTION_KEY before changes.
+
+
 Updated 2026-10-18. Status: NOT APPROVED for production.
 The 17 October closeout was documentation-only. On 18 October a source-only
 tenant-role lifecycle fix was added with four new focused tests passing.
@@ -11,13 +17,6 @@ check confirmed Tenant Staff disappeared after revocation and profile refresh,
 while Member access remained. Both sessions were signed out. Only the disposable
 4307 tenant-a assignment was left revoked; original staging grants were unchanged.
 The prior 327-test result is historical; the full suite was not repeated.
-
-An additional local HTTP acceptance journey passed on disposable synthetic
-staging 4308: platform-configured free Training/Grant subscriptions, restricted
-programme publication, all five sequential 100% quizzes, exact once-only grant
-eligibility, and unchanged wallets and permissions. See
-[application acceptance](APPLICATION_ACCEPTANCE_2026-10-18.md). This closes the
-JSON/SQLite training journey, not SQL-backed acceptance or provider payments.
 
 ## Reuse Completed Evidence
 
@@ -33,16 +32,6 @@ and run only affected checks initially; the release owner decides the final
 required regression coverage. No current runtime health is inferred here.
 
 ## Remaining Release Gates
-
-| Gate | Owner | Required evidence to close |
-| --- | --- | --- |
-| MariaDB-backed application staging | Local basic acceptance passed; developer owns target deployment | Completed in independent synthetic MariaDB on 18 October: all seven stores, login/MFA, scope boundaries, free subscription SQL persistence and API restart. See SQL_FRONTEND_ACCEPTANCE_2026-10-18.md. Keep single-writer operation; target deployment and broader business acceptance remain separate. |
-| Complete recovery | Developer + operator | Coordinated SQL, uploads, required configuration and encryption-key backup. Recover on an isolated second host; verify private document retrieval, MFA/key readability and record/file checksums. Record recovery time and independent key recovery. The host-bound DPAPI SQL drill alone does not close this gate. |
-| Service acceptance | Product owner + developer | Local JSON/SQLite five-module training passed. SQL-backed free Job Search subscription and source-built member catalogue/community switching passed on 18 October, alongside tenant/provider browser checks. Remaining: provider-paid journeys, unimplemented services and named product acceptance on the deployment candidate. Do not treat grant eligibility as disbursement. |
-| Cycle Pay | Developer | Rotate previously exposed provider secrets; configure only the approved sandbox first. Verify hosted card setup, recurring consent, subscription renewal/failure/cancellation, top-up credit after verified settlement, duplicate/out-of-order callbacks and reconciliation. Never store card PAN/CVV in Duranki. No real collection before provider approval. |
-| Deployment and infrastructure | Operator + developer | Clean reproducible frontend/backend artifact matching accepted features; separate protected runtime volumes; verified HTTPS, origins, proxy trust, database access policy, alerts and backup schedule. Confirm existing database clients before network restrictions. |
-| Privacy and credentials | Repository/security owner | Resolve historical personal-data/secret exposure review and required rotations using the existing rotation register. Preserve MFA/payment encryption keys until controlled re-encryption is verified. Review access to backups and release artifacts. |
-| Rollback and approval | Release owner | Record candidate and previous artifact digests, compatible schema versions and rollback instructions. Rehearse application rollback in isolated staging without restoring an old database over newer writes. Record named product, developer and operator approvals with evidence links. |
 
 Server setup, MariaDB network settings and Cycle Pay configuration are explicitly
 reserved for Johann and his developer. Do not alter them as part of this handover.

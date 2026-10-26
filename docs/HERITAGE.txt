@@ -1,12 +1,10 @@
 Duranki Heritage / Family Tree - first local release
 
-Entry: /dashboard/heritage
-Service ID: duranki-heritage
-Storage: backend/data/heritage.sqlite (SQLite, WAL, foreign keys enabled).
-The service follows the existing Treasury SQLite pattern. It does NOT resolve
-the platform's outstanding MySQL authentication issue. The MySQL membership
-adapter deliberately refuses access rather than using potentially mismatched
-local user IDs.
+> Historical implementation/results below are not current acceptance. Local-store
+> setup and migration instructions are retired. Follow [MariaDB-only setup](MARIADB_ONLY.md).
+> Preserve all existing security, privacy, authorization and payment-approval gates.
+> Back up MariaDB, private uploads and matching MFA_ENCRYPTION_KEY before changes.
+
 
 SETUP
 Sign in normally, including MFA for administrators. Open Heritage from the
@@ -62,39 +60,6 @@ Claim an invited profile. There is no automatic SMS/email delivery.
 Tokens are hashed, targeted, one-use, expire after seven
 days, and are revoked when reissued. Claiming transfers profile management
 and resets privacy to Private and verification to Unverified.
-
-VERIFICATION
-Another claimed family participant may record Family Confirmed.
-Community Verified requires Platform Admin or an existing tenant/community
-administrator given an explicit verifier grant for this tenant/community.
-Officially Verified requires a platform administrator, source reference
-and supporting document. This is a human review record, not an external
-government validation. Managers cannot verify their own records.
-Profile and relationship edits reset affected person verification.
-Audit records and verification evidence are retained in SQLite.
-
-TRADITIONAL LEADERSHIP
-Record King, Queen, Chief, Prince, Princess or Traditional Leader, royal
-house, clan, reign dates and notes. Record predecessor, successor, office,
-effective date and evidence notes separately from genealogy. These records
-do not establish lawful title or succession rights.
-Supporting PDF/JPEG/PNG documents (up to 5 MB) are stored privately in SQLite
-and downloaded as authenticated attachments. Uploads have size/signature
-checks, but malware scanning is not configured.
-
-OPERATIONS AND REMAINING PRODUCTION WORK
-Back up heritage.sqlite with its WAL/SHM files while stopped, or use SQLite
-backup tooling. Do not expose backend/data over the web. Use HTTPS, encrypted
-host disks/backups, access monitoring and restricted host permissions.
-Resolve the existing production MySQL/identity architecture before rollout.
-The standalone service is usable locally; the old compiled Angular bundle
-was not rebuilt because it differs from its restored source. Navigation is
-connected through the existing compatibility script; the Angular default
-service catalogue source also includes Heritage for the future rebuild.
-No subscription fee or payment processing is introduced by this service.
-Before wider release: integrate invitation delivery, document malware
-scanning, retention/erasure workflows, cross-owner relationship proposals,
-cross-tree deduplication/merging and the production tenant catalogue adapter.
 
 TESTS
 node --test backend/test/heritage.test.js backend/test/heritage-api.test.js

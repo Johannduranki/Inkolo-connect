@@ -3,11 +3,10 @@ import multer from 'multer';
 import { randomUUID } from 'node:crypto';
 import { fail, relationshipPath } from './heritage-store.js';
 import {heritageScopes} from './heritage-api.js';
-export function createMysqlHeritageRouter({ requireAuth, readState, resolveUser, store, databaseAvailable = false }) {
+export function createMysqlHeritageRouter({ requireAuth, readState, resolveUser, store }) {
+    if (!store) throw Error('A MariaDB heritage store is required.');
     const router = express.Router();
     router.get('/public/:id', async (req, res) => {
-        if (databaseAvailable)
-            return res.status(503).json({ message: 'Heritage storage adapter is not configured.' });
         const p = (await store.get("SELECT p.* FROM heritage_person p JOIN heritage_community_service c ON c.community_id=p.community_id JOIN heritage_tenant_service t ON t.tenant_id=p.tenant_id WHERE p.person_id=? AND p.privacy='Public' AND c.enabled=1 AND t.enabled=1", req.params.id));
         if (!p)
             return res.status(404).json({ message: 'Public profile not available.' });
@@ -17,8 +16,6 @@ export function createMysqlHeritageRouter({ requireAuth, readState, resolveUser,
     router.use(async (req, res, next) => {
         try {
             res.set('Cache-Control', 'no-store');
-            if (databaseAvailable)
-                fail(503, 'Heritage membership adapter for MySQL must be configured before use.');
             const user = await resolveUser(req.auth.sub);
             if (!user || user.status !== 'active')
                 fail(403, 'Active account required.');

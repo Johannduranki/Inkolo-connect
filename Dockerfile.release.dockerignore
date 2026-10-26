@@ -5,6 +5,10 @@
 !backend/package-lock.json
 !backend/src/
 !backend/src/**
+!backend/scripts/
+!backend/scripts/**
+!backend/database/
+!backend/database/**
 !frontend/
 !frontend/package.json
 !frontend/package-lock.json
@@ -18,7 +22,10 @@
 !scripts/release-health.mjs
 **/*.pre-migration-*
 **/.env*
-**/*.sqlite*
+**/*.db
+**/*.db-wal
+**/*.db-shm
 **/*.log
 **/*.sql
+!backend/database/*.sql
 **/node_modules/**

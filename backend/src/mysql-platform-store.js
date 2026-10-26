@@ -13,7 +13,7 @@ function freeze(value) {
 
 export async function readSqlDocument(connection,id='platform') {
   const [[metadata]] = await connection.execute('SELECT * FROM duranki_platform_document WHERE id=?',[id]);
-  if (!metadata) throw Error('A verified platform migration is required.');
+  if (!metadata) throw Error('Platform storage is not initialized. Run npm run migrate then npm run bootstrap.');
   const [chunks] = await connection.execute('SELECT chunk_index,payload FROM duranki_platform_chunk WHERE document_id=? ORDER BY chunk_index',[id]);
   if (chunks.length !== metadata.chunk_count || chunks.some((chunk,index)=>chunk.chunk_index!==index)) throw Error('Platform snapshot is incomplete.');
   const bytes = Buffer.concat(chunks.map(chunk=>chunk.payload));
@@ -48,7 +48,7 @@ export class MysqlPlatformStore {
       if (Number(lock.acquired)!==1) throw Object.assign(Error('Another platform writer is active.'), {code:'ER_DURANKI_WRITER_ACTIVE'});
       if(this.id==='platform'){
         const [[migration]]=await c.query('SELECT id FROM duranki_platform_migration WHERE id=1');
-        if(!migration)throw Error('Platform migration is not verified.');
+        if(!migration)throw Error('Platform storage is not initialized. Run npm run bootstrap.');
       }
       const loaded = await readSqlDocument(c,this.id);
       this.state=freeze(loaded.state);this.revision=loaded.revision;this.healthy=true;

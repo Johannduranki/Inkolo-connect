@@ -26,25 +26,20 @@ import { logger, requestLogging, errorDetails } from './logger.js';
 import { createTreasuryRouter } from './treasury-api.js';
 import { resolveTreasuryIdentity } from './treasury-identity.js';
 import { createCycleRouter } from './cycle-api.js';
-import { TrainingStore, createTrainingRouter } from './trader-training.js';
+import { createTrainingRouter } from './trader-training.js';
 import { createStudyRouter, ensureStudyDrafts } from './study-modules.js';
-import { CycleStore, cycleConfig } from './cycle-pay.js';
-import { CycleBilling } from './cycle-billing.js';
+import { cycleConfig } from './cycle-pay.js';
 import { MysqlCycleStore } from './mysql-cycle-store.js';
 import { MysqlCycleBilling } from './mysql-cycle-billing.js';
 import { MysqlHeritageStore } from './mysql-heritage-store.js';
 import { createMysqlHeritageRouter } from './mysql-heritage-api.js';
 import { createCommunityReportsRouter } from './community-reports.js';
-import { HeritageStore } from './heritage-store.js';
-import { createHeritageRouter } from './heritage-api.js';
-import { TreasuryStore } from './treasury-store.js';
 import { MysqlTreasuryStore } from './mysql-treasury-store.js';
 import { MysqlTrainingStore } from './mysql-training-store.js';
-import { MfaStore, needsMfa } from './mfa.js';
+import { needsMfa } from './mfa.js';
 import { createMfaRouter } from './mfa-api.js';
 import { hashPassword, passwordPolicy, verifyPassword } from './password-security.js';
 import { canReadUpload, validateUploadedFiles } from './upload-security.js';
-import { SessionStore } from './session-security.js';
 import {
   createAcceptanceEvidence,
   saveDemoAcceptance
@@ -193,14 +188,15 @@ function mapSubscription(row) {
   };
 }
 
-export function createApp({ databaseAvailable = true, accountStorage = 'relational' } = {}) {
+export function createApp({ databaseAvailable = true, accountStorage = 'platform' } = {}) {
   const config = getConfig();
+  if (!databaseAvailable) throw Error('MariaDB is required to start the application.');
   const documentAccounts = accountStorage === 'platform';
   if (documentAccounts && (!databaseAvailable || platformStorage !== 'mariadb')) throw Error('Platform accounts require MariaDB.');
   // Existing routers use this flag to select the relational users schema versus
   // platform documents. Document persistence is still MariaDB, not demo storage.
   if (documentAccounts) databaseAvailable = false;
-  const allowPlatformAccounts = documentAccounts || config.allowDemoAuth;
+  const allowPlatformAccounts = documentAccounts;
   const app = express();
   const abuseProtection = createAuthenticatedAbuseProtection();
   const requireAuth = (req, res, next) => authenticate(req, res, error => error ? next(error) : abuseProtection(req, res, next));
@@ -215,27 +211,17 @@ export function createApp({ databaseAvailable = true, accountStorage = 'relation
   app.use(createFrontendCors(config.frontendOrigins));
   app.use('/api/cycle/notifications',express.raw({type:'application/json',limit:'128kb'}));
   app.use(express.json({ limit: '2mb' }));
-  const treasuryDirectory = fileURLToPath(new URL('../data/', import.meta.url));
-  mkdirSync(treasuryDirectory,{recursive:true});
-  const treasuryCutover = path.join(treasuryDirectory,'treasury-storage-mode.json');
-  const savedTreasuryStorage = existsSync(treasuryCutover) ? JSON.parse(readFileSync(treasuryCutover,'utf8')).storage : null;
-  const treasuryStorage = process.env.TREASURY_STORAGE || savedTreasuryStorage || 'sqlite';
-  if (savedTreasuryStorage === 'mariadb' && treasuryStorage !== 'mariadb') throw Error('Treasury has migrated to MariaDB. A verified reverse migration is required before rollback.');
-  if (!['sqlite','mariadb'].includes(treasuryStorage)) throw Error('Unsupported treasury storage.');
-  const treasuryStore = treasuryStorage === 'mariadb' ? new MysqlTreasuryStore(getPool()) : new TreasuryStore(path.join(treasuryDirectory,'treasury.sqlite'));
-  const authCutover = path.join(treasuryDirectory,'auth-storage-mode.json');
-  const savedAuthStorage = existsSync(authCutover) ? JSON.parse(readFileSync(authCutover,'utf8')).storage : null;
-  const authStorage = process.env.AUTH_STORAGE || savedAuthStorage || 'sqlite';
-  if (savedAuthStorage === 'mariadb' && authStorage !== 'mariadb') throw Error('Authentication has migrated to MariaDB. A verified reverse migration is required before rollback.');
-  if (!['sqlite','mariadb'].includes(authStorage)) throw Error('Unsupported authentication storage.');
-  const sessions = authStorage === 'mariadb' ? new MysqlSessionStore(getPool()) : new SessionStore(path.join(treasuryDirectory, 'sessions.sqlite'));
+  const treasuryStorage = 'mariadb';
+  const treasuryStore = new MysqlTreasuryStore(getPool());
+  const authStorage = 'mariadb';
+  const sessions = new MysqlSessionStore(getPool());
   app.locals.sessions = sessions;
-  const mfaStore=authStorage === 'mariadb' ? new MysqlMfaStore(getPool(),path.join(treasuryDirectory,'mfa.key')) : new MfaStore(path.join(treasuryDirectory,'mfa.sqlite'),path.join(treasuryDirectory,'mfa.key'));
+  const mfaStore = new MysqlMfaStore(getPool());
   // Migrated stores also need initialization when local authentication is enabled.
   app.locals.storageReady = Promise.all([
         initializePlatformStorage(getPool()),
-        authStorage === 'mariadb' ? mfaStore.ready() : undefined,
-        treasuryStorage === 'mariadb' ? treasuryStore.ready() : undefined
+        mfaStore.ready(),
+        treasuryStore.ready()
       ]);
   const resolveMfaUser=async id=>{
     let user;
@@ -254,31 +240,18 @@ export function createApp({ databaseAvailable = true, accountStorage = 'relation
   };
   app.locals.mfa={store:mfaStore,resolveUser:resolveMfaUser};
   app.use('/api/community-registration',createCommunityRegistrationRouter({requireAuth,resolveUser:resolveMfaUser,readState:readPlatformState,updateState:updatePlatformState,databaseAvailable}));
-  const trainingCutover=path.join(treasuryDirectory,'training-storage-mode.json');
-  const savedTrainingStorage=existsSync(trainingCutover)?JSON.parse(readFileSync(trainingCutover,'utf8')).storage:null;
-  const trainingStorage=process.env.TRAINING_STORAGE||savedTrainingStorage||'sqlite';
-  if(savedTrainingStorage==='mariadb'&&trainingStorage!=='mariadb')throw Error('Training rollback requires a verified reverse migration.');
-  if(!['sqlite','mariadb'].includes(trainingStorage))throw Error('Unsupported training storage.');
-  const trainingStore=trainingStorage==='mariadb'?new MysqlTrainingStore(getPool()):new TrainingStore(path.join(treasuryDirectory,'trader-training.sqlite'));
-  app.locals.storageReady=Promise.all([app.locals.storageReady,trainingStorage==='mariadb'?trainingStore.ready():undefined]);
+  const trainingStorage = 'mariadb';
+  const trainingStore = new MysqlTrainingStore(getPool());
+  app.locals.storageReady=Promise.all([app.locals.storageReady,trainingStore.ready()]);
   app.locals.storageReady = Promise.resolve(app.locals.storageReady).then(() => databaseAvailable ? undefined : ensureStudyDrafts({readState:readPlatformState,updateState:updatePlatformState}));
   app.use('/api/trader-training/study',createStudyRouter({requireAuth,readState:readPlatformState,updateState:updatePlatformState,databaseAvailable}));
   app.use('/api/trader-training',createTrainingRouter({requireAuth,resolveUser:resolveMfaUser,readState:readPlatformState,store:trainingStore,databaseAvailable}));
   app.use('/api/branding',createBrandingRouter({requireAuth,resolveUser:resolveMfaUser,readState:readPlatformState,updateState:updatePlatformState}));
   app.use('/api/service-pricing',createServicePricingRouter({requireAuth,resolveUser:resolveMfaUser,readState:readPlatformState,updateState:updatePlatformState,checkoutReady:()=>!databaseAvailable&&cycleConfig().ready&&cycleBilling.settings().recurringReady}));
   app.use('/api/wholesalers',createWholesalerRouter({requireAuth,readState:readPlatformState,updateState:updatePlatformState,databaseAvailable,paidSubscriptions:id=>cycleBilling.active(id)}));
-  const serviceStorage=name=>{
-    const marker=path.join(treasuryDirectory,`${name}-storage-mode.json`);
-    const saved=existsSync(marker)?JSON.parse(readFileSync(marker,'utf8')).storage:null;
-    const selected=process.env[`${name.toUpperCase()}_STORAGE`]||saved||'sqlite';
-    if(saved==='mariadb'&&selected!=='mariadb')throw Error(`${name} rollback requires a verified reverse migration.`);
-    if(!['sqlite','mariadb'].includes(selected))throw Error('Unsupported service storage.');
-    return selected;
-  };
-  const cycleStorage=serviceStorage('cycle'),heritageStorage=serviceStorage('heritage');
-  const cycleStore=cycleStorage==='mariadb'?new MysqlCycleStore(getPool()):new CycleStore(path.join(treasuryDirectory,'cycle.sqlite'));
-  const Billing=cycleStorage==='mariadb'?MysqlCycleBilling:CycleBilling;
-  const cycleBilling=new Billing({store:cycleStore,readState:readPlatformState,updateState:updatePlatformState,config:cycleConfig,serviceReady:async(code,c)=>!['trader-training','grant-distribution'].includes(code)||(await trainingStore.list()).some(p=>p.community_id===c.id&&p.state==='PUBLISHED')});
+  const cycleStorage='mariadb',heritageStorage='mariadb';
+  const cycleStore = new MysqlCycleStore(getPool());
+  const cycleBilling=new MysqlCycleBilling({store:cycleStore,readState:readPlatformState,updateState:updatePlatformState,config:cycleConfig,serviceReady:async(code,c)=>!['trader-training','grant-distribution'].includes(code)||(await trainingStore.list()).some(p=>p.community_id===c.id&&p.state==='PUBLISHED')});
   app.use('/api/cycle',createCycleRouter({requireAuth,resolveUser:resolveMfaUser,store:cycleStore,billing:cycleBilling,databaseAvailable}));
   if(!databaseAvailable){let renewing=false;const timer=setInterval(async()=>{if(renewing)return;renewing=true;try{await cycleBilling.renewDue();}catch(error){logger.error('cycle_renewal_failed',errorDetails(error));}finally{renewing=false;}},60000);timer.unref();app.locals.stopCycleBilling=()=>clearInterval(timer);}
   app.use('/api/community-reports',createCommunityReportsRouter({requireAuth,resolveUser:resolveMfaUser,readState:readPlatformState,cycleStore,treasuryStore,databaseAvailable}));
@@ -288,10 +261,9 @@ export function createApp({ databaseAvailable = true, accountStorage = 'relation
     const [rows] = await getPool().query('SELECT id, status FROM users');
     return rows;
   } }));
-  const heritageStore=heritageStorage==='mariadb'?new MysqlHeritageStore(getPool()):new HeritageStore(path.join(treasuryDirectory,'heritage.sqlite'));
-  app.locals.storageReady=Promise.all([app.locals.storageReady,cycleStorage==='mariadb'?cycleStore.ready():undefined,heritageStorage==='mariadb'?heritageStore.ready():undefined]);
-  const heritageRouter=heritageStorage==='mariadb'?createMysqlHeritageRouter:createHeritageRouter;
-  app.use('/api/heritage',heritageRouter({requireAuth,readState:readPlatformState,resolveUser:resolveMfaUser,store:heritageStore,databaseAvailable}));
+  const heritageStore = new MysqlHeritageStore(getPool());
+  app.locals.storageReady=Promise.all([app.locals.storageReady,cycleStore.ready(),heritageStore.ready()]);
+  app.use('/api/heritage',createMysqlHeritageRouter({requireAuth,readState:readPlatformState,resolveUser:resolveMfaUser,store:heritageStore,databaseAvailable}));
   app.use('/api/auth/mfa',createMfaRouter({store:mfaStore,resolveUser:resolveMfaUser,sessions}));
   app.post('/api/auth/logout', requireAuth, async (req, res) => {
     await sessions.revoke(req.auth.jti);
@@ -365,12 +337,13 @@ export function createApp({ databaseAvailable = true, accountStorage = 'relation
     })
   );
 
-  app.get('/api/health', (_req, res) => {
-    if(platformStorage==='mariadb')readPlatformState();
+  app.get('/api/health', async (_req, res) => {
+    try { await getPool().query('SELECT 1'); readPlatformState(); }
+    catch { return res.status(503).json({status:'unavailable',storage:'mariadb'}); }
     res.json({
       status: 'ok',
-      storage: databaseAvailable || documentAccounts ? 'mariadb' : 'persistent-demo',
-      accountStorage: documentAccounts ? 'platform-document' : databaseAvailable ? 'relational' : 'local',
+      storage: 'mariadb',
+      accountStorage: documentAccounts ? 'platform-document' : 'relational',
       authenticationStorage: authStorage,
       treasuryStorage,
       platformStorage,
@@ -865,7 +838,7 @@ export function createApp({ databaseAvailable = true, accountStorage = 'relation
     try {
       await resetUserServiceData(req.auth.sub, databaseAvailable, {actorId:req.auth.sub,mode:'self'});
       if (!databaseAvailable && allowPlatformAccounts) {
-        resetDemoUserServices(req.auth.sub);
+        await resetDemoUserServices(req.auth.sub);
       }
 
       return res.status(204).send();

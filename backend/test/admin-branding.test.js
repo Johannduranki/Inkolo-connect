@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import ts from '../../frontend/node_modules/typescript/lib/typescript.js';
-const source=fs.readFileSync(new URL('../../frontend/dist/duranki-login/browser/main-4DAPJI7G.js',import.meta.url),'utf8');
-const ast=ts.createSourceFile('bundle.js',source,99,true,ts.ScriptKind.JS);let method,init;
-function visit(n){if(ts.isMethodDeclaration(n)&&n.name.getText(ast)==='loadUploadedBranding'){method=n.getText(ast);init=n.parent.members.find(m=>m.name?.getText(ast)==='ngOnInit').getText(ast);}ts.forEachChild(n,visit);}visit(ast);
+const source=ts.transpileModule(fs.readFileSync(new URL('../../frontend/src/app/features/platform-admin/platform-admin-dashboard/platform-admin-dashboard.component.ts',import.meta.url),'utf8'), {compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+const ast=ts.createSourceFile('component.js',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
+let method,init;
+function visit(n){if(ts.isMethodDeclaration(n)&&n.name.getText(ast)==='loadUploadedBranding'){method=n.getText(ast);init=n.parent.members.find(m=>m.name?.getText(ast)==='ngOnInit').getText(ast);}ts.forEachChild(n,visit);}visit(ast);assert.ok(method,'Expected current component method');
 test('admin loads uploaded logos by scope ID, preserves other settings and fallback logos',async()=>{
   const url='/api/branding/images/'+'a'.repeat(64);
   let tenants=[{id:'tenant-inkolo',branding:{logoUrl:'',primaryColor:'blue'}},{id:'tenant-other',branding:{logoUrl:'/original.png'}}];

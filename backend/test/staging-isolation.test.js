@@ -1,39 +1,42 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { stagingEnvironment, stagingState, stagingBanner, accountSpecs } from '../../scripts/staging-support.mjs';
+import {readFileSync} from 'node:fs';
 
-test('staging ignores inherited database, payment, Node preload and authentication secrets', () => {
-  const inherited = { PATH: 'tools', DB_HOST: 'production', DB_PORT: '3306', DB_PASSWORD: 'live-password',
-    CYCLE_PAYWALL_SECRET: 'live-secret', CYCLE_ENABLED: 'true', NODE_OPTIONS: '--import=live.mjs', AUTH_STORAGE: 'mariadb', JWT_SECRET: 'live-jwt' };
-  const env = stagingEnvironment('/isolated/staging/run-test', 4300, { jwt: 'a'.repeat(64), pepper: 'b'.repeat(64) }, inherited);
-  assert.equal(env.DB_PORT, '9'); assert.equal(env.DB_HOST, '127.0.0.1');
-  assert.equal(env.CYCLE_ENABLED, 'false'); assert.equal(env.CYCLE_MODE, 'sandbox');
-  assert.equal(env.CYCLE_PAYWALL_SECRET, undefined); assert.equal(env.NODE_OPTIONS, undefined);
-  assert.equal(env.AUTH_STORAGE, 'sqlite'); assert.equal(env.PLATFORM_STORAGE, 'json');
-  assert.equal(env.JWT_SECRET, 'a'.repeat(64)); assert.equal(env.PATH, 'tools');
-  assert.ok(!Object.values(env).includes('live-password'));
+// Source contract checks run without Docker or access to an operator environment.
+const compose=readFileSync(new URL('../../docker-compose.yml',import.meta.url),'utf8');
+
+test('optional release inherits its private MFA key without requiring shell interpolation',()=>{
+  const release=readFileSync(new URL('../../deploy/compose.yml',import.meta.url),'utf8');
+  assert.match(release,/env_file: \/srv\/duranki\/production\.env/);
+  assert.doesNotMatch(release,/^\s+MFA_ENCRYPTION_KEY:/m);
 });
 
-test('staging refuses live ports and missing private keys', () => {
-  const keys = { jwt: 'a'.repeat(64), pepper: 'b'.repeat(64) };
-  for (const port of [3000, 3306, 4200, 0, NaN, 4300.1]) assert.throws(() => stagingEnvironment('/stage', port, keys));
-  assert.throws(() => stagingEnvironment('/stage', 4300, {}));
+test('Docker backend explicitly selects MariaDB and disables demo authentication',()=>{
+  for(const name of ['PLATFORM','AUTH','TREASURY','TRAINING','CYCLE','HERITAGE']) {
+    assert.match(compose,new RegExp('^    '+name+'_STORAGE: mariadb\\r?$','m'));
+  }
+  for(const name of ['ALLOW_DEMO_AUTH','FORCE_DEMO_MODE']) {
+    assert.match(compose,new RegExp("^    "+name+": 'false'\\r?$",'m'));
+  }
+  assert.match(compose,/^    DB_HOST: db\r?$/m);
+  assert.match(compose,/^    DB_PORT: '3306'\r?$/m);
+  assert.doesNotMatch(compose,/^\s*(?:env_file|NODE_OPTIONS|CYCLE_PAYWALL_SECRET):/m);
 });
 
-test('synthetic fixture separates tenant and provider permissions and never seeds funds', () => {
-  const accounts = accountSpecs.map(([name, roles], i) => ({ name, roles, telephoneNumber: '000000'+String(1001+i), passwordHash: 'synthetic-hash', password: 'must-not-persist' }));
-  const state = stagingState(accounts);
-  assert.equal(state.users.length, 7); assert.equal(state.demoUsersDisabled, true);
-  assert.equal(state.stagingOnly, true); assert.equal(state.walletTransactions.length, 0); assert.equal(state.wallets.length, 0);
-  assert.equal(JSON.stringify(state).includes('must-not-persist'), false);
-  assert.equal(state.users.filter(u => u.roles.includes('Platform Admin')).length, 1);
-  assert.equal(state.tenantStaff[0].tenantId, 'tenant-stage-a'); assert.equal(state.tenantStaff[1].tenantId, 'tenant-stage-b');
-  assert.equal(state.providerAccessGrants[0].tenantId, 'tenant-stage-a');
-  assert.equal(state.memberCommunities.filter(m => m.memberId === '91006').length, 2);
+test('Docker secrets and browser origin require explicit operator values',()=>{
+  for(const name of ['DB_USER','DB_PASSWORD','DB_NAME','ID_PEPPER','JWT_SECRET','MFA_ENCRYPTION_KEY','FRONTEND_ORIGIN']) {
+    assert.ok(compose.includes(name+': ${'+name+':?'),name+' must not have a fallback');
+  }
+  assert.ok(compose.includes('MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?'));
+  assert.doesNotMatch(compose,/^\s*-\s*[^\r\n]*\.env(?::|\s*$)/m);
 });
 
-test('staging banner identifies test screens while preserving their scripts', () => {
-  const output = stagingBanner('<html><title>Duranki</title><body class="page"><main>Screen</main><script src="/mfa-navigation.js"></script></body></html>');
-  assert.match(output, /STAGING \| Duranki/); assert.match(output, /Synthetic data only/);
-  assert.match(output, /body class="page"/); assert.match(output, /src="\/mfa-navigation.js"/);
+test('Docker application waits for healthy MariaDB and successful schema bootstrap',()=>{
+  assert.match(compose,/image: mariadb:/);
+  assert.match(compose,/command: \[sh, -c, 'npm run migrate && npm run bootstrap'\]/);
+  assert.match(compose,/db:\r?\n\s+condition: service_healthy/);
+  assert.match(compose,/migrate:\r?\n\s+condition: service_completed_successfully/);
+  assert.match(compose,/mariadb_data:\/var\/lib\/mysql/);
+  assert.doesNotMatch(compose,/backend_data:\/usr\/src\/app\/data/);
+  assert.match(compose,/backend_uploads:\/usr\/src\/app\/uploads/);
 });

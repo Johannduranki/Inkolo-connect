@@ -15,8 +15,8 @@ RUN npm ci --omit=dev
 COPY backend ./
 COPY frontend/public /usr/src/frontend/public
 
-# Verify shared policy modules and the required SQLite runtime before deployment.
-RUN node --input-type=module -e "import { DatabaseSync } from 'node:sqlite'; import { resolveCommunityConfiguration } from '../frontend/public/tenant-service-policy.js'; import { memberCapabilities } from '../frontend/public/member-service-catalogue.js'; if (typeof DatabaseSync !== 'function' || typeof resolveCommunityConfiguration !== 'function' || !memberCapabilities) process.exit(1);"
+# Verify the MariaDB driver and shared policy modules without a database connection.
+RUN node --input-type=module -e "import mysql from 'mysql2/promise'; import { resolveCommunityConfiguration } from '../frontend/public/tenant-service-policy.js'; import { memberCapabilities } from '../frontend/public/member-service-catalogue.js'; if (typeof mysql.createPool !== 'function' || typeof resolveCommunityConfiguration !== 'function' || !memberCapabilities) process.exit(1);"
 
 # Expose the port
 EXPOSE 3001

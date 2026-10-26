@@ -9,6 +9,7 @@ function harness(fetch) {
   const storage = { getItem: key => values.get(key) || null, setItem: (key,value) => values.set(key,value), removeItem: key => values.delete(key) };
   let interval, redirect, time=1000;
   vm.runInNewContext(script, { sessionStorage: storage, localStorage: storage, Date: { now: () => time },
+    document: { addEventListener() {} },
     location: { pathname: '/dashboard/tenant', replace: url => { redirect=url; } }, fetch,
     setInterval: fn => { interval=fn; } });
   return { values, redirect: () => redirect, advance: async () => { time+=60001;await interval(); } };

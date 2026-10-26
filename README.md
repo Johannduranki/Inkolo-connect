@@ -1,124 +1,75 @@
-# Duranki
+# Duranki / Inkolo-connect
 
-A standalone authentication prototype using:
+The original application uses Angular, Node.js/Express and MariaDB. This is not
+the separate, unfinished duranki-separated architecture migration.
 
-- Angular and TypeScript for the frontend
-- Node.js and Express for the API
-- MariaDB/MySQL for persistence
-- JWT bearer tokens for authenticated API requests
+**Existing dev server:** Johann must complete the one-time
+[MariaDB server setup](docs/JOHANN_MARIADB_DEV_SETUP.md). The unchanged GitHub
+deployment does not perform database initialization or install private secrets.
 
-The prototype authenticates a user using an ID number only. For production,
-add a second factor such as a password, one-time PIN, or platform SSO.
+## Development
 
-## 1. Create the database
+1. Install Node.js and Docker with Compose, and start Docker.
+2. Copy `deploy/local.env.example` to a private file outside this checkout.
+3. Fill every required secret and select a free local port.
+4. Run `npm start -- --env-file /private/duranki-local.env` from the repository root.
 
-Run `backend/database/001_create_users.sql` in MariaDB:
+Alternatively, set `DURANKI_ENV_FILE` to that private file and run `npm start`.
+The root `start:backend`, `start:frontend` and `start-demo.cmd` entry points all
+launch the same complete Docker stack; do not run them as separate services.
+The launcher has no secret defaults or native database fallback. Docker builds
+the frontend/backend, provisions isolated MariaDB, and runs migration/bootstrap
+before the app starts. Local host database-service recovery is not part of setup.
 
-```powershell
-mysql -u root -p < backend/database/001_create_users.sql
+MariaDB is mandatory. Do not enable demo authentication or fall back to local
+files. Sign in using an authorized account and password; privileged accounts
+require MFA. Bootstrap must not create demo accounts.
+
+### First Administrator
+
+Register a normal member through the application and verify that password login
+works. Independently verify the intended administrator's identity and account ID
+using your authorized operator process. Registration does not itself prove identity,
+and the first signup is never automatically promoted.
+
+Stop all API instances, keep MariaDB running, then from `backend` in a private
+interactive terminal run `npm run provision-admin -- --api-stopped`. Supply the
+existing account ID, confirm its registered telephone, provide an operator label
+for the audit record, and type the requested promotion confirmation. The CLI uses
+the existing private DB configuration and matching `MFA_ENCRYPTION_KEY`; never
+put passwords or keys in command arguments. For Docker, use an interactive
+one-off backend container with the same private environment and database network
+while the regular backend service is stopped.
+
+The CLI creates no account, changes no password or encryption key, and grants
+only `Platform Admin` to the selected active registered account. It records an
+audit event and revokes that user's sessions and pending MFA challenges in the
+same transaction. Restart the API and sign in again; normal privileged MFA
+enrolment/verification is required. Existing MFA credentials are preserved.
+Rerunning for an existing Platform Admin does not modify the account.
+
+## Deployment And Data Safety
+
+For the self-contained local Docker stack, fill a private copy of
+`deploy/local.env.example`, then run:
+
+```sh
+docker compose --env-file /private/duranki-local.env -f compose.local.yml up --build -d
 ```
 
-## 2. Configure the API
+Open http://localhost:3000/login. This builds the frontend/backend and provisions
+an isolated MariaDB. No demo account is seeded. Use synthetic registration.
+MFA_ENCRYPTION_KEY is required canonical base64 of exactly 32 bytes.
+Existing dev-server setup requires separately approved manual migration/bootstrap
+and matching imported secrets before this candidate can start.
 
-Copy `backend/.env.example` to `backend/.env` and replace `ID_PEPPER` and
-`JWT_SECRET` with different long random values.
+Read [MariaDB-only deployment](docs/MARIADB_ONLY.md) for Docker health checks,
+migration ordering, required secrets, existing-volume handling and verification.
+Read [Imported accounts](docs/IMPORTED_DATABASE_LOGIN.md) before importing private
+accounts. Preserve matching encryption keys, identity peppers, uploads and backups.
 
-## 3. Install dependencies
+The existing GitHub Actions workflow deploys code to the dev/test server; it does
+not import private records or run migrations. Production promotion requires
+separate authorization. Browser API calls use same-origin `/api`.
 
-```powershell
-npm.cmd run install:all
-```
-
-If npm reports `UNABLE_TO_VERIFY_LEAF_SIGNATURE`, configure npm to trust your
-organization's root CA certificate instead of disabling SSL verification:
-
-```powershell
-npm.cmd config set cafile "C:\path\to\organization-root-ca.pem"
-```
-
-Ask your network or IT administrator for the correct PEM certificate path.
-
-## 4. Add a test user
-
-The default test ID is `9001015009087`:
-
-```powershell
-npm.cmd --prefix backend run seed
-```
-
-To use another numeric ID:
-
-```powershell
-npm.cmd --prefix backend run seed -- 1234567890
-```
-
-The raw ID number is not stored in the database. The API stores an HMAC hash
-and the final four digits for display.
-
-## 5. Run the module
-
-Start the API:
-
-```powershell
-npm.cmd run start:backend
-```
-
-In another terminal, start Angular:
-
-```powershell
-npm.cmd run start:frontend
-```
-
-Open `http://localhost:4200` and sign in with the seeded ID.
-
-## API endpoints
-
-- `GET /api/health`
-- `POST /api/auth/login` with `{ "idNumber": "9001015009087" }`
-- `GET /api/auth/me` with `Authorization: Bearer <token>`
-# Duranki platform
-
-## Local services
-
-- Angular frontend: `http://127.0.0.1:4200`
-- Node.js API: `http://127.0.0.1:3000`
-- Health check: `http://127.0.0.1:3000/api/health`
-
-The Angular development server proxies `/api` requests to the Node.js API.
-
-## Persistent storage
-
-The API first attempts to connect to MariaDB using `backend/.env`. When MariaDB
-is unavailable and `ALLOW_DEMO_AUTH=true`, the platform uses the durable
-server-side file:
-
-`backend/data/platform-store.json`
-
-Unlike the original in-memory demo, this data survives backend restarts. It
-stores profiles, role assignments, churches, member communities, contacts,
-direct messages, wallets, referrals, marketplace listings, and job listings.
-
-## MariaDB setup
-
-Install and start MariaDB, create the configured database, then run the SQL
-files in `backend/database` in numeric order:
-
-1. `001_create_users.sql`
-2. `002_add_membership.sql`
-3. `003_create_service_subscriptions.sql`
-4. `004_create_service_applications.sql`
-5. `005_create_platform_tables.sql`
-
-Update `backend/.env` with the MariaDB host, port, username, password, and
-database name before restarting the API.
-
-## Community communication API
-
-Authenticated members can:
-
-- search members in their selected church community by name or telephone;
-- add community contacts;
-- read a one-to-one conversation;
-- send persistent direct messages.
-
-The Angular My Community screen uses these API endpoints directly.
+Historical deployment and acceptance reports are not current release sign-off.

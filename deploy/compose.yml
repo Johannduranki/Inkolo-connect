@@ -5,15 +5,20 @@ services:
     restart: unless-stopped
     init: true
     env_file: /srv/duranki/production.env
-    environment:
+    environment: &app-environment
       NODE_ENV: production
       PORT: '3000'
       ALLOW_DEMO_AUTH: 'false'
       FORCE_DEMO_MODE: 'false'
+      PLATFORM_STORAGE: mariadb
+      AUTH_STORAGE: mariadb
+      TREASURY_STORAGE: mariadb
+      TRAINING_STORAGE: mariadb
+      CYCLE_STORAGE: mariadb
+      HERITAGE_STORAGE: mariadb
     ports:
       - '127.0.0.1:3000:3000'
-    volumes:
-      - /srv/duranki/data:/app/backend/data
+    volumes: &app-volumes
       - /srv/duranki/uploads:/app/backend/uploads
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
@@ -25,3 +30,19 @@ services:
       options:
         max-size: '10m'
         max-file: '3'
+  # External MariaDB is managed separately. Run only after backup and approval.
+  migrate:
+    image: ${DURANKI_IMAGE:?Set an immutable release image}
+    profiles: [maintenance]
+    restart: 'no'
+    env_file: /srv/duranki/production.env
+    environment: *app-environment
+    volumes: *app-volumes
+    command: [sh, -c, 'npm run migrate && npm run bootstrap']
+    healthcheck:
+      disable: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
