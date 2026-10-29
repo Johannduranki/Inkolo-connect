@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import {languageSession,resetLanguage} from '../../public/language.js';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../environments/environment';
@@ -20,11 +21,14 @@ export interface User {
 }
 
 export interface ServiceSubscription {
+  id?: string;
+  provider?: string;
+  communityId?: string;
   serviceCode: string;
   planCode: string;
   planLabel: string;
   amountCents: number;
-  status: 'active' | 'cancelled';
+  status: 'active' | 'cancelled' | 'pending';
   subscribedAt: string;
 }
 
@@ -153,6 +157,7 @@ export class AuthService {
   }
 
   logout(): void {
+    resetLanguage();
     const token = this.getToken();
     if (token) void fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, keepalive: true }).catch(() => {});
     this.inMemoryToken = null;
@@ -173,6 +178,7 @@ export class AuthService {
 
   private storeToken(token: string): void {
     this.inMemoryToken = token;
+    void languageSession(token,this.apiUrl+'/preferences/language').catch(()=>window.dispatchEvent(new Event('duranki-language-save-error')));
 
     try {
       sessionStorage.setItem(this.tokenKey, token);

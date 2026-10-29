@@ -1,4 +1,5 @@
 import { DatePipe, DecimalPipe, NgStyle } from '@angular/common';
+import {LanguageComponent,TranslatePipe} from './language.component';
 import { memberCapabilities, reconcileMemberCatalogue, scopedMemberCatalogue, programmeContext } from '../../public/member-service-catalogue.js';
 import { resolveCommunityConfiguration } from '../../public/tenant-service-policy.js';
 import { ChangeDetectorRef, Component, OnInit, inject, signal } from '@angular/core';
@@ -174,6 +175,7 @@ interface WalletOperatorFunction {
   selector: 'app-dashboard',
   standalone: true,
   imports: [
+    LanguageComponent,TranslatePipe,
     DatePipe,
     DecimalPipe,
     NgStyle,
@@ -980,6 +982,9 @@ export class DashboardComponent implements OnInit {
   }
 
   openService(service: Service): void {
+    if(service.code==='funeral'){
+      window.location.assign('/dashboard/funeral-application?communityId='+encodeURIComponent(this.memberCommunity()?.churchId||''));return;
+    }
     if(['Payment setup required','Cycle Pay checkout'].includes(service.catalogueStatus||'')&&!this.isServiceActive(service)){
       window.location.assign('/payments/cycle?service='+encodeURIComponent(service.canonicalCode||service.code)+'&communityId='+encodeURIComponent(this.memberCommunity()?.churchId||''));return;
     }
@@ -1567,7 +1572,7 @@ export class DashboardComponent implements OnInit {
 
   monthlySubscriptionTotal(): string {
     const totalCents = this.subscriptions()
-      .filter((subscription) => subscription.status === 'active')
+      .filter((subscription) => subscription.status === 'active' || (subscription.provider==='funeral'&&subscription.status==='pending'))
       .reduce((total, subscription) => total + subscription.amountCents, 0);
 
     return `R${(totalCents / 100).toFixed(2)} p/m`;
@@ -1629,6 +1634,7 @@ export class DashboardComponent implements OnInit {
   }
 
   isServiceActive(service: Service): boolean {
+    if(service.code==='funeral'&&this.subscriptionFor('funeral')?.status==='pending')return false;
     if (service.application) {
       return this.stepUpApplicationStatus() === 'submitted';
     }

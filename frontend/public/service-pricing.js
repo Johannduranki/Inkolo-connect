@@ -12,6 +12,7 @@
     for(const item of data.services){
       const form=document.createElement('form');form.className='price-row';
       const title=document.createElement('h2');title.textContent=item.name;
+      if(item.code==='funeral-cover'&&data.scope.level==='platform'&&data.canEdit){const link=document.createElement('a');link.href='/dashboard/funeral-cover';link.textContent='Configure funeral cover plans';form.append(link);}
       const source=document.createElement('small');source.className='price-source';source.textContent='Price: '+item.priceSource+' | '+(item.effectiveEnabled?'Enabled':'Disabled');title.append(source);
       const inherited=document.createElement('input');inherited.type='checkbox';inherited.checked=item.inheritPrice;inherited.setAttribute('aria-label',item.name+' inherit price');
       const availability=document.createElement('select');availability.setAttribute('aria-label',item.name+' availability');if(data.scope.level!=='platform')availability.append(option('inherit','Keep inherited availability'));availability.append(option('enabled','Enabled'),option('disabled','Disabled'));availability.value=item.enabled===true?'enabled':item.enabled===false?'disabled':data.scope.level==='platform'?'enabled':'inherit';availability.disabled=!data.canEdit;

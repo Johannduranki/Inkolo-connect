@@ -1,4 +1,5 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
+import {LanguageComponent,TranslatePipe} from './language.component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
@@ -11,7 +12,7 @@ import { parseIdentityText } from './identity-ocr';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule,LanguageComponent,TranslatePipe],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css'
 })

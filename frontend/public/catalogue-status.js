@@ -20,12 +20,7 @@
     }
     const count=document.querySelector('.services-section .section-heading > span');
     if(count&&/services available/.test(count.textContent))count.textContent=count.textContent.replace('services available','enabled services');
-    const empty=document.querySelector('.all-subscribed');
-    if(empty&&!document.querySelector('.subscribed-service')){
-      const heading=empty.querySelector('h3'),description=empty.querySelector('p');
-      if(heading&&heading.textContent!=='No services enabled')heading.textContent='No services enabled';
-      if(description&&description.textContent!=='No services are enabled for both this tenant and community.')description.textContent='No services are enabled for both this tenant and community.';
-    }
+    // Angular owns the translated empty-state copy.
   }
   new MutationObserver(render).observe(document.body,{childList:true,subtree:true});render();
 })();

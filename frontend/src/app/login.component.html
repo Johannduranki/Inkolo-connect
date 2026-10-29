@@ -9,24 +9,25 @@
       <div class="logo-frame">
         <img class="inkolo-logo" src="/duranki-up-logo-transparent.png" alt="Duranki">
       </div>
-      <p class="brand-slogan">Your Gateway to Financial Freedom and Inclusion</p>
+      <p class="brand-slogan">{{ "Your Gateway to Financial Freedom and Inclusion" | translate }}</p>
     </div>
-    <p class="support">Need help? Contact your platform administrator.</p>
+    <p class="support">{{ "Need help? Contact your platform administrator." | translate }}</p>
   </section>
 
   <section class="form-panel">
     <form class="login-card" (submit)="submit(); $event.preventDefault()" novalidate>
+      <app-language-selector />
       <div class="mobile-brand">
         <img class="inkolo-logo mobile" src="/duranki-up-logo-transparent.png" alt="Duranki">
       </div>
 
-      <p class="eyebrow dark">ACCOUNT ACCESS</p>
-      <h2>{{ mode() === 'register' ? 'Create your account' : 'Tell us who you are' }}</h2>
+      <p class="eyebrow dark">{{ "ACCOUNT ACCESS" | translate }}</p>
+      <h2>{{ mode() === 'register' ? ('Create your account' | translate) : ('Tell us who you are' | translate) }}</h2>
       <p class="form-intro">
         @if (mode() === 'register') {
-          Register as a Duranki member using your name, surname and telephone number.
+          {{ "Register as a Duranki member using your name, surname and telephone number." | translate }}
         } @else {
-          Sign in with one telephone number and password, then switch between your assigned dashboards.
+          {{ "Sign in with one telephone number and password, then switch between your assigned dashboards." | translate }}
         }
       </p>
 
@@ -36,38 +37,38 @@
           [class.active]="mode() === 'login'"
           (click)="setMode('login')"
         >
-          Member login
+          {{ "Member login" | translate }}
         </button>
         <button
           type="button"
           [class.active]="mode() === 'register'"
           (click)="setMode('register')"
         >
-          Register
+          {{ "Register" | translate }}
         </button>
       </div>
 
       @if (mode() === 'register' && !existingAccount()) {
       <section class="identity-panel" aria-labelledby="identity-heading">
         <div class="identity-heading">
-          <div><p id="identity-heading">Identity verification</p><strong>{{ isMobileDevice() ? 'Scan your ID card' : 'Upload an ID document' }}</strong></div>
-          <span>{{ isMobileDevice() ? 'Phone detected' : 'Computer detected' }}</span>
+          <div><p id="identity-heading">{{ "Identity verification" | translate }}</p><strong>{{ isMobileDevice() ? ('Scan your ID card' | translate) : ('Upload an ID document' | translate) }}</strong></div>
+          <span>{{ isMobileDevice() ? ('Phone detected' | translate) : ('Computer detected' | translate) }}</span>
         </div>
-        <p class="identity-copy">Choose a JPG, PNG or PDF up to 5 MB. Your document is saved privately when you register.</p>
+        <p class="identity-copy">{{ "Choose a JPG, PNG or PDF up to 5 MB. Your document is saved privately when you register." | translate }}</p>
         <div class="identity-actions">
-          <label class="scan-button">{{ idOcrBusy() ? 'Reading ID...' : 'Upload ID' }}
+          <label class="scan-button">{{ idOcrBusy() ? ('Reading ID...' | translate) : ('Upload ID' | translate) }}
             <input type="file" accept="image/jpeg,image/png,application/pdf" (change)="uploadIdDocument($event)" [disabled]="loading() || idOcrBusy()">
           </label>
           @if (isMobileDevice()) {
-            <label class="scan-button">Scan ID card<input type="file" accept="image/jpeg,image/png" capture="environment" (change)="uploadIdDocument($event)" [disabled]="loading() || idOcrBusy()"></label>
+            <label class="scan-button">{{ "Scan ID card" | translate }}<input type="file" accept="image/jpeg,image/png" capture="environment" (change)="uploadIdDocument($event)" [disabled]="loading() || idOcrBusy()"></label>
           }
-          @if (idDocument) { <button type="button" (click)="clearDocument()" [disabled]="loading()">Remove document</button> }
+          @if (idDocument) { <button type="button" (click)="clearDocument()" [disabled]="loading()">{{ "Remove document" | translate }}</button> }
         </div>
         @if (idScanPreview()) { <img class="identity-preview" [src]="idScanPreview()" alt="Selected ID document preview"> }
-        @if (idScanStatus()) { <p class="scan-status" aria-live="polite">{{ idScanStatus() }}</p> }
+        @if (idScanStatus()) { <p class="scan-status" aria-live="polite">{{ idScanStatus() | translate }}</p> }
       <div class="identity-fields">
         <label>
-          <span>Name</span>
+          <span>{{ "Name" | translate }}</span>
           <input
             type="text"
             autocomplete="given-name"
@@ -76,7 +77,7 @@
           >
         </label>
         <label>
-          <span>Surname</span>
+          <span>{{ "Surname" | translate }}</span>
           <input
             type="text"
             autocomplete="family-name"
@@ -84,11 +85,11 @@
             placeholder="e.g. Shabalala"
           >
         </label>
-        <label><span>ID number</span><input type="text" inputmode="numeric" [formControl]="idNumber" maxlength="13" placeholder="13-digit ID number"></label>
-        <label><span>Date of birth</span><input type="date" [formControl]="dateOfBirth"></label>
-        <label><span>Gender</span><input type="text" [formControl]="gender" maxlength="32"></label>
+        <label><span>{{ "ID number" | translate }}</span><input type="text" inputmode="numeric" [formControl]="idNumber" maxlength="13" placeholder="13-digit ID number"></label>
+        <label><span>{{ "Date of birth" | translate }}</span><input type="date" [formControl]="dateOfBirth"></label>
+        <label><span>{{ "Gender" | translate }}</span><input type="text" [formControl]="gender" maxlength="32"></label>
       </div>
-      @if (idNumber.touched && idNumber.invalid) { <p class="error" role="alert">Enter a 13-digit ID number, or leave it blank.</p> }
+      @if (idNumber.touched && idNumber.invalid) { <p class="error" role="alert">{{ "Enter a 13-digit ID number, or leave it blank." | translate }}</p> }
 
       @if (
         (firstName.touched && firstName.invalid) ||
@@ -99,7 +100,7 @@
       </section>
       }
 
-      <label for="telephoneNumber">Telephone number</label>
+      <label for="telephoneNumber">{{ "Telephone number" | translate }}</label>
       <input
         id="telephoneNumber"
         type="tel"
@@ -112,52 +113,52 @@
       >
       <p id="telephone-help" class="field-help">
         @if (mode() === 'register') {
-          This number becomes your secure Duranki login.
+          {{ "This number becomes your secure Duranki login." | translate }}
         } @else {
-          Use the number registered to your account.
+          {{ "Use the number registered to your account." | translate }}
         }
       </p>
 
       @if (existingAccount()) {
         <section class="existing-registration-panel" aria-live="polite">
-          <strong>You are already registered.</strong>
-          <span>Sign in with your existing password to choose another community. Your account and memberships will be kept.</span>
+          <strong>{{ "You are already registered." | translate }}</strong>
+          <span>{{ "Sign in with your existing password to choose another community. Your account and memberships will be kept." | translate }}</span>
         </section>
       }
 
-      <label for="accountPassword">Password</label>
+      <label for="accountPassword">{{ "Password" | translate }}</label>
       <input id="accountPassword" type="password" [formControl]="password"
         [attr.autocomplete]="mode() === 'register' && !existingAccount() ? 'new-password' : 'current-password'" maxlength="1024">
-      <p class="field-help">{{ mode() === 'register' && !existingAccount() ? 'Use at least 15 characters.' : 'Use the password assigned to your telephone-number login.' }}</p>
+      <p class="field-help">{{ mode() === 'register' && !existingAccount() ? ('Use at least 15 characters.' | translate) : ('Use the password assigned to your telephone-number login.' | translate) }}</p>
       @if (mode() === 'register' && !existingAccount()) {
         <section class="privacy-policy-panel" aria-label="Duranki privacy policy">
-          <div class="privacy-policy-heading"><p>Privacy &amp; consent</p><strong>Duranki Privacy Policy</strong><span>Please read the policy before creating your account.</span></div>
-          <button class="privacy-policy-open" type="button" (click)="openPrivacyPolicy()">Open Privacy Policy</button>
-          <label class="privacy-acceptance"><input type="checkbox" [formControl]="privacyAccepted"><span>I have read and accept the Duranki Privacy Policy.</span></label>
-          @if (privacyAccepted.touched && privacyAccepted.invalid) { <p class="error" role="alert">Please accept the Privacy Policy before registering.</p> }
+          <div class="privacy-policy-heading"><p>{{ "Privacy & consent" | translate }}</p><strong>{{ "Duranki Privacy Policy" | translate }}</strong><span>{{ "Please read the policy before creating your account." | translate }}</span></div>
+          <button class="privacy-policy-open" type="button" (click)="openPrivacyPolicy()">{{ "Open Privacy Policy" | translate }}</button>
+          <label class="privacy-acceptance"><input type="checkbox" [formControl]="privacyAccepted"><span>{{ "I have read and accept the Duranki Privacy Policy." | translate }}</span></label>
+          @if (privacyAccepted.touched && privacyAccepted.invalid) { <p class="error" role="alert">{{ "Please accept the Privacy Policy before registering." | translate }}</p> }
         </section>
       }
 
       @if (telephoneNumber.touched && telephoneNumber.invalid) {
-        <p class="error" role="alert">Enter a valid telephone number.</p>
+        <p class="error" role="alert">{{ "Enter a valid telephone number." | translate }}</p>
       }
       @if (errorMessage()) {
-        <p class="error" role="alert">{{ errorMessage() }}</p>
+        <p class="error" role="alert">{{ errorMessage() | translate }}</p>
       }
 
       <button type="submit" [disabled]="loading() || idOcrBusy()">
         {{
           loading()
-            ? (mode() === 'register' ? 'Creating account...' : 'Signing in...')
-            : (existingAccount() ? 'Sign in and choose a community' : mode() === 'register' ? 'Register and continue' : 'Continue')
+            ? (mode() === 'register' ? ('Creating account...' | translate) : ('Signing in...' | translate))
+            : (existingAccount() ? ('Sign in and choose a community' | translate) : mode() === 'register' ? ('Register and continue' | translate) : ('Continue' | translate))
         }}
       </button>
 
       <p class="privacy">
         @if (mode() === 'register') {
-          Your account will be created with the Member role. Additional roles can only be assigned by an administrator.
+          {{ "Your account will be created with the Member role. Additional roles can only be assigned by an administrator." | translate }}
         } @else {
-          Keep your password and authenticator codes private.
+          {{ "Keep your password and authenticator codes private." | translate }}
         }
       </p>
     </form>
@@ -166,7 +167,7 @@
 @if (privacyPolicyOpen()) {
   <div class="privacy-modal-backdrop" (click)="privacyPolicyOpen.set(false)">
     <section class="privacy-modal" role="dialog" aria-modal="true" aria-labelledby="privacy-modal-heading" (click)="$event.stopPropagation()" (keydown.escape)="privacyPolicyOpen.set(false)">
-      <div class="privacy-modal-title"><h3 id="privacy-modal-heading">Duranki Privacy Policy</h3><button type="button" class="privacy-modal-close" (click)="privacyPolicyOpen.set(false)">Close</button></div>
+      <div class="privacy-modal-title"><h3 id="privacy-modal-heading">{{ "Duranki Privacy Policy" | translate }}</h3><button type="button" class="privacy-modal-close" (click)="privacyPolicyOpen.set(false)">{{ "Close" | translate }}</button></div>
       <pre class="privacy-policy-text">{{ privacyPolicyText() }}</pre>
     </section>
   </div>

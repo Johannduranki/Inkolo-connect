@@ -6,7 +6,7 @@ const source = path => readFileSync(new URL('../../frontend/src/app/' + path, im
 
 test('role select uses the Angular select accessor when asynchronous options arrive', () => {
   const path = 'shared/components/role-switcher/role-switcher.component';
-  assert.match(source(path + '.ts'), /imports: \[AsyncPipe, FormsModule\]/);
+  assert.match(source(path + '.ts'), /imports: \[[^\]]*AsyncPipe, FormsModule[^\]]*\]/);
   assert.match(source(path + '.html'), /\[ngModel\]="activeRole\$ \| async"/);
   assert.doesNotMatch(source(path + '.html'), /\[value\]="activeRole\$ \| async"/);
 });
@@ -39,5 +39,5 @@ test('member sign-out remains available in the mobile header', () => {
   const css = source('dashboard.component.css');
   assert.doesNotMatch(css, /\.avatar,\s*\.sign-out\s*\{\s*display:\s*none/);
   assert.match(css, /\.sign-out\s*\{\s*display:\s*inline-flex/);
-  assert.match(source('dashboard.component.html'), /\(click\)="logout\(\)"\>Sign out/);
+  assert.match(source('dashboard.component.html'), /\(click\)="logout\(\)"\>\{\{ "Sign out" \| translate \}\}/);
 });

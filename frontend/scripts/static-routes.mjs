@@ -8,6 +8,8 @@ import {memberCapabilities} from '../public/member-service-catalogue.js';
 const frontend = fileURLToPath(new URL('../', import.meta.url));
 
 export const staticRoutes = {
+  '/dashboard/funeral-cover': 'funeral-cover.html',
+  '/dashboard/funeral-application': 'funeral-application.html',
   '/two-factor': 'two-factor.html',
   '/join-community': 'join-community.html',
   '/payments/cycle': 'cycle.html',

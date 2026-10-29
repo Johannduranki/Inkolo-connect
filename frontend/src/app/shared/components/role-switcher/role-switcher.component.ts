@@ -1,4 +1,5 @@
 import { Component, Input, OnInit, OnDestroy, inject, signal } from '@angular/core';
+import {TranslatePipe} from '../../../language.component';
 import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../auth.service';
@@ -9,7 +10,7 @@ import { RoleService } from '../../../core/services/role.service';
 @Component({
   selector: 'app-role-switcher',
   standalone: true,
-  imports: [AsyncPipe, FormsModule],
+  imports: [AsyncPipe, FormsModule,TranslatePipe],
   templateUrl: './role-switcher.component.html',
   styleUrl: './role-switcher.component.css'
 })

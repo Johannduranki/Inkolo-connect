@@ -12,7 +12,7 @@ export const memberCapabilities = {
   'vuma-fibre':{issue:'Provider connection required',detail:'Live connectivity ordering and provider fulfilment require setup.'},
   internet:{issue:'Provider connection required',detail:'Internet is a separate enabled service. Its provider and ordering workflow require setup.'},
   insurance:{issue:'Not yet implemented'}, education:{native:'eduu',issue:'Not yet implemented'},
-  'funeral-cover':{native:'funeral',issue:'Provider connection required',detail:'Live policy enrolment, collection and provider confirmation require setup. Existing records are retained.'},
+  'funeral-cover':{native:'funeral',issue:'View cover plans',detail:'Individual and family applications use separately configured cover prices. Payment and provider confirmation are required before cover is active.'},
   loans:{issue:'Not yet implemented',detail:'Loan applications, approvals and payouts are not connected.'},
   pos:{issue:'Not yet implemented'}, deliveries:{native:'catch-a-ride',detail:'Ride requests and matching are available; payment settlement is separate.'},
   'business-services':{issue:'Not yet implemented'},projects:{issue:'Not yet implemented'},

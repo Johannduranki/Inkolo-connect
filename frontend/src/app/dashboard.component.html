@@ -16,18 +16,19 @@
       <a class="brand" href="/dashboard" aria-label="Duranki dashboard">
         <img class="header-logo" src="/duranki-up-logo.png" alt="Duranki">
       </a>
-      <span class="top-powered-by">Powered by Duranki</span>
+      <span class="top-powered-by">{{ "Powered by Duranki" | translate }}</span>
     </div>
 
     <span aria-hidden="true"></span>
 
     <div class="account">
+      <app-language-selector />
       @if (user()) {
         <app-role-switcher
           [userFullName]="user()!.firstName + ' ' + user()!.lastName"
         ></app-role-switcher>
         <div class="monthly-subscription-total" aria-label="Total monthly subscription fee">
-          <span>Monthly subscriptions</span>
+          <span>{{ "Monthly subscriptions" | translate }}</span>
           <strong>{{ monthlySubscriptionTotal() }}</strong>
         </div>
         <span class="avatar" aria-hidden="true">
@@ -38,7 +39,7 @@
           }
         </span>
       }
-      <button class="profile-button" type="button" (click)="profileOpen.set(true)">My Profile</button>
+      <button class="profile-button" type="button" (click)="profileOpen.set(true)">{{ "My Profile" | translate }}</button>
       <button
         class="reset-services"
         type="button"
@@ -47,17 +48,17 @@
       >
         {{ resetLoading() ? 'Resetting...' : 'Reset' }}
       </button>
-      <button class="sign-out" type="button" (click)="logout()">Sign out</button>
+      <button class="sign-out" type="button" (click)="logout()">{{ "Sign out" | translate }}</button>
     </div>
   </header>
 
   <section class="subscribed-banner" aria-labelledby="subscribed-heading">
       <div class="subscribed-heading">
         <div>
-          <p class="eyebrow">YOUR ACTIVE ECOSYSTEM</p>
-          <h2 id="subscribed-heading">My active services</h2>
+          <p class="eyebrow">{{ "YOUR ACTIVE ECOSYSTEM" | translate }}</p>
+          <h2 id="subscribed-heading">{{ "My active services" | translate }}</h2>
         </div>
-        <span>{{ subscribedServices().length }} active</span>
+        <span>{{ subscribedServices().length }} {{ 'active' | translate }}</span>
       </div>
 
       @if (subscribedServices().length > 0) {
@@ -68,24 +69,24 @@
               <img [src]="service.image" [alt]="service.name">
             </div>
             <div class="subscribed-copy">
-              <span>{{ service.tag }}</span>
+              <span>{{ service.tag | translate }}</span>
               <h3>{{ serviceDisplayName(service) }}</h3>
               @if (service.application) {
-                <p>Application submitted for review</p>
+                <p>{{ "Application submitted for review" | translate }}</p>
               } @else {
                 <p>{{ subscriptionFor(service.code)?.planLabel }}</p>
                 <strong class="active-service-price">{{ subscriptionPrice(service) }}</strong>
               }
             </div>
             <button type="button" (click)="openService(service)">
-              Open
+              {{ "Open" | translate }}
               <span aria-hidden="true">→</span>
             </button>
           </article>
         }
       </div>
       } @else {
-        <p class="no-active-services">Subscribe to a service below and it will appear here.</p>
+        <p class="no-active-services">{{ "Subscribe to a service below and it will appear here." | translate }}</p>
       }
 
       @if (subscriptionFor('community')) {
@@ -152,16 +153,16 @@
 
   <section class="hero">
     <div>
-      <p class="eyebrow">YOUR DURANKI ECOSYSTEM</p>
+      <p class="eyebrow">{{ "YOUR DURANKI ECOSYSTEM" | translate }}</p>
       <h1 class="welcome-line">
         @if (user()) {
-          Hi, {{ user()!.firstName }} {{ user()!.lastName }}
+          {{ 'Hi,' | translate }} {{ user()!.firstName }} {{ user()!.lastName }}
         } @else {
-          Hi
+          {{ "Hi" | translate }}
         }
       </h1>
       <p class="hero-copy">
-        Everything you need, connected in one place. Choose a service to get started.
+        {{ "Everything you need, connected in one place. Choose a service to get started." | translate }}
       </p>
     </div>
 
@@ -215,14 +216,17 @@
   </section>
 
   <div class="dashboard-content">
-    @if (walletLoadNotice()) { <p role="status">{{ walletLoadNotice() }}</p> }
+    @if (subscriptionFor('funeral')?.status === 'pending') {
+      <p role="status">{{ "Funeral cover application pending. Its monthly selling price is included in the total; payment and provider confirmation are still required." | translate }}</p>
+    }
+    @if (walletLoadNotice()) { <p role="status">{{ walletLoadNotice() | translate }}</p> }
     <section class="services-section">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">EXPLORE</p>
-          <h2>Duranki services</h2>
+          <p class="eyebrow">{{ "EXPLORE" | translate }}</p>
+          <h2>{{ 'Duranki services' | translate }}</h2>
         </div>
-        <span>{{ availableServices().length }} enabled services</span>
+        <span>{{ availableServices().length }} {{ 'enabled services' | translate }}</span>
       </div>
 
       <div class="service-grid">
@@ -232,7 +236,7 @@
             [style.--accent]="service.accent"
           >
             <div class="image-wrap">
-              <span class="service-tag">{{ service.tag }}</span>
+              <span class="service-tag">{{ service.tag | translate }}</span>
               <img [src]="service.image" [alt]="service.name">
             </div>
             <button
@@ -242,10 +246,10 @@
             >
               {{
                 subscriptionFor(service.code)
-                  ? 'Open'
+                  ? ('Open' | translate)
                   : service.application
-                    ? 'Apply now'
-                    : 'Subscribe'
+                    ? ('Apply now' | translate)
+                    : ('Subscribe' | translate)
               }}
             </button>
             <div class="service-content">
@@ -257,15 +261,15 @@
                 (click)="openService(service)"
               >
                 @if (service.availability === 'coming-soon') {
-                  Coming soon
+                  {{ "Coming soon" | translate }}
                 } @else if (service.application && stepUpApplicationStatus()) {
-                  Application submitted
+                  {{ "Application submitted" | translate }}
                 } @else if (service.application) {
-                  Apply now
+                  {{ "Apply now" | translate }}
                 } @else if (subscriptionFor(service.code)) {
-                  Open
+                  {{ "Open" | translate }}
                 } @else {
-                  Subscribe
+                  {{ "Subscribe" | translate }}
                 }
                 <span aria-hidden="true">→</span>
               </button>
@@ -276,11 +280,11 @@
 
       @if (availableServices().length === 0) {
         <div class="all-subscribed">
-          <h3>No additional services available</h3>
+          <h3>{{ "No additional services available" | translate }}</h3>
           @if (subscribedServices().length > 0) {
-            <p>Your active services are listed above.</p>
+            <p>{{ "Your active services are listed above." | translate }}</p>
           } @else {
-            <p>No services are currently available for this community. Contact your community administrator.</p>
+            <p>{{ "No services are currently available for this community. Contact your community administrator." | translate }}</p>
           }
         </div>
       }
@@ -290,8 +294,8 @@
       <aside class="announcements" aria-labelledby="announcement-title">
         <div class="announcement-heading">
           <div>
-            <p class="eyebrow">STAY INFORMED</p>
-            <h2 id="announcement-title">Community announcements</h2>
+            <p class="eyebrow">{{ "STAY INFORMED" | translate }}</p>
+            <h2 id="announcement-title">{{ "Community announcements" | translate }}</h2>
           </div>
           <span class="live-dot" aria-label="New announcements"></span>
         </div>
@@ -313,7 +317,7 @@
         </div>
 
         <button class="all-announcements" type="button">
-          View all announcements
+          {{ "View all announcements" | translate }}
           <span aria-hidden="true">→</span>
         </button>
       </aside>
@@ -323,7 +327,7 @@
           <div>
             <span class="online-dot" aria-hidden="true"></span>
             <div>
-              <h2 id="chat-title">Community chat</h2>
+              <h2 id="chat-title">{{ "Community chat" | translate }}</h2>
               <p>Members online now</p>
             </div>
           </div>
@@ -377,15 +381,15 @@
   <section class="coming-soon">
     <div class="coming-icon">+</div>
     <div>
-      <p class="eyebrow">THE ECOSYSTEM IS GROWING</p>
-      <h2>More services are on the way.</h2>
-      <p>New Duranki services will appear here as they become available.</p>
+      <p class="eyebrow">{{ "THE ECOSYSTEM IS GROWING" | translate }}</p>
+      <h2>{{ "More services are on the way." | translate }}</h2>
+      <p>{{ "New Duranki services will appear here as they become available." | translate }}</p>
     </div>
   </section>
 
   <footer>
     <span>Duranki Platform</span>
-    <span>One account. A growing ecosystem.</span>
+    <span>{{ 'One account. A growing ecosystem.' | translate }}</span>
   </footer>
 
   @if (selectedService(); as service) {
@@ -410,7 +414,7 @@
           <img [src]="service.image" [alt]="service.name">
           <div>
             <p class="eyebrow">SERVICE SUBSCRIPTION</p>
-            <h2 id="subscription-title">{{ service.name }}</h2>
+            <h2 id="subscription-title">{{ service.name | translate }}</h2>
             <p>{{ service.billingNote }}</p>
           </div>
         </div>
@@ -507,11 +511,11 @@
 
             <div class="referral-form">
               <label>
-                <span>Name</span>
+                <span>{{ "Name" | translate }}</span>
                 <input type="text" [formControl]="referralFirstName" placeholder="Name">
               </label>
               <label>
-                <span>Surname</span>
+                <span>{{ "Surname" | translate }}</span>
                 <input type="text" [formControl]="referralLastName" placeholder="Surname">
               </label>
               <label>
@@ -874,7 +878,7 @@
                   <div><dt>Departure</dt><dd>{{ lift.departureTime }}</dd></div>
                 </dl>
                 <div class="ride-detail-actions">
-                  <button type="button" class="ride-cancel" (click)="cancelLiftSelection()">Cancel</button>
+                  <button type="button" class="ride-cancel" (click)="cancelLiftSelection()">{{ "Cancel" | translate }}</button>
                   <button type="button" class="ride-request" (click)="requestSelectedLift()">Ask for lift</button>
                 </div>
                 </section>
@@ -898,7 +902,7 @@
                       {{ request.driverMessage || request.status }}
                     </span>
                     @if (request.status === 'PENDING') {
-                      <button type="button" (click)="cancelRideRequest(request)">Cancel</button>
+                      <button type="button" (click)="cancelRideRequest(request)">{{ "Cancel" | translate }}</button>
                     }
                   </article>
                 } @empty {
@@ -936,7 +940,7 @@
             <img src="/service-education.png" alt="" aria-hidden="true">
             <div>
               <p class="eyebrow">EDUU LEARNING SERVICES</p>
-              <h3 id="eduu-coming-soon-title">Coming soon</h3>
+              <h3 id="eduu-coming-soon-title">{{ "Coming soon" | translate }}</h3>
               <p>
                 Your EduU subscription is active. Courses, learning resources and
                 education opportunities will be available here soon.
@@ -1422,7 +1426,7 @@
             type="button"
             (click)="closeSubscription()"
           >
-            Close
+            {{ "Close" | translate }}
           </button>
         } @else if (service.application) {
           <button
@@ -1504,7 +1508,7 @@
         <header class="marketplace-heading">
           <div>
             <p class="eyebrow">COMMUNITY MARKETPLACE</p>
-            <h2 id="marketplace-title">Buy and Sell</h2>
+            <h2 id="marketplace-title">{{ "Buy and Sell" | translate }}</h2>
             <p>Discover items offered by trusted Duranki members.</p>
           </div>
           <div class="business-heading-actions">
@@ -2214,7 +2218,7 @@
           <input [formControl]="jobFilterCommunity" placeholder="Church / branch">
           <select [formControl]="jobFilterStatus">
             <option value="">Any status</option>
-            <option value="OPEN">Open</option>
+            <option value="OPEN">{{ "Open" | translate }}</option>
             <option value="IN_PROGRESS">In Progress</option>
             <option value="FILLED">Filled</option>
             <option value="COMPLETED">Completed</option>

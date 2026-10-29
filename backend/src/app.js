@@ -1,4 +1,7 @@
 import express from 'express';
+import {createFuneralConfigRouter} from './funeral-cover-config.js';
+import {createLanguageRouter} from './language-preferences.js';
+import {createFuneralApplicationRouter,funeralSubscriptions} from './funeral-applications.js';
 import { registrationDetails, ensureRegistrationStorage, saveSqlRegistrationDetails, savePlatformRegistrationDetails } from './registration-details.js';
 import { createWholesalerRouter } from './wholesaler-orders.js';
 import { createFrontendCors } from './frontend-origins.js';
@@ -275,6 +278,14 @@ export function createApp({ databaseAvailable = true, accountStorage = 'platform
     resolveUser:(id,claims)=>resolveTreasuryIdentity(id,claims,resolveMfaUser,treasuryStore)
   }));
   const treasuryPublic = fileURLToPath(new URL('../../frontend/public/', import.meta.url));
+  app.use('/api/funeral-cover/config',createFuneralConfigRouter({requireAuth,resolveUser:resolveMfaUser,readState:readPlatformState,updateState:updatePlatformState}));
+  app.use('/api/preferences/language',createLanguageRouter({requireAuth,resolveUser:resolveMfaUser,readState:readPlatformState,updateState:updatePlatformState}));
+  for(const file of ['language.js','language-catalogue.js','language-page.js'])app.get('/'+file,(_req,res)=>res.set('Cache-Control','no-store').sendFile(path.join(treasuryPublic,file)));
+  app.use('/api/funeral-cover/member',createFuneralApplicationRouter({requireAuth,resolveUser:resolveMfaUser,readState:readPlatformState,updateState:updatePlatformState}));
+  app.get('/dashboard/funeral-application',(_req,res)=>res.set('Cache-Control','no-store').sendFile(path.join(treasuryPublic,'funeral-application.html')));
+  app.get('/funeral-application.js',(_req,res)=>res.set('Cache-Control','no-store').sendFile(path.join(treasuryPublic,'funeral-application.js')));
+  app.get('/dashboard/funeral-cover',(_req,res)=>res.set('Cache-Control','no-store').sendFile(path.join(treasuryPublic,'funeral-cover.html')));
+  for(const file of ['funeral-cover.js','funeral-cover.css'])app.get('/'+file,(_req,res)=>res.set('Cache-Control','no-store').sendFile(path.join(treasuryPublic,file)));
   app.get('/private-downloads.js', (_req, res) => res.set('Cache-Control', 'no-store').sendFile(path.join(treasuryPublic, 'private-downloads.js')));
   app.get('/wallet-request-key.js', (_req, res) => res.set('Cache-Control', 'no-store').sendFile(path.join(treasuryPublic, 'wallet-request-key.js')));
   app.get('/catalogue-status.js',(_req,res)=>res.set('Cache-Control','no-store').sendFile(path.join(treasuryPublic,'catalogue-status.js')));
@@ -705,6 +716,7 @@ export function createApp({ databaseAvailable = true, accountStorage = 'platform
       const requestedCommunity=(typeof req.query.communityId==='string'?req.query.communityId:'')||membership?.communityId||membership?.churchId||'';
       const community=requestedCommunity?joinableCommunities(readPlatformState()).find(c=>c.id===requestedCommunity||c.aliases?.includes(requestedCommunity)):null;
       const paid=databaseAvailable||!community?[]:await cycleBilling.active(req.auth.sub,community.id);
+      subscriptions.push(...funeralSubscriptions(readPlatformState(),req.auth.sub,community?.id));
       return res.json([...subscriptions.filter(s=>!s.communityId||s.communityId===community?.id),...(databaseAvailable?[]:await heritageStore.subscriptions(req.auth.sub)),...paid]);
     } catch (error) {
       return next(error);
@@ -714,6 +726,7 @@ export function createApp({ databaseAvailable = true, accountStorage = 'platform
   app.post('/api/subscriptions', requireAuth, async (req, res, next) => {
     try {
       const { serviceCode, planCode, acceptance } = req.body ?? {};
+      if(serviceCode==='funeral'||serviceCode==='funeral-cover')return res.status(400).json({message:'Apply through the funeral cover application page.'});
       const pricingState = readPlatformState();
       const pricingScope = memberServiceScope(pricingState, req.auth.sub, req.body?.communityId);
       const plan = configuredSubscriptionPlan(pricingState, serviceCode, planCode, pricingScope.community || {});
