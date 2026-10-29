@@ -1,0 +1,36 @@
+.dashboard-shell header.topbar.member-header {
+  display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px 32px;
+  padding:20px 32px 16px;background:#fff;border-bottom:1px solid #d7e4ec;
+}
+.dashboard-shell header.member-header > app-role-switcher {justify-self:end;min-width:0;max-width:100%}
+.dashboard-shell header.member-header .header-brand-group {gap:16px}
+.dashboard-shell header.member-header .header-logo {width:76px;height:54px;object-fit:contain}
+.dashboard-shell header.member-header .top-powered-by {font-size:12px;color:#5e7484}
+.dashboard-shell header.member-header .account {
+  grid-column:1/-1;display:flex;flex-wrap:wrap;gap:12px;align-items:center;
+  width:100%;padding-top:14px;border-top:1px solid #e7eef3;
+}
+.dashboard-shell header.member-header app-language-selector {width:208px;padding:0;margin-right:auto}
+.dashboard-shell header.member-header .monthly-subscription-total {border:0;border-radius:8px;box-shadow:none;background:#edf8f5;padding:10px 16px;text-align:left}
+.dashboard-shell header.member-header .monthly-subscription-total span {font-size:12px;color:#3d665e}
+.dashboard-shell header.member-header .monthly-subscription-total strong {font-size:17px;color:#15594e}
+.dashboard-shell header.member-header .account .avatar {width:42px;height:42px;flex-shrink:0}
+.dashboard-shell header.member-header .account button {min-height:44px;margin:0;border-radius:8px;padding:10px 16px;font-size:14px}
+.dashboard-shell header.member-header .account .sign-out {color:#526778;background:transparent}
+@media(max-width:640px){
+  .dashboard-shell header.topbar.member-header {padding:16px;gap:16px;grid-template-columns:1fr}
+  .dashboard-shell header.member-header > app-role-switcher {justify-self:stretch}
+  .dashboard-shell header.member-header .account {justify-content:flex-start}
+  .dashboard-shell header.member-header app-language-selector {width:100%;margin:0}
+  .dashboard-shell header.member-header .monthly-subscription-total {flex:1}
+  .dashboard-shell header.member-header .top-powered-by {font-size:12px}
+}
+.dashboard-shell header.member-header app-role-switcher .role-switcher {gap:24px}
+.dashboard-shell header.member-header app-role-switcher .role-identity {text-align:left;gap:4px}
+.dashboard-shell header.member-header app-role-switcher .role-identity strong {font-size:16px;white-space:normal;overflow-wrap:anywhere}
+.dashboard-shell header.member-header app-role-switcher .role-identity span {font-size:12px;font-weight:500}
+.dashboard-shell header.member-header app-role-switcher .registered-community {padding-left:20px;border-left:2px solid #3aa69b}
+.dashboard-shell header.member-header app-role-switcher .registered-community strong {font-size:17px}
+.dashboard-shell header.member-header app-role-switcher select {min-height:44px;font-size:14px;border-radius:8px}
+.dashboard-shell header.member-header app-role-switcher label {grid-template-columns:minmax(0,1fr)}
+.dashboard-shell header.member-header app-role-switcher select {width:100%;box-sizing:border-box;min-width:0}

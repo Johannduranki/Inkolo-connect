@@ -11,7 +11,7 @@
       tabindex="-1"
     ></iframe>
   }
-  <header class="topbar">
+  <header class="topbar member-header">
     <div class="header-brand-group">
       <a class="brand" href="/dashboard" aria-label="Duranki dashboard">
         <img class="header-logo" src="/duranki-up-logo.png" alt="Duranki">
@@ -19,14 +19,14 @@
       <span class="top-powered-by">{{ "Powered by Duranki" | translate }}</span>
     </div>
 
-    <span aria-hidden="true"></span>
-
+    @if (user()) {
+      <app-role-switcher
+        [userFullName]="user()!.firstName + ' ' + user()!.lastName"
+      ></app-role-switcher>
+    }
     <div class="account">
-      <app-language-selector />
+      <app-language-selector [compact]="true" />
       @if (user()) {
-        <app-role-switcher
-          [userFullName]="user()!.firstName + ' ' + user()!.lastName"
-        ></app-role-switcher>
         <div class="monthly-subscription-total" aria-label="Total monthly subscription fee">
           <span>{{ "Monthly subscriptions" | translate }}</span>
           <strong>{{ monthlySubscriptionTotal() }}</strong>
@@ -40,14 +40,6 @@
         </span>
       }
       <button class="profile-button" type="button" (click)="profileOpen.set(true)">{{ "My Profile" | translate }}</button>
-      <button
-        class="reset-services"
-        type="button"
-        [disabled]="resetLoading()"
-        (click)="resetServices()"
-      >
-        {{ resetLoading() ? 'Resetting...' : 'Reset' }}
-      </button>
       <button class="sign-out" type="button" (click)="logout()">{{ "Sign out" | translate }}</button>
     </div>
   </header>
