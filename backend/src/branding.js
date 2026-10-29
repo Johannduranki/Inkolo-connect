@@ -1,7 +1,8 @@
 import express from 'express';
 import multer from 'multer';
 import { createHash } from 'node:crypto';
-import { platformAdmin, permissionsFor, tenantDirectory } from './tenant-access.js';
+import { platformAdmin, permissionsFor, tenantDirectory, communityPermissions } from './tenant-access.js';
+import { legacyTraderTenantId } from './trader-community-hierarchy.js';
 
 export function imageType(bytes){
   if(bytes.length<24)throw Error('Choose a PNG or JPG image.');
@@ -24,7 +25,7 @@ export function imageType(bytes){
   throw Error('Use a valid PNG or JPG up to 4096 x 4096 pixels.');
 }
 export function brandingDirectory(state){
-  const rows=[...tenantDirectory(state).map(t=>({kind:'tenant',id:t.id,name:t.name,tenantId:t.id})),...(state.importedCommunities||[]).map(c=>({kind:'community',id:c.platformCommunityId||c.id,aliases:[c.id],name:c.name,tenantId:c.tenantId}))];
+  const rows=[...tenantDirectory(state).map(t=>({kind:'tenant',id:t.id,name:t.name,tenantId:t.id})),...(state.importedCommunities||[]).map(c=>({kind:'community',id:c.platformCommunityId||c.id,aliases:[...new Set([c.id,...(c.aliases||[])])],name:c.name,tenantId:c.tenantId}))];
   for(const row of state.brandingDirectory||[])if(!rows.some(r=>r.kind===row.kind&&r.id===row.id))rows.push(row);
   return rows;
 }
@@ -39,6 +40,7 @@ export function createBrandingRouter({requireAuth,resolveUser,readState,updateSt
   router.post('/directory',async(req,res,next)=>{try{
     const user=await resolveUser(req.auth.sub);if(!platformAdmin(user))return res.sendStatus(403);
     const {kind,id,name,tenantId}=req.body||{};
+    if (kind === 'tenant' && id === legacyTraderTenantId) return res.status(409).json({ message: 'Trader Connect is a community of Inkolo Connect, not a tenant.' });
     if(!['tenant','community'].includes(kind)||typeof id!=='string'||!new RegExp('^'+kind+'-[a-z0-9-]{1,100}$').test(id)||typeof name!=='string'||!name.trim()||name.length>150)return res.status(400).json({message:'Invalid tenant or community.'});
     const row={kind,id,name:name.trim(),tenantId:kind==='tenant'?id:tenantId};
     const result=await updateState(current=>{
@@ -53,7 +55,7 @@ export function createBrandingRouter({requireAuth,resolveUser,readState,updateSt
       return {row,created:true};
     });res.status(result.created?201:200).json(result.row);
   }catch(error){if(error.status)res.status(error.status).json({message:error.message});else next(error);}});
-  const canEdit=(state,user,row)=>platformAdmin(user)||permissionsFor(state,user,row.tenantId).includes('branding.manage');
+  const canEdit=(state,user,row)=>platformAdmin(user)||(row.kind==='community'?communityPermissions(state,user,row):permissionsFor(state,user,row.tenantId)).includes('branding.manage');
   router.get('/',async(req,res,next)=>{try{
     const user=await resolveUser(req.auth.sub);if(user?.status!=='active')return res.sendStatus(403);
     const state=readState();res.set('Cache-Control','no-store').json(brandingDirectory(state).map(row=>({...row,canEdit:canEdit(state,user,row),logoUrl:state.entityBranding?.[row.kind+':'+row.id]?.logoUrl||'',revision:state.entityBranding?.[row.kind+':'+row.id]?.revision||0})));

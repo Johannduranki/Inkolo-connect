@@ -14,12 +14,18 @@
     }
     if (!nav) return;
     for (const link of links) nav.append(link);
+    // Member service entry points belong in the subscription cards, not shortcuts.
+    const memberDashboard = location.pathname === '/dashboard/member';
+    if (nav.hidden !== memberDashboard) nav.hidden = memberDashboard;
+    nav.style.setProperty('display', memberDashboard ? 'none' : 'flex', 'important');
     // Keep injected link markers intact; hide duplicate destinations without recreating them.
     const destinations = new Set();
     for (const link of nav.children) {
-      const duplicate = destinations.has(link.href);
+      const url = new URL(link.href, location.href);
+      const destination = url.pathname === '/payments/cycle' ? url.pathname : url.href;
+      const duplicate = destinations.has(destination);
       if (link.hidden !== duplicate) link.hidden = duplicate;
-      destinations.add(link.href);
+      destinations.add(destination);
     }
   }
   new MutationObserver(arrange).observe(document.body, { childList: true, subtree: true });

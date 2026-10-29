@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import express from 'express';
 import { createPlatformRouter } from '../src/platform-api.js';
 
-test('member configuration returns only the selected membership and tenant/community intersection', async t => {
+test('member configuration keeps membership boundaries and uses Duranki availability', async t => {
   const state = {users:[{id:'member',status:'active',roles:['Member']}],
+    servicePricing:{wallet:{mode:'free',amountCents:0,enabled:true}},
     tenantAccessDirectory:[{id:'t',name:'Synthetic tenant',status:'active'}],
     brandingDirectory:[{kind:'community',id:'a',name:'Synthetic A',tenantId:'t'},
       {kind:'community',id:'b',name:'Synthetic B',tenantId:'t'}],
@@ -26,7 +27,7 @@ test('member configuration returns only the selected membership and tenant/commu
   state.cycleServiceAvailability.tenants[0].status='inactive';
   assert.deepEqual((await (await fetch(base+'?communityId=a')).json()).serviceConfiguration.serviceCodes,[]);
   delete state.cycleServiceAvailability;
-  // A registered scope still resolves without policy, but enables no services.
+  // No assignment must never mean every platform service is assigned.
   assert.deepEqual((await (await fetch(base+'?communityId=a')).json()).serviceConfiguration,{id:'a',tenantId:'t',serviceCodes:[]});
   state.brandingDirectory=[];
   assert.equal((await (await fetch(base+'?communityId=a')).json()).serviceConfiguration,null);

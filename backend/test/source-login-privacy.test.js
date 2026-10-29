@@ -14,6 +14,7 @@ function run(mode,mfaRequired=false){
   const loading=()=>false;loading.set=()=>{};
   const control=(value,invalid=false)=>({value,invalid,markAsTouched(){}});
   const screen={mode:()=>mode,existingAccount:()=>false,privacyAccepted:control(false,true),idNumber:control(''),gender:control(''),idOcrBusy:()=>false,loading,errorMessage:{set(){}},firstName:control('',true),lastName:control('',true),
+    address:control(''),city:control(''),region:control(''),country:control(''),postalCode:control(''),
     telephoneNumber:control('0000001004'),password:control('synthetic-password'),completeLogin:()=>calls.push('complete'),
     auth:{login:()=>{calls.push('login');return {pipe:()=>({subscribe:handlers=>handlers.next({user:{},mfaRequired})})};},register:()=>{calls.push('register');}}};
   const fn=vm.runInNewContext(code+';Screen.prototype.submit',{sessionStorage:{getItem:()=>null},finalize:fn=>fn,window:{location:{assign:url=>calls.push(url)}}});

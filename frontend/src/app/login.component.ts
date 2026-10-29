@@ -6,6 +6,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
 import { Router } from '@angular/router';
 import { AuthService } from './auth.service';
+import { MemberCommunityService } from './core/services/member-community.service';
 import { RoleService, UserRole } from './core/services/role.service';
 import { parseIdentityText } from './identity-ocr';
 
@@ -17,6 +18,7 @@ import { parseIdentityText } from './identity-ocr';
   styleUrl: './login.component.css'
 })
 export class LoginComponent {
+  private readonly communities = inject(MemberCommunityService);
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
   readonly brandFaces = Array.from({ length: 16 }, (_, index) => index + 1);
@@ -139,6 +141,11 @@ export class LoginComponent {
     validators: [Validators.required, Validators.pattern(/^[+\d\s()-]{9,24}$/)]
   });
   readonly loading = signal(false);
+  readonly address = new FormControl('', { nonNullable: true, validators: [Validators.maxLength(500)] });
+  readonly city = new FormControl('', { nonNullable: true, validators: [Validators.maxLength(100)] });
+  readonly region = new FormControl('', { nonNullable: true, validators: [Validators.maxLength(100)] });
+  readonly postalCode = new FormControl('', { nonNullable: true, validators: [Validators.maxLength(20)] });
+  readonly country = new FormControl('South Africa', { nonNullable: true, validators: [Validators.maxLength(100)] });
   readonly password = new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(1024)] });
   readonly errorMessage = signal('');
   readonly mode = signal<'login' | 'register'>('login');
@@ -169,6 +176,9 @@ export class LoginComponent {
     this.telephoneNumber.markAsTouched();
     if (this.mode() === 'register' && !this.existingAccount()) {
       this.privacyAccepted.markAsTouched();
+      if ([this.address, this.city, this.region, this.postalCode, this.country].some(control => control.invalid)) {
+        this.errorMessage.set('Check the length of your address details.'); return;
+      }
       this.idNumber.markAsTouched();
       if (this.privacyAccepted.invalid || this.idNumber.invalid || this.gender.invalid || this.idOcrBusy()) return;
       if (this.password.value.length < 15) { this.errorMessage.set('Use a password of at least 15 characters.'); return; }
@@ -192,6 +202,7 @@ export class LoginComponent {
           this.lastName.value.trim(),
           this.password.value,
           { idNumber: this.idNumber.value, dateOfBirth: this.dateOfBirth.value, gender: this.gender.value,
+            address: this.address.value, city: this.city.value, region: this.region.value, postalCode: this.postalCode.value, country: this.country.value,
             privacyAccepted: this.privacyAccepted.value, idDocument: this.idDocument }
         )
       : this.auth.login(
@@ -240,15 +251,11 @@ export class LoginComponent {
       return;
     }
 
-    this.auth.getSubscriptions().subscribe({
-      next: (subscriptions) => {
-        const hasCommunity = subscriptions.some(
-          ({ serviceCode, status }) =>
-            serviceCode === 'community' && status === 'active'
-        );
-        void this.router.navigate([
-          hasCommunity ? '/community' : '/dashboard/member'
-        ]);
+    this.communities.getMemberCommunity(String(user.id)).subscribe({
+      next: (community) => {
+        void this.router.navigate([community?.churchId ? '/community' : '/dashboard/member'], {
+          queryParams: community?.churchId ? { communityId: community.churchId } : {}
+        });
       },
       error: () => void this.router.navigate(['/dashboard/member'])
     });

@@ -32,8 +32,7 @@ test('pricing API persists, audits, validates amounts, protects edits and reject
   assert.equal((await call('admin','/missing',body)).status,404);
   assert.equal((await call('admin','/deliveries',body)).status,200);
   assert.equal((await call('admin','/deliveries',body)).status,409);
-  const data=await (await call('member')).json();assert.equal(data.canEdit,false);assert.equal(data.services.find(s=>s.code==='deliveries').amountCents,3550);
-  for(const row of data.services){assert.equal('costCents' in row,false);assert.equal('shares' in row,false);assert.equal('updatedBy' in row,false);}
+  assert.equal((await call('member')).status,403);
   const admin=await (await call('admin')).json();assert.equal(admin.services.find(s=>s.code==='deliveries').costCents,2000);
   assert.deepEqual(admin.services.find(s=>s.code==='deliveries').shares,body.shares);
   assert.equal((await call('admin','/deliveries',{...body,mode:'free',amountCents:0,revision:1})).status,200);

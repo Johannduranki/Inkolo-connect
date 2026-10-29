@@ -1,20 +1,33 @@
 import express from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { randomUUID } from 'node:crypto';
-import { permissionsFor, tenantDirectory } from './tenant-access.js';
+import { permissionsFor, tenantDirectory, communityPermissions } from './tenant-access.js';
+import { brandingDirectory } from './branding.js';
+import { inkoloTenantId, legacyTraderTenantId, traderCommunityId } from './trader-community-hierarchy.js';
 import { studyCurriculum, legacyStudyCurriculum } from './study-curriculum.js';
 
 const fail = (status, message) => { throw Object.assign(Error(message), { status }); };
 const list = (s, key) => s[key] || [];
 const user = (s, id) => s.users?.find(u => String(u.id) === String(id) && u.status === 'active');
-const isMember = (s, id, tenant) => list(s, 'memberCommunities').some(m => String(m.memberId) === String(id) && m.tenantId === tenant && (!m.status || ['active', 'approved'].includes(String(m.status).toLowerCase())));
+function traderCommunity(s) { return brandingDirectory(s).find(c => c.kind === 'community' && c.id === traderCommunityId && c.tenantId === inkoloTenantId); }
+function studyDirectory(s) {
+  const rows = tenantDirectory(s);
+  return traderCommunity(s) ? [...rows.filter(t => t.id !== legacyTraderTenantId), { id: legacyTraderTenantId, name: 'Trader Connect', parentTenantId: inkoloTenantId, communityId: traderCommunityId }] : rows;
+}
+const isMember = (s, id, tenant) => {
+  const community = tenant === legacyTraderTenantId ? traderCommunity(s) : null;
+  return list(s, 'memberCommunities').some(m => String(m.memberId) === String(id) &&
+    (community ? m.tenantId === inkoloTenantId && [community.id, ...(community.aliases || [])].includes(m.communityId || m.churchId) : m.tenantId === tenant) &&
+    (!m.status || ['active', 'approved'].includes(String(m.status).toLowerCase())));
+};
 export const canTeach = (s, actor, tenant) => {
-  const permissions = permissionsFor(s, actor, tenant);
+  const community = tenant === legacyTraderTenantId ? traderCommunity(s) : null;
+  const permissions = community ? communityPermissions(s, actor, community) : permissionsFor(s, actor, tenant);
   return permissions.includes('training.manage') || permissions.includes('users.manage');
 };
 function authorize(s, id, tenant, manage = false) {
   const actor = user(s, id);
-  if (!actor || !tenantDirectory(s).some(t => t.id === tenant)) fail(403, 'Active tenant access required.');
+  if (!actor || !studyDirectory(s).some(t => t.id === tenant)) fail(403, 'Active training access required.');
   if (!(manage ? canTeach(s, actor, tenant) : canTeach(s, actor, tenant) || isMember(s, id, tenant))) fail(403, 'You do not have access to this tenant training.');
   return actor;
 }
@@ -58,7 +71,7 @@ function untouchedStarter(m, index) {
   return old && m && !m.published && !m.draft.lessons && m.draft.title === old.title && m.draft.content === old.content && !m.draft.resources.length && JSON.stringify(m.draft.questions.map(({ id, ...q }) => q)) === JSON.stringify(old.questions);
 }
 export function seedStudyDrafts(s, tenant = 'tenant-trader-connect', actor = 'system') {
-  if (!tenantDirectory(s).some(t => t.id === tenant)) return [];
+  if (!studyDirectory(s).some(t => t.id === tenant)) return [];
   const modules = s.trainingStudyModules ??= [];
   const added = [];
   studyCurriculum.forEach((lesson, index) => {
@@ -78,7 +91,7 @@ export function seedStudyDrafts(s, tenant = 'tenant-trader-connect', actor = 'sy
 }
 export async function ensureStudyDrafts({ readState, updateState }) {
   const s = readState(), tenant = 'tenant-trader-connect';
-  if (!tenantDirectory(s).some(t => t.id === tenant)) return;
+  if (!studyDirectory(s).some(t => t.id === tenant)) return;
   if (studyCurriculum.every((_, i) => { const m = list(s, 'trainingStudyModules').find(m => m.tenantId === tenant && m.seedKey === 'duranki-study-v1-' + i); return m && !untouchedStarter(m, i); })) return;
   await updateState(state => { seedStudyDrafts(state); });
 }
@@ -163,7 +176,7 @@ export function studyView(s, id, tenant) {
 }
 export function studyReport(s, id, tenant) {
   authorize(s, id, tenant, true);
-  const learnerIds = [...new Set(list(s, 'memberCommunities').filter(m => m.tenantId === tenant && isMember(s, m.memberId, tenant)).map(m => String(m.memberId)))];
+  const learnerIds = [...new Set(list(s, 'memberCommunities').filter(m => isMember(s, m.memberId, tenant)).map(m => String(m.memberId)))];
   const members = learnerIds.map(id => { const u = s.users.find(u => String(u.id) === id); const trainerId = list(s, 'trainingStudyAssignments').find(a => a.tenantId === tenant && a.userId === id)?.trainerId; const trainer = trainerId && user(s, trainerId); return { id, name: [u?.firstName, u?.lastName].filter(Boolean).join(' ') || id, trainerId: trainerId || null, trainerName: trainer ? [trainer.firstName, trainer.lastName].filter(Boolean).join(' ') || trainerId : null }; });
   const progress = list(s, 'trainingStudyProgress').filter(p => p.tenantId === tenant), attempts = list(s, 'trainingStudyAttempts').filter(a => a.tenantId === tenant);
   const modules = list(s, 'trainingStudyModules').filter(m => m.tenantId === tenant && m.published);
@@ -188,7 +201,7 @@ export function assignStudyTrainer(s, id, tenant, memberId, trainerId) {
 export function createStudyRouter({ requireAuth, readState, updateState, databaseAvailable = false }) {
   const router = express.Router(); router.use(requireAuth);
   router.use((req, res, next) => { res.set('Cache-Control', 'no-store'); if (databaseAvailable) return res.status(503).json({ message: 'Training SQL identity adapter must be configured before database cutover.' }); if (!user(readState(), req.auth.sub)) return res.sendStatus(403); next(); });
-  router.get('/access', (req, res) => { const s = readState(), actor = user(s, req.auth.sub); res.json({ tenants: tenantDirectory(s).filter(t => canTeach(s, actor, t.id) || isMember(s, actor.id, t.id)).map(t => ({ ...t, manage: canTeach(s, actor, t.id) })) }); });
+  router.get('/access', (req, res) => { const s = readState(), actor = user(s, req.auth.sub); res.json({ tenants: studyDirectory(s).filter(t => canTeach(s, actor, t.id) || isMember(s, actor.id, t.id)).map(t => ({ ...t, manage: canTeach(s, actor, t.id) })) }); });
   router.get('/:tenantId', (req, res) => res.json(studyView(readState(), req.auth.sub, req.params.tenantId)));
   router.get('/:tenantId/report', (req, res) => res.json(studyReport(readState(), req.auth.sub, req.params.tenantId)));
   const mutate = work => async (req, res) => res.json(await updateState(s => work(s, req)));

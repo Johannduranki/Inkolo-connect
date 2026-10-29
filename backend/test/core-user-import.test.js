@@ -24,7 +24,7 @@ test('preserves local users and superuser; maps source memberships without grant
   assert.ok(admin.roles.includes('Platform Admin'));
   assert.deepEqual(state.users.find(u=>u.id===2000010).roles,['Member']);
   assert.deepEqual(state.memberCommunities.filter(m=>m.memberId==='2000010').map(m=>[m.tenantId,m.communityId]),[
-    ['tenant-trader-connect','trader-ilembe'],['tenant-zuc','community-zuc']]);
+    ['tenant-inkolo','trader-ilembe'],['tenant-zuc','community-zuc']]);
   assert.equal(state.demoUsersDisabled,true);
   const again=buildCoreImport(state,source).state;
   assert.equal(again.users.length,state.users.length);

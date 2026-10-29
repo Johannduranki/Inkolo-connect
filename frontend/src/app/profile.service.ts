@@ -9,6 +9,8 @@ export interface MemberProfile {
   email: string;
   address: string;
   city: string;
+  region: string;
+  country: string;
   postalCode: string;
   emergencyContactName: string;
   emergencyContactNumber: string;
@@ -21,6 +23,8 @@ const emptyProfile: MemberProfile = {
   email: '',
   address: '',
   city: '',
+  region: '',
+  country: '',
   postalCode: '',
   emergencyContactName: '',
   emergencyContactNumber: ''

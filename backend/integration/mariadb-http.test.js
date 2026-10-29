@@ -26,7 +26,8 @@ test('MariaDB HTTP registration, privacy, password login, MFA and restart persis
   const form = (telephoneNumber, consent = true, attach = true) => {
     const data = new FormData();
     for (const [name, value] of Object.entries({ telephoneNumber, firstName: 'Synthetic', lastName: 'HttpFixture',
-      password, idNumber: '9001015009087', dateOfBirth: '1990-01-01', gender: 'Female', privacyAccepted: String(consent) })) data.append(name, value);
+      password, idNumber: '9001015009087', dateOfBirth: '1990-01-01', gender: 'Female', privacyAccepted: String(consent),
+      address: '123 Synthetic Test Street', city: 'Pretoria', region: 'Gauteng', postalCode: '0001', country: 'South Africa' })) data.append(name, value);
     if (attach) data.append('idDocument', new Blob([document], { type: 'application/pdf' }), 'synthetic.pdf');
     return data;
   };
@@ -40,6 +41,17 @@ test('MariaDB HTTP registration, privacy, password login, MFA and restart persis
   const account = await register(form(phone));
   assert.ok(account.accessToken);
   const token = account.accessToken;
+  const profile = await json('/platform/profile', { token });
+  assert.equal(profile.region, 'Gauteng'); assert.equal(profile.city, 'Pretoria');
+  const directory = await json('/community-registration', { token });
+  const trader = directory.communities.find(c => c.name === 'Trader Connect');
+  assert.equal(trader.tenantName, 'Inkolo Connect');
+  await json('/community-registration', { method: 'POST', token, body: { communityId: trader.id } }, 201);
+  await json('/platform/profile', { method: 'PUT', token, body: { region: 'Western Cape', city: 'Cape Town' } });
+  const updatedProfile = await json('/platform/profile', { token });
+  assert.equal(updatedProfile.address, '123 Synthetic Test Street');
+  assert.equal(updatedProfile.region, 'Western Cape');
+  assert.equal((await json('/community-registration', { token })).communities.length, directory.communities.length);
   const details = await json('/auth/registration-details', { token });
   assert.equal(details.idNumber, '9001015009087');
   assert.equal(details.dateOfBirth, '1990-01-01');
@@ -65,6 +77,10 @@ test('MariaDB HTTP registration, privacy, password login, MFA and restart persis
   assert.notEqual(signedIn.mfaRequired, true);
 
   await api.stop(); api = await startApi();
+  assert.deepEqual(await json('/platform/profile', { token }), updatedProfile);
+  const memberships = await json('/platform/community/me/all', { token });
+  assert.equal(memberships.filter(m => m.communityName === 'Trader Connect').length, 1);
+  assert.equal(memberships.find(m => m.communityName === 'Trader Connect').tenantId, 'tenant-inkolo');
   assert.deepEqual(await json('/auth/registration-details', { token }), details);
   await checkDocument(token);
   await login();
@@ -83,6 +99,11 @@ test('MariaDB HTTP registration, privacy, password login, MFA and restart persis
   const verified = await json('/auth/mfa/verify', { method: 'POST', token: challenge.accessToken, body: { code: authenticator.generate(setup.secret) } });
   assert.equal(verified.recoveryCodes.length, 8);
   await json('/auth/me', { token: verified.accessToken });
+  const report = await json('/community-reports?communityId=' + trader.id, { token: verified.accessToken });
+  const reportedMember = report.members.find(m => String(m.id) === String(account.user.id));
+  assert.equal(reportedMember.region, 'Western Cape');
+  assert.equal(reportedMember.city, 'Cape Town');
+  assert.equal(Object.hasOwn(reportedMember, 'address'), false);
   await json('/auth/mfa/verify', { method: 'POST', token: challenge.accessToken, body: { code: authenticator.generate(setup.secret) } }, 401);
 
   await api.stop(); api = await startApi();

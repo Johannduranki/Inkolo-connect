@@ -33,6 +33,7 @@ export class RoleSwitcherComponent implements OnInit, OnDestroy {
     });
   }
   switchCommunity(id: string): void {
+    if (this.communities().length < 2) return;
     if (this.communities().some(row => row.memberCommunityId === id) && this.roles.setActiveRole('Member')) {
       window.location.assign('/dashboard/member?communityId=' + encodeURIComponent(id));
     }

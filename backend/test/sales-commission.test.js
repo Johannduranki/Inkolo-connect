@@ -40,6 +40,7 @@ test('commission API exposes estimates and enforces platform-only settings',asyn
   assert.equal((await call('admin','/marketplace/commission',body)).status,200);
   const quote=await(await call('staff','/marketplace/commission-quote?salePriceCents=100000')).json();assert.equal(quote.durankiCents,1000);assert.equal(quote.sellerRemainderCents,99000);
   assert.equal((await call('staff','/marketplace/commission-quote?salePriceCents=1.1')).status,400);
-  const rows=await(await call('staff','?tenantId=tenant-a')).json(),row=rows.services.find(r=>r.code==='marketplace');assert.equal(row.canEditCommission,false);assert.equal(row.salesCommission.rateBps,100);assert(!('updatedBy' in row.salesCommission));
+  assert.equal((await call('staff','?tenantId=tenant-a')).status,200);
+  const rows=await(await call('staff','?tenantId=tenant-a')).json();assert.ok(rows.services.every(row=>!('salesCommission' in row)&&!('costCents' in row)&&!('shares' in row)));
   assert.equal(salesCommission(s,'keycha-properties').rateBps,null);
 });

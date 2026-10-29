@@ -1,9 +1,9 @@
 import express from 'express';
 import { memberCapabilities } from '../../frontend/public/member-service-catalogue.js';
-import { tenantDirectory, platformAdmin } from './tenant-access.js';
+import { tenantDirectory, platformAdmin, permissionsFor } from './tenant-access.js';
 import { joinableCommunities } from './community-registration.js';
 import { salesCommission, saveSalesCommission, salesCommissionQuote } from './sales-commission.js';
-import { serviceScope, memberServiceScope, canConfigureServices, canReadServiceScope, ownServiceSetting, effectiveServicePrice, serviceEnabled, storeServiceSetting } from './service-scope.js';
+import { assignedServiceCodes, serviceScope, memberServiceScope, canConfigureServices, canReadServiceScope, ownServiceSetting, effectiveServicePrice, serviceEnabled, storeServiceSetting } from './service-scope.js';
 export { effectiveServicePrice, serviceEnabled } from './service-scope.js';
 
 export const serviceCatalogue = {
@@ -43,20 +43,40 @@ export function createServicePricingRouter({requireAuth,resolveUser,readState,up
   const router=express.Router();router.use(requireAuth);
   router.get('/scopes',async(req,res,next)=>{try{
     const state=readState(),user=await resolveUser(req.auth.sub); if(user?.status!=='active')return res.sendStatus(403);
-    const tenants=tenantDirectory(state).filter(t=>canConfigureServices(state,user,t.id));
-    res.set('Cache-Control','no-store').json({platform:platformAdmin(user),tenants,communities:joinableCommunities(state).filter(c=>tenants.some(t=>t.id===c.tenantId)).map(c=>({id:c.id,name:c.name,tenantId:c.tenantId}))});
+    const admin=platformAdmin(user),tenants=tenantDirectory(state).filter(t=>admin||permissionsFor(state,user,t.id).length>0).map(t=>({id:t.id,name:t.name}));
+    if(!admin&&!tenants.length)return res.status(403).json({message:'No tenant service access.'});
+    return res.set('Cache-Control','no-store').json({platform:admin,tenants,communities:[]});
   }catch(error){next(error);}});
+  router.get('/assignments',async(req,res,next)=>{try{
+    const user=await resolveUser(req.auth.sub);if(!platformAdmin(user))return res.sendStatus(403);
+    const state=readState(),scope=serviceScope(state,{tenantId:req.query.tenantId});
+    if(!scope.tenantId)return res.status(400).json({message:'Choose a tenant.'});
+    res.set('Cache-Control','no-store').json({tenantId:scope.tenantId,serviceCodes:assignedServiceCodes(state,scope.tenantId),revision:state.durankiServiceAssignments?.[scope.tenantId]?.revision||0,services:Object.entries(serviceCatalogue).map(([code,name])=>({code,name}))});
+  }catch(e){next(e);}});
+  router.put('/assignments',async(req,res,next)=>{try{
+    const user=await resolveUser(req.auth.sub);if(!platformAdmin(user))return res.sendStatus(403);
+    const {tenantId,serviceCodes,revision}=req.body||{};
+    if(typeof tenantId!=='string'||!tenantId||!Array.isArray(serviceCodes)||serviceCodes.length>100||serviceCodes.some(c=>!Object.hasOwn(serviceCatalogue,c))||!Number.isSafeInteger(revision)||revision<0)return res.status(400).json({message:'Choose a tenant and valid services.'});
+    let saved;await updateState(state=>{
+      if(!platformAdmin(state.users?.find(u=>String(u.id)===String(user.id))))throw Object.assign(Error('Duranki administrator required.'),{status:403});
+      serviceScope(state,{tenantId});const before=state.durankiServiceAssignments?.[tenantId];
+      if((before?.revision||0)!==revision)throw Object.assign(Error('Assignments changed. Refresh before saving.'),{status:409});
+      saved={serviceCodes:[...new Set(serviceCodes)],revision:revision+1,updatedAt:new Date().toISOString(),updatedBy:String(user.id)};
+      (state.durankiServiceAssignments??={})[tenantId]=saved;
+      (state.serviceAssignmentAudit??=[]).push({tenantId,before:before||{serviceCodes:state.cycleServiceAvailability?.tenants?.find(t=>t.id===tenantId)?.serviceCodes||[]},after:saved});
+    });res.json({saved:true,revision:saved.revision});
+  }catch(e){if(e.status)return res.status(e.status).json({message:e.message});next(e);}});
   router.get('/',async(req,res,next)=>{try{
     const user=await resolveUser(req.auth.sub);
     if(!user||user.status!=='active')return res.sendStatus(403);
     const state=readState();
     const scope=req.query.member==='true'?memberServiceScope(state,user.id,req.query.communityId):serviceScope(state,req.query); if(!canReadServiceScope(state,user,scope))return res.sendStatus(403);
-    const canEdit=req.query.member!=='true'&&canConfigureServices(state,user,scope.tenantId);
-    res.set('Cache-Control','no-store').json({canEdit,scope:{level:scope.level,tenantId:scope.tenantId,communityId:scope.communityId},services:Object.entries(serviceCatalogue).map(([code,name])=>{
+    const canEdit=req.query.member!=='true'&&canConfigureServices(state,user,scope.tenantId,scope.community);
+    res.set('Cache-Control','no-store').json({canEdit,scope:{level:scope.level,tenantId:scope.tenantId,communityId:scope.communityId},services:Object.entries(serviceCatalogue).filter(([code])=>canEdit||(scope.tenantId&&assignedServiceCodes(state,scope.tenantId).includes(code))).map(([code,name])=>{
       const price=effectiveServicePrice(state,code,scope),own=ownServiceSetting(state,code,scope);
       const visible={code,name,currency:'ZAR',billingInterval:'monthly',mode:price?.mode||'unconfigured',amountCents:price?.amountCents??null,revision:canEdit?own?.revision||0:price?.revision||0,effectiveRevision:price?.revision||0,priceSource:price?.source||'unconfigured',inheritPrice:scope.level!=='platform'&&(!own||own.inheritPrice===true),enabled:own?.enabled??null,effectiveEnabled:scope.community?serviceEnabled(state,scope.community,code):scope.tenantId?(state.servicePricing?.[code]?.enabled!==false&&(own?.enabled??!!state.cycleServiceAvailability?.tenants?.find(t=>t.id===scope.tenantId)?.serviceCodes?.some(s=>canonicalService(s)===code))):own?.enabled!==false,checkoutReady:checkoutReady(),readiness:memberCapabilities[code]?.issue||'Member screen available',readinessDetail:memberCapabilities[code]?.detail||''};
       const commission=salesCommission(state,code);
-      if(commission)Object.assign(visible,{salesCommission:commission,canEditCommission:canEdit&&scope.level==='platform'&&platformAdmin(user)});
+      if(commission&&canEdit)Object.assign(visible,{salesCommission:commission,canEditCommission:true});
       return canEdit?{...visible,costCents:price?.costCents??null,shares:price?.shares??null}:visible;
     })});
   }catch(error){if(error.status)return res.status(error.status).json({message:error.message});next(error);}});
@@ -73,8 +93,9 @@ export function createServicePricingRouter({requireAuth,resolveUser,readState,up
   }catch(error){if(error.status)return res.status(error.status).json({message:error.message});next(error);}});
   router.put('/:code',async(req,res,next)=>{try{
     const user=await resolveUser(req.auth.sub);
+    if(req.query.tenantId||req.query.communityId)return res.status(403).json({message:'Configure services at Duranki platform level only.'});
     const scope=serviceScope(readState(),req.query);
-    if(!user||user.status!=='active'||!canConfigureServices(readState(),user,scope.tenantId))return res.sendStatus(403);
+    if(!user||user.status!=='active'||!canConfigureServices(readState(),user,scope.tenantId,scope.community))return res.sendStatus(403);
     const code=req.params.code,{mode,amountCents,costCents,shares,revision}=req.body||{};
     if(!Object.hasOwn(serviceCatalogue,code))return res.status(404).json({message:'Unknown service.'});
     if(![undefined,null,true,false].includes(req.body?.enabled))return res.status(400).json({message:'Choose enabled, disabled or inherited availability.'});

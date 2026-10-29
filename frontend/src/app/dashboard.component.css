@@ -3,6 +3,66 @@
   min-height: 100vh;
 }
 
+/* Keep the services rail below the naturally sized header and location strip. */
+.dashboard-shell .member-workspace {
+  display: grid;
+  grid-template-columns: 17rem minmax(0, 1fr);
+  align-items: start;
+  gap: 1.5rem;
+  max-width: 100rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.dashboard-shell .member-workspace-content { min-width: 0; }
+.dashboard-shell .subscribed-service .unsubscribe-service { grid-column: 1 / -1; order: 10; width: 100%; margin-top: 0.5rem; color: #963e35; background: #fff; border: 1px solid #d4b5b1; border-radius: 6px; }
+
+.dashboard-shell .member-workspace > .subscribed-banner {
+  position: static;
+  width: 100%;
+  min-width: 0;
+  max-height: none;
+  margin: 0;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-shell .member-workspace-content > :is(.hero, .dashboard-content, .coming-soon, footer) {
+  box-sizing: border-box;
+  width: 100%;
+  margin-inline: 0;
+}
+
+.dashboard-shell .member-workspace-content > .hero {
+  padding: 1.5rem 0 2rem;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dashboard-shell .hero .welcome-line {
+  font-size: 2.5rem;
+  line-height: 1.15;
+  letter-spacing: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-shell .topbar { grid-template-columns: auto minmax(0, 1fr); gap: 1rem; padding-block: 1rem; }
+.dashboard-shell .topbar > span[aria-hidden] { display: none; }
+.dashboard-shell .account { min-width: 0; }
+
+@media (max-width: 1050px) {
+  .dashboard-shell .member-workspace { grid-template-columns: minmax(0, 1fr); }
+  .dashboard-shell .topbar { position: static; grid-template-columns: minmax(0, 1fr); }
+  .dashboard-shell .account { justify-content: flex-start; }
+}
+
+@media (max-width: 600px) {
+  .dashboard-shell .member-workspace { padding: 1rem; gap: 1rem; }
+  .dashboard-shell .hero .welcome-line { font-size: 2rem; }
+  .dashboard-shell .account app-role-switcher { min-width: 0; max-width: 100%; }
+}
+
 .dashboard-shell {
   min-height: 100vh;
   color: #173541;
@@ -270,6 +330,8 @@ footer {
 
 .subscribed-heading {
   display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   margin-bottom: 1rem;
   align-items: center;
   justify-content: space-between;
@@ -302,6 +364,8 @@ footer {
 }
 
 .subscribed-heading > span {
+  flex-shrink: 0;
+  white-space: nowrap;
   padding: 0.4rem 0.6rem;
   border-radius: 99rem;
   color: var(--bot-blue);

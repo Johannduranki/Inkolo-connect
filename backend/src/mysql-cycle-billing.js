@@ -107,7 +107,7 @@ export class MysqlCycleBilling {
     let submitted=0;
     const due=await this.store.all("SELECT * FROM cycle_subscription WHERE cancelled_at IS NULL AND token IS NOT NULL AND paid_until<=? AND mode=? AND state='ACTIVE'",this.now(),cfg.mode);
     for(const sub of due){
-      const community=joinableCommunities(this.readState()).find(c=>c.id===sub.community_id);
+      const community=joinableCommunities(this.readState()).find(c=>c.id===sub.community_id||c.aliases?.includes(sub.community_id));
       if(!community||!await this.serviceReady(sub.service_code,community))continue;
       const row=await this.store.tx(async()=>{
         const current=await this.store.get('SELECT * FROM cycle_subscription WHERE id=?',sub.id);

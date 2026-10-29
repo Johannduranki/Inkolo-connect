@@ -34,6 +34,7 @@
       c.memberCommunityId = result.membership.communityId || result.membership.churchId;
       $('roles').textContent = 'Your roles: '+result.roles.join(', ');
       selection(); $('status').textContent = result.alreadyMember ? 'You are already registered in this community.' : 'Registration complete. Your other roles and memberships are unchanged.';
+      if(c.memberCommunityId&&result.roles.every(role=>['member','community_member','community member'].includes(String(role).toLowerCase())))location.assign('/community?communityId='+encodeURIComponent(c.memberCommunityId));
     } catch(error) { $('status').textContent = error.message; }
     finally { busy = false; $('join').disabled = !!communities.find(c => c.id === $('community').value)?.joined; }
   };

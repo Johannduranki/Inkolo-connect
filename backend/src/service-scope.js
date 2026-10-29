@@ -1,10 +1,15 @@
-import { tenantDirectory, permissionsFor, platformAdmin } from './tenant-access.js';
+import { tenantDirectory, permissionsFor, platformAdmin, communityPermissions } from './tenant-access.js';
 import { joinableCommunities, findMembership } from './community-registration.js';
+import { inkoloTenantId, legacyTraderTenantId, traderCommunityId, traderAliases } from './trader-community-hierarchy.js';
 const fail = (status, message) => { throw Object.assign(Error(message), { status }); };
 const canonical = code => ({'build-up-balance':'marketplace','job-search':'jobs',funeral:'funeral-cover',eduu:'education','catch-a-ride':'deliveries',transport:'deliveries','uif-trader-training':'trader-training',membership:'community-membership'})[code] || code;
 export function serviceScope(state, input = {}) {
   let tenantId = input.tenantId || '', communityId = input.communityId || '';
   if (typeof tenantId !== 'string' || typeof communityId !== 'string') fail(400, 'Choose a tenant and community.');
+  if (tenantId === legacyTraderTenantId && traderAliases(state).length) {
+    if (communityId && !traderAliases(state).includes(communityId)) fail(403, 'Community does not belong to Trader Connect.');
+    tenantId = inkoloTenantId; communityId ||= traderCommunityId;
+  }
   let community;
   if (communityId) {
     community = joinableCommunities(state).find(c => c.id === communityId || c.aliases?.includes(communityId));
@@ -14,14 +19,16 @@ export function serviceScope(state, input = {}) {
   if (tenantId && !tenantDirectory(state).some(t => t.id === tenantId)) fail(404, 'Tenant not found.');
   return { tenantId, communityId, community, level: communityId ? 'community' : tenantId ? 'tenant' : 'platform' };
 }
-export function canConfigureServices(state, user, tenantId) {
-  if (platformAdmin(user)) return true;
-  if (!tenantId) return false;
-  const permissions = permissionsFor(state, user, tenantId);
-  return permissions.includes('services.manage') || permissions.includes('users.manage');
+export function canConfigureServices(state, user, tenantId, community) {
+  return platformAdmin(user) && !tenantId && !community;
 }
 export function canReadServiceScope(state, user, scope) {
-  return !scope.tenantId || canConfigureServices(state, user, scope.tenantId) || (scope.community && !!findMembership(state, user.id, scope.community));
+  return platformAdmin(user) || (scope.tenantId && permissionsFor(state,user,scope.tenantId).length>0) || (scope.community && !!findMembership(state, user.id, scope.community));
+}
+export function assignedServiceCodes(state, tenantId) {
+  const assigned=state.durankiServiceAssignments?.[tenantId];
+  const codes=assigned?.serviceCodes ?? state.cycleServiceAvailability?.tenants?.find(t=>t.id===tenantId)?.serviceCodes ?? [];
+  return [...new Set(codes.map(canonical))];
 }
 export function memberServiceScope(state, userId, communityId) {
   const memberships = (state.memberCommunities || []).filter(m => String(m.memberId) === String(userId));
@@ -39,31 +46,24 @@ export function ownServiceSetting(state, code, scope) {
 }
 export function effectiveServicePrice(state, code, context = {}) {
   const base = state.servicePricing?.[code];
-  const tenant = state.tenantServicePricing?.[context.tenantId]?.[code];
-  const community = context.communityId ? state.communityServicePricing?.[context.communityId]?.[code] : context.id ? state.communityServicePricing?.[context.id]?.[code] : null;
-  let price = base, source = 'platform';
-  if (base && tenant && !tenant.inheritPrice) { price = tenant; source = 'tenant'; }
-  if (base && community && !community.inheritPrice) { price = community; source = 'community'; }
-  if (!price) return undefined;
-  return { ...price, source, revision: Math.max(base?.revision || 0, tenant?.revision || 0, community?.revision || 0) };
+  // Retain historic scoped records, but never apply them to new service access.
+  return base ? { ...base, source: 'platform' } : undefined;
 }
 export function serviceEnabled(state, community, code) {
   if (!community) return false;
+  if (!assignedServiceCodes(state, community.tenantId).includes(canonical(code))) return false;
   const policy = state.cycleServiceAvailability;
   const tenantPolicy = policy?.tenants?.find(t => t.id === community.tenantId);
   const communityPolicy = policy?.communities?.find(c => c.id === community.id || community.aliases?.includes(c.id));
-  const tenantSetting = state.tenantServicePricing?.[community.tenantId]?.[code];
-  const communitySetting = state.communityServicePricing?.[community.id]?.[code];
   const active = row => !row?.status || ['active', 'configured'].includes(String(row.status).toLowerCase());
   if (!active(tenantPolicy) || !active(communityPolicy) || (communityPolicy && communityPolicy.tenantId !== community.tenantId) || state.servicePricing?.[code]?.enabled === false) return false;
-  const includes = row => !!row?.serviceCodes?.some(s => canonical(s) === code);
-  const tenantEnabled = tenantSetting?.enabled ?? includes(tenantPolicy);
-  const communityEnabled = communitySetting?.enabled ?? includes(communityPolicy);
-  return tenantEnabled && communityEnabled;
+  const price = state.servicePricing?.[code];
+  if (code === 'funeral-cover') return price?.enabled !== false && !!state.funeralCoverConfig?.plans?.some(plan => plan.enabled);
+  return !!price && ['free', 'paid'].includes(price.mode) && price.enabled !== false;
 }
 export function storeServiceSetting(state, userId, code, scopeInput, body, price) {
   const scope = serviceScope(state, scopeInput), actor = state.users?.find(u => String(u.id) === String(userId));
-  if (!canConfigureServices(state, actor, scope.tenantId)) fail(403, 'Service configuration permission required for this tenant.');
+  if (!canConfigureServices(state, actor, scope.tenantId, scope.community)) fail(403, 'Only Duranki platform administrators can configure services, at platform level.');
   const previous = ownServiceSetting(state, code, scope);
   if ((previous?.revision || 0) !== body.revision) fail(409, 'Settings changed. Refresh before saving.');
   const parent = effectiveServicePrice(state, code, scope.communityId ? { tenantId: scope.tenantId } : {});

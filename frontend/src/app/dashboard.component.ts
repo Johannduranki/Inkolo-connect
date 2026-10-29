@@ -1227,7 +1227,7 @@ export class DashboardComponent implements OnInit {
         this.subscriptionLoading.set(false);
         this.closeSubscription();
         if (subscription.serviceCode === 'community') {
-          void this.router.navigate(['/community']);
+          void this.router.navigate(['/community'], { queryParams: { communityId: subscription.communityId || this.route.snapshot.queryParamMap.get('communityId') } });
         } else if (subscription.serviceCode === 'kzncc') {
           void this.router.navigate(['/kzncc']);
         }
@@ -3162,6 +3162,23 @@ export class DashboardComponent implements OnInit {
         this.resetLoading.set(false);
         window.alert('The services could not be reset. Please try again.');
       }
+    });
+  }
+
+  readonly cancellingService = signal('');
+
+  unsubscribeService(service: Service): void {
+    const subscription = this.subscriptionFor(service.code);
+    if (!subscription || this.cancellingService() || !window.confirm(`Unsubscribe from ${this.serviceDisplayName(service)}? Future renewals will stop. Any paid access continues until expiry. Your documents and history will be kept.`)) return;
+    this.cancellingService.set(service.code);
+    this.auth.cancelSubscription(subscription).subscribe({
+      next: result => {
+        this.auth.getSubscriptions().subscribe({
+          next: rows => { this.subscriptions.set(rows); this.cancellingService.set(''); window.alert(result.message); },
+          error: () => { this.cancellingService.set(''); window.alert('Unsubscribed. Please refresh to update your services.'); }
+        });
+      },
+      error: () => { this.cancellingService.set(''); window.alert('Could not unsubscribe. Please try again.'); }
     });
   }
 

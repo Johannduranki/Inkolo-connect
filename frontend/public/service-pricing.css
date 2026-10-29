@@ -18,6 +18,19 @@ body{background:#fff}
 header{border-top:4px solid #087c9a;border-bottom:1px solid #dce6ec;padding:12px 28px;gap:16px 24px}
 header strong{font-size:17px;color:#124a70}
 header nav{gap:12px 24px;align-items:center}
+header nav{gap:10px;max-width:100%}
+header nav a,header > a{
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;
+  box-sizing:border-box;max-width:100%;padding:10px 16px;border:1px solid #c6dce5;
+  border-radius:8px;background:#fff;color:#15516d;text-decoration:none;
+  font-size:14px;font-weight:600;line-height:1.4;text-align:center;overflow-wrap:anywhere;
+  box-shadow:0 3px 8px #16466a12;transition:background .16s,border-color .16s,box-shadow .16s,transform .16s;
+}
+header nav a:hover,header > a:hover{background:#eef9f7;border-color:#58a79f;box-shadow:0 5px 12px #16466a20;transform:translateY(-1px);text-decoration:none}
+header nav a:active,header > a:active{transform:translateY(0);box-shadow:0 1px 3px #16466a18}
+header a[hidden]{display:none!important}
+@media(max-width:650px){header nav{width:100%;margin-left:0;gap:8px}header nav a{flex:1 1 140px}}
+@media(prefers-reduced-motion:reduce){header nav a,header > a{transition:none;transform:none!important}}
 a{color:#056b87;text-underline-offset:4px}
 main{max-width:1200px;margin:30px auto;padding:0 28px 48px}
 .heading{padding-bottom:20px;border-bottom:1px solid #dce6ec}
@@ -26,6 +39,12 @@ main{max-width:1200px;margin:30px auto;padding:0 28px 48px}
 #refresh{background:#fff;color:#14607b;border-color:#a9c4d1;min-width:96px}
 #refresh:hover{background:#edf8fa;border-color:#087c9a}
 .scope-controls{margin:0;padding:22px 0 24px;gap:20px;border-bottom:2px solid #b5e1df;background:#fff}
+.scope-controls[hidden]{display:none}
+#tenant-assignments{padding:24px 0;border-bottom:2px solid #b5e1df}
+#tenant-assignments[hidden]{display:none}
+.assignment-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:20px 0}
+.assignment-options label{display:flex;align-items:center;gap:10px}
+.assignment-options input{width:18px;height:18px}
 .scope-controls label{font-size:14px;color:#25566b;min-width:min(220px,100%)}
 .scope-controls select{border-color:#9fbdcc;background:#f5fafc;margin-top:2px;min-height:46px}
 .pricing-intro{color:#536875;font-size:14px;margin:18px 0 12px}
@@ -55,6 +74,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,su
 .inherit-label input{accent-color:#087f8c}
 .price-preview{font-size:13px;color:#416b5d;padding:4px 0}
 .row-status:empty{display:none}
+#service-picker{padding:20px 0;border-bottom:1px solid #c6dce5}
+#service-picker label{display:block;font-weight:600;margin-bottom:8px}
+#selected-service{width:100%;max-width:480px;min-height:48px}
+#service-picker[hidden],.price-row[hidden]{display:none!important}
 .commission-settings{border-top:1px solid #ead4ae;border-bottom:1px solid #ead4ae;padding:16px 0 20px;margin:8px 0 2px}
 .commission-settings legend{color:#80541d;font-size:14px;padding-right:12px}
 .commission-settings label{color:#6f522e}

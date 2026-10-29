@@ -1,9 +1,10 @@
 import express from 'express';
 import { randomUUID } from 'node:crypto';
 import { hashPassword } from './password-security.js';
+import { inkoloTenantId, legacyTraderTenantId, traderCommunityId, traderMemberCommunityId } from './trader-community-hierarchy.js';
 
 export const tenantPermissions = {
-  'services.manage': 'Tenant and community service configuration',
+  'services.manage': 'Assigned services (read only)',
   'training.manage': 'Study modules and learner results',
   'reports.view': 'Community reports',
   'tenant.view': 'Tenant overview',
@@ -22,6 +23,15 @@ export function permissionsFor(state, user, tenantId) {
   if (!tenantDirectory(state).some(t => t.id === tenantId) || user?.status !== 'active') return [];
   if (platformAdmin(user)) return Object.keys(tenantPermissions);
   return (state.tenantStaff || []).find(a => a.userId === String(user.id) && a.tenantId === tenantId && a.status === 'active')?.permissions || [];
+}
+export function communityPermissions(state, user, community) {
+  const inherited = permissionsFor(state, user, community.tenantId);
+  if (user?.status !== 'active' || community.tenantId !== inkoloTenantId ||
+      ![traderCommunityId, traderMemberCommunityId].includes(community.id)) return inherited;
+  const legacy = (state.tenantStaff || []).find(a => a.userId === String(user.id) && a.tenantId === legacyTraderTenantId && a.status === 'active');
+  const scoped = (legacy?.permissions || []).filter(p => ['services.manage', 'reports.view', 'training.manage', 'branding.manage'].includes(p));
+  if (legacy?.permissions?.includes('users.manage')) scoped.push('services.manage', 'training.manage');
+  return [...new Set([...inherited, ...scoped])];
 }
 const phone = value => { const s = String(value || '').replace(/[\s()+-]/g, ''); return s.startsWith('27') ? '0' + s.slice(2) : s; };
 const publicStaff = (state, row) => {
@@ -84,6 +94,7 @@ export function createTenantAccessRouter({ requireAuth, readState, updateState, 
   router.post('/', async (req, res, next) => { try {
     if (!platformAdmin(req.actor)) return res.status(403).json({ message: 'Platform Admin required.' });
     const { id, name } = req.body;
+    if (id === legacyTraderTenantId) return res.status(409).json({ message: 'Trader Connect is a community of Inkolo Connect, not a tenant.' });
     if (typeof id !== 'string' || !/^tenant-[a-z0-9-]{1,80}$/.test(id) || typeof name !== 'string' || !name.trim() || name.length > 100) return res.status(400).json({ message: 'Valid tenant identifier and name required.' });
     const result = await updateState(state => {
       if (!platformAdmin(state.users.find(user => String(user.id) === String(req.auth.sub)))) fail(403, 'Platform Admin required.');

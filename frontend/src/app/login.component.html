@@ -102,6 +102,19 @@
       </section>
       }
 
+      @if (mode() === 'register' && !existingAccount()) {
+        <fieldset class="address-fields">
+          <legend>{{ "Your address" | translate }}</legend>
+          <label><span>{{ "Street address" | translate }}</span><input type="text" autocomplete="street-address" [formControl]="address" maxlength="500"></label>
+          <div class="identity-fields">
+            <label><span>{{ "Town / city" | translate }}</span><input type="text" autocomplete="address-level2" [formControl]="city" maxlength="100"></label>
+            <label><span>{{ "Province / region" | translate }}</span><input type="text" autocomplete="address-level1" [formControl]="region" maxlength="100" list="signup-regions"></label>
+            <label><span>{{ "Postal code" | translate }}</span><input type="text" autocomplete="postal-code" [formControl]="postalCode" maxlength="20"></label>
+            <label><span>{{ "Country" | translate }}</span><input type="text" autocomplete="country-name" [formControl]="country" maxlength="100"></label>
+          </div>
+          <datalist id="signup-regions"><option>Eastern Cape</option><option>Free State</option><option>Gauteng</option><option>KwaZulu-Natal</option><option>Limpopo</option><option>Mpumalanga</option><option>North West</option><option>Northern Cape</option><option>Western Cape</option></datalist>
+        </fieldset>
+      }
       <label for="telephoneNumber">{{ "Telephone number" | translate }}</label>
       <input
         id="telephoneNumber"

@@ -3,6 +3,7 @@ import multer from 'multer';
 import { randomUUID } from 'node:crypto';
 import { fail, relationshipPath } from './heritage-store.js';
 import {heritageScopes} from './heritage-api.js';
+import { serviceStorageTenant } from './trader-community-hierarchy.js';
 export function createMysqlHeritageRouter({ requireAuth, readState, resolveUser, store }) {
     if (!store) throw Error('A MariaDB heritage store is required.');
     const router = express.Router();
@@ -20,7 +21,7 @@ export function createMysqlHeritageRouter({ requireAuth, readState, resolveUser,
             if (!user || user.status !== 'active')
                 fail(403, 'Active account required.');
             const state = readState(), all = heritageScopes(state), roles = user.roles || [], id = String(user.id);
-            req.actor = { id, name: `${user.first_name || user.firstName || ''} ${user.last_name || user.lastName || ''}`.trim(), platform: roles.includes('Platform Admin'), admin: roles.some(r => ['Tenant Admin', 'Community Admin', 'TENANT_ADMIN', 'COMMUNITY_ADMIN'].includes(r)), scopes: all.filter(s => (state.memberCommunities || []).some(m => String(m.memberId) === id && (m.communityId || m.churchId) === s.community_id && m.tenantId === s.tenant_id)) };
+            req.actor = { id, name: `${user.first_name || user.firstName || ''} ${user.last_name || user.lastName || ''}`.trim(), platform: roles.includes('Platform Admin'), admin: roles.some(r => ['Tenant Admin', 'Community Admin', 'TENANT_ADMIN', 'COMMUNITY_ADMIN'].includes(r)), scopes: all.filter(s => (state.memberCommunities || []).some(m => String(m.memberId) === id && (m.communityId || m.churchId) === s.community_id && serviceStorageTenant(state, m.tenantId, m.communityId || m.churchId) === s.tenant_id)) };
             // Explicit grants extend verifier access only to their assigned community, never a global role alone.
             if (req.actor.admin)
                 for (const s of all)

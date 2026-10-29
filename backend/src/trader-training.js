@@ -3,11 +3,12 @@ import { rateLimit } from 'express-rate-limit';
 import { brandingDirectory } from './branding.js';
 import { platformAdmin } from './tenant-access.js';
 import { starterLessons } from './trader-curriculum.js';
+import { inkoloTenantId, traderCommunityId } from './trader-community-hierarchy.js';
 
 const fail=(status,message)=>{throw Object.assign(Error(message),{status});};
 export const traderTenant='tenant-trader-connect';
-export const trainingCommunities=state=>brandingDirectory(state).filter(c=>c.kind==='community'&&c.tenantId===traderTenant);
-export function trainingMember(state,userId,community){return (state.memberCommunities||[]).some(m=>String(m.memberId)===String(userId)&&m.tenantId===traderTenant&&[community.id,...(community.aliases||[])].includes(m.communityId||m.churchId));}
+export const trainingCommunities=state=>brandingDirectory(state).filter(c=>c.kind==='community'&&(c.tenantId===traderTenant||(c.tenantId===inkoloTenantId&&c.id===traderCommunityId)));
+export function trainingMember(state,userId,community){return (state.memberCommunities||[]).some(m=>String(m.memberId)===String(userId)&&m.tenantId===community.tenantId&&(!m.status||['active','approved'].includes(String(m.status).toLowerCase()))&&[community.id,...(community.aliases||[])].includes(m.communityId||m.churchId));}
 const titles=['Know your business and money','Pricing, profit and stock','Cash flow and record keeping','Customers and daily operations','Business growth and planning'];
 export const draftModules=()=>titles.map((title,i)=>({id:'module-'+(i+1),title,content:starterLessons[i].content,amountCents:null,questions:starterLessons[i].questions.map((q,j)=>({id:'q'+(j+1),...structuredClone(q)}))}));
 export function validateModules(modules,publish){
@@ -35,14 +36,14 @@ export function createTrainingRouter({requireAuth,resolveUser,readState,store}){
   router.get('/access',async(req,res)=>{
     const state=readState(),isAdmin=platformAdmin(req.trainingUser),programmes=[];
     for(const p of await store.list()){
-      const c=trainingCommunities(state).find(c=>c.id===p.community_id);
+      const c=trainingCommunities(state).find(c=>[c.id,...(c.aliases||[])].includes(p.community_id));
       if(c&&trainingMember(state,req.auth.sub,c)&&p.state==='PUBLISHED')programmes.push(await store.memberView(p,req.auth.sub));
     }
-    res.json({admin:isAdmin,tenant:{id:traderTenant,name:'Trader Connect'},communities:trainingCommunities(state).filter(c=>isAdmin||trainingMember(state,req.auth.sub,c)),programmes});
+    res.json({admin:isAdmin,tenant:{id:inkoloTenantId,name:'Inkolo Connect'},communities:trainingCommunities(state).filter(c=>isAdmin||trainingMember(state,req.auth.sub,c)),programmes});
   });
   router.get('/admin',admin,async(_req,res)=>{const programmes=await store.list(),grants=[];for(const p of programmes)for(const g of await store.grants(p.id))grants.push({...g,communityId:p.community_id});res.json({programmes,grants});});
   router.post('/programmes',admin,async(req,res)=>{const c=trainingCommunities(readState()).find(c=>c.id===req.body?.communityId);if(!c)fail(400,'Choose a Trader Connect community.');res.status(201).json(await store.create(c,req.auth.sub));});
   router.put('/programmes/:id',admin,async(req,res)=>res.json(await store.save(req.params.id,req.body||{},req.auth.sub)));
-  router.post('/programmes/:id/modules/:moduleId/attempts',rateLimit({windowMs:60000,limit:15,standardHeaders:true,legacyHeaders:false}),async(req,res)=>{const p=await store.get(req.params.id),c=trainingCommunities(readState()).find(c=>c.id===p?.community_id);if(!c||!trainingMember(readState(),req.auth.sub,c))fail(403,'You must belong to this Trader Connect community.');res.json(await store.attempt(p.id,req.auth.sub,req.params.moduleId,req.body.answers));});
+  router.post('/programmes/:id/modules/:moduleId/attempts',rateLimit({windowMs:60000,limit:15,standardHeaders:true,legacyHeaders:false}),async(req,res)=>{const p=await store.get(req.params.id),c=trainingCommunities(readState()).find(c=>[c.id,...(c.aliases||[])].includes(p?.community_id));if(!c||!trainingMember(readState(),req.auth.sub,c))fail(403,'You must belong to this Trader Connect community.');res.json(await store.attempt(p.id,req.auth.sub,req.params.moduleId,req.body.answers));});
   router.use((error,_req,res,next)=>error.status?res.status(error.status).json({message:error.message}):next(error));return router;
 }

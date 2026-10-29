@@ -15,7 +15,7 @@ test('published funding immutable and draft updates reject stale revision', asyn
 test('incomplete answers and invalid amounts cannot create an entitlement', async (t) => { const s = await setup(t), p = await publish(s); for (const a of [null, [], {}, { q1: 999, q2: 0 }])
     await assert.rejects(async () => await s.attempt(p.id, 'm', 'module-1', a), { status: 400 }); assert.equal((await s.grants(p.id)).length, 0); });
 const state = { importedCommunities: [{ id: 'legacy', platformCommunityId: 'c', name: 'Traders KZN', tenantId: 'tenant-trader-connect', tenantName: 'Trader Connect' }, { id: 'zuc', name: 'ZUC', tenantId: 'tenant-zuc' }], memberCommunities: [{ memberId: 'member', communityId: 'legacy', tenantId: 'tenant-trader-connect' }] };
-test('Trader Connect remains tenant, aliases preserve memberships and other tenants excluded', () => { assert.equal(trainingCommunities(state).length, 1); assert.equal(trainingCommunities(state)[0].name, 'Traders KZN'); assert.ok(trainingMember(state, 'member', community)); assert.equal(trainingMember(state, 'outsider', community), false); });
+test('pre-migration Trader scope remains compatible and excludes other tenants', () => { assert.equal(trainingCommunities(state).length, 1); assert.equal(trainingCommunities(state)[0].name, 'Traders KZN'); assert.ok(trainingMember(state, 'member', community)); assert.equal(trainingMember(state, 'outsider', community), false); });
 test('API protects funding configuration and rejects non-member attempts', async (t) => {
     const store = await setup(t), p = await publish(store), app = express();
     app.use(express.json());

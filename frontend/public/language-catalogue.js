@@ -1,5 +1,6 @@
 // Interface copy only. Names, user-entered data and legal documents are not translated.
 export const zu={
+ 'ID number (optional)':'Inombolo kamazisi (akuphoqelekile)','Contact number (optional)':'Inombolo yokuxhumana (akuphoqelekile)',
  'Duranki services':'Izinsizakalo ze-Duranki',
  'Your wallet has not been activated.':'Isikhwama sakho asikakavulwa.','One account. A growing ecosystem.':'I-akhawunti eyodwa. Izinsizakalo ezandayo.','Choose a plan':'Khetha uhlelo','You are here':'Ulapha',
  'Apply now':'Faka isicelo manje','Coming soon':'Kuyeza maduze','active':'ezisebenzayo','enabled services':'izinsizakalo ezivuliwe','No additional services available':'Azikho ezinye izinsizakalo ezitholakalayo','Your active services are listed above.':'Izinsizakalo zakho ezisebenzayo zibhalwe ngenhla.','No services are currently available for this community. Contact your community administrator.':'Azikho izinsizakalo ezitholakalayo kulo mphakathi okwamanje. Xhumana nomphathi womphakathi wakho.','STAY INFORMED':'HLALA UNOLWAZI','Community announcements':'Izimemezelo zomphakathi','View all announcements':'Buka zonke izimemezelo','Community chat':'Ingxoxo yomphakathi','Hi':'Sawubona','Switch active role':'Shintsha indima esebenzayo',

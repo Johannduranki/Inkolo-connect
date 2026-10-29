@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { permissionsFor, tenantDirectory, platformAdmin } from './tenant-access.js';
 import { resolveCommunityConfiguration } from '../../frontend/public/tenant-service-policy.js';
 import { serviceScope, serviceEnabled } from './service-scope.js';
+import { inkoloTenantId, legacyTraderTenantId, traderCommunityId, traderAliases, serviceStorageTenant } from './trader-community-hierarchy.js';
 
 const fail = (status, message) => { throw Object.assign(Error(message), { status }); };
 const text = (value, max, required = true) => {
@@ -11,12 +12,17 @@ const text = (value, max, required = true) => {
 };
 const integer = (value, min, max) => { if (!Number.isSafeInteger(value) || value < min || value > max) fail(400, 'Enter a valid whole number.'); return value; };
 const actor = (state, id) => { const user = state.users.find(u => String(u.id) === String(id)); if (user?.status !== 'active') fail(403, 'Active account required.'); return user; };
-const manages = (state, user, tenantId) => permissionsFor(state, user, tenantId).includes('users.manage');
+const manages = (state, user, tenantId) => permissionsFor(state, user, tenantId).includes('users.manage') ||
+  (tenantId === legacyTraderTenantId && traderAliases(state).length > 0 && user?.status === 'active' &&
+    (permissionsFor(state, user, inkoloTenantId).includes('users.manage') || (state.tenantStaff || []).some(a => a.userId === String(user.id) && a.tenantId === legacyTraderTenantId && a.status === 'active' && a.permissions?.includes('users.manage'))));
 const admin = (state, user, tenantId) => { if (!manages(state, user, tenantId)) fail(403, 'Tenant administrator access required.'); };
 const store = state => state.wholesalerOrders || { suppliers: [], offers: [], applications: [], orders: [], groups: [], audit: [] };
-export const paidWholesaleAccess = (subscriptions, tenantId, communityId, now = new Date()) => subscriptions.some(s =>
-  ['marketplace','build-up-balance'].includes(s.serviceCode) && s.tenantId === tenantId && s.communityId === communityId &&
-  s.provider === 'cycle' && s.status === 'active' && s.amountCents > 0 && new Date(s.paidUntil) > now);
+export const paidWholesaleAccess = (subscriptions, tenantId, communityId, now = new Date(), state = {}) => {
+  const aliases = traderAliases(state), trader = tenantId === legacyTraderTenantId && aliases.includes(communityId);
+  return subscriptions.some(s => ['marketplace','build-up-balance'].includes(s.serviceCode) &&
+    (trader ? [inkoloTenantId, legacyTraderTenantId].includes(s.tenantId) && aliases.includes(s.communityId) : s.tenantId === tenantId && s.communityId === communityId) &&
+    s.provider === 'cycle' && s.status === 'active' && s.amountCents > 0 && new Date(s.paidUntil) > now);
+};
 function memberScope(state, user, communityId) {
   const membership = (state.memberCommunities || []).find(m => String(m.memberId) === String(user.id) && (m.communityId || m.churchId) === communityId);
   const policy = state.cycleServiceAvailability;
@@ -24,10 +30,11 @@ function memberScope(state, user, communityId) {
   if (!membership || !tenantDirectory(state).some(t => t.id === membership.tenantId)) fail(403, 'Join this community before browsing wholesalers.');
   // A missing published payment policy must not hide manual browsing from existing members.
   // Once published, explicit tenant/community restrictions remain authoritative.
-  const hasOverrides=state.tenantServicePricing?.[membership.tenantId]||state.communityServicePricing||state.servicePricing?.marketplace?.enabled===false;
+  const communitySettings = state.communityServicePricing?.[config?.id || communityId];
+  const hasOverrides=state.tenantServicePricing?.[membership.tenantId]?.marketplace||communitySettings?.marketplace||state.servicePricing?.marketplace?.enabled===false;
   const enabled=hasOverrides?serviceEnabled(state,serviceScope(state,{communityId}).community,'marketplace'):!policy||config?.serviceCodes?.some(c=>['marketplace','build-up-balance'].includes(c));
   if (!enabled) fail(403, 'Buy and Sell is not enabled for this community.');
-  return membership.tenantId;
+  return serviceStorageTenant(state, membership.tenantId, communityId);
 }
 function find(rows, id) { const row = rows.find(r => r.id === id); if (!row) fail(404, 'Record not found.'); return row; }
 export function wholesaleQuote(offer, quantity, groupQuantity = quantity) {
@@ -47,13 +54,14 @@ function groupView(data, offer, communityId) {
 export function wholesaleView(state, userId, tenantId, communityId, subscriptions = [], now = new Date()) {
   const user = actor(state, userId), data = store(state);
   const tenants = tenantDirectory(state).filter(t => manages(state, user, t.id));
+  if (traderAliases(state).length && manages(state, user, legacyTraderTenantId)) tenants.push({ id: legacyTraderTenantId, name: 'Trader Connect (Inkolo Connect)', communityId: traderCommunityId, parentTenantId: inkoloTenantId });
   const communities = (state.memberCommunities || []).filter(m => String(m.memberId) === String(user.id)).filter(m => {
     try { memberScope(state, user, m.communityId || m.churchId); return true; } catch { return false; }
   }).map(m => ({ id: m.communityId || m.churchId, name: m.communityName || m.churchName || m.communityId, tenantId: m.tenantId }));
   if (!tenantId && !communityId) return { tenants, communities, platformAdmin: platformAdmin(user) };
   const isAdmin = !!tenantId;
   if (isAdmin) admin(state, user, tenantId); else tenantId = memberScope(state, user, communityId);
-  const discountEligible = isAdmin || paidWholesaleAccess(subscriptions, tenantId, communityId, now);
+  const discountEligible = isAdmin || paidWholesaleAccess(subscriptions, tenantId, communityId, now, state);
   const suppliers = data.suppliers.filter(s => s.tenantId === tenantId && (isAdmin || s.active));
   const offers = data.offers.filter(o => suppliers.some(s => s.id === o.supplierId)).map(o => discountEligible ? o : {...o, discountBps: 0});
   const orders = data.orders.filter(o => o.tenantId === tenantId && (isAdmin || (o.userId === String(user.id) && o.communityId === communityId)));
@@ -113,7 +121,7 @@ export function wholesaleCommand(state, userId, action, body, now = new Date(), 
     const groupQuantity = pendingGroup(data, offer.id, body.communityId).reduce((n, o) => n + o.quantity, quantity);
     if (groupQuantity > 1000000) fail(400, 'Group quantity limit reached.');
     result = { id: randomUUID(), requestId, tenantId, communityId: body.communityId, userId: String(user.id), supplierId: supplier.id, supplierName: supplier.name, offerId: offer.id, product: offer.product, unit: offer.unit, unitPriceCents: offer.unitPriceCents, quantity, mode: body.mode, status: body.mode === 'group' ? 'collecting' : 'ready_manual', quote: body.mode === 'individual' ? wholesaleQuote(offer, quantity) : null, supplierReference: '', createdAt: stamp };
-    result.discountEligible = paidWholesaleAccess(subscriptionsByUser[String(user.id)] || [], tenantId, body.communityId, now);
+    result.discountEligible = paidWholesaleAccess(subscriptionsByUser[String(user.id)] || [], tenantId, body.communityId, now, state);
     if (body.mode === 'individual' && !result.discountEligible) result.quote = wholesaleQuote({...offer, discountBps: 0}, quantity);
     data.orders.push(result);
   } else if (action === 'close-group') {
@@ -122,7 +130,7 @@ export function wholesaleCommand(state, userId, action, body, now = new Date(), 
     const rows = pendingGroup(data, offer.id, body.communityId), quantity = rows.reduce((n, o) => n + o.quantity, 0);
     if (!rows.length || !wholesaleQuote(offer, quantity).qualified) fail(409, 'The group has not reached the discount threshold.');
     for (const order of rows) {
-      const eligible = paidWholesaleAccess(subscriptionsByUser[order.userId] || [], order.tenantId, order.communityId, now);
+      const eligible = paidWholesaleAccess(subscriptionsByUser[order.userId] || [], order.tenantId, order.communityId, now, state);
       Object.assign(order, { discountEligible: eligible, quote: wholesaleQuote(eligible ? offer : {...offer, discountBps: 0}, order.quantity, quantity), status: 'ready_manual', closedAt: stamp });
     }
     result = { id: randomUUID(), offerId: offer.id, communityId: body.communityId, quantity, closedAt: stamp }; data.groups.push(result);

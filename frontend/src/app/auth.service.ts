@@ -83,11 +83,12 @@ export class AuthService {
     firstName: string,
     lastName: string,
     password: string,
-    identity: { idNumber: string; dateOfBirth: string; gender: string; privacyAccepted: boolean; idDocument: File | null }
+    identity: { idNumber: string; dateOfBirth: string; gender: string; privacyAccepted: boolean; idDocument: File | null; address?: string; city?: string; region?: string; postalCode?: string; country?: string }
   ): Observable<LoginResponse> {
     const body = new FormData();
     for (const [key, value] of Object.entries({ telephoneNumber, firstName, lastName, password,
       idNumber: identity.idNumber, dateOfBirth: identity.dateOfBirth, gender: identity.gender,
+      address: identity.address || '', city: identity.city || '', region: identity.region || '', postalCode: identity.postalCode || '', country: identity.country || '',
       privacyAccepted: String(identity.privacyAccepted) })) body.append(key, value);
     if (identity.idDocument) body.append('idDocument', identity.idDocument);
     return this.http
@@ -120,6 +121,13 @@ export class AuthService {
 
   resetServiceSubscriptions(): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/subscriptions`);
+  }
+
+  cancelSubscription(subscription: ServiceSubscription): Observable<{message:string}> {
+    return this.http.post<{message:string}>(`${this.apiUrl}/subscriptions/cancel`, {
+      serviceCode:subscription.serviceCode, communityId:subscription.communityId || '',
+      provider:subscription.provider, id:subscription.id
+    });
   }
 
   applyForStepUpBoost(

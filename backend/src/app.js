@@ -2,6 +2,7 @@ import express from 'express';
 import {createFuneralConfigRouter} from './funeral-cover-config.js';
 import {createLanguageRouter} from './language-preferences.js';
 import {createFuneralApplicationRouter,funeralSubscriptions} from './funeral-applications.js';
+import { cancelStoredSubscription } from './subscription-cancellation.js';
 import { registrationDetails, ensureRegistrationStorage, saveSqlRegistrationDetails, savePlatformRegistrationDetails } from './registration-details.js';
 import { createWholesalerRouter } from './wholesaler-orders.js';
 import { createFrontendCors } from './frontend-origins.js';
@@ -31,6 +32,8 @@ import { resolveTreasuryIdentity } from './treasury-identity.js';
 import { createCycleRouter } from './cycle-api.js';
 import { createTrainingRouter } from './trader-training.js';
 import { createStudyRouter, ensureStudyDrafts } from './study-modules.js';
+import { ensureTraderCommunity } from './trader-community-hierarchy.js';
+import { memberLocation } from './member-location.js';
 import { cycleConfig } from './cycle-pay.js';
 import { MysqlCycleStore } from './mysql-cycle-store.js';
 import { MysqlCycleBilling } from './mysql-cycle-billing.js';
@@ -246,7 +249,11 @@ export function createApp({ databaseAvailable = true, accountStorage = 'platform
   const trainingStorage = 'mariadb';
   const trainingStore = new MysqlTrainingStore(getPool());
   app.locals.storageReady=Promise.all([app.locals.storageReady,trainingStore.ready()]);
-  app.locals.storageReady = Promise.resolve(app.locals.storageReady).then(() => databaseAvailable ? undefined : ensureStudyDrafts({readState:readPlatformState,updateState:updatePlatformState}));
+  app.locals.storageReady = Promise.resolve(app.locals.storageReady).then(async () => {
+    if (databaseAvailable) return;
+    await ensureTraderCommunity({readState:readPlatformState,updateState:updatePlatformState});
+    await ensureStudyDrafts({readState:readPlatformState,updateState:updatePlatformState});
+  });
   app.use('/api/trader-training/study',createStudyRouter({requireAuth,readState:readPlatformState,updateState:updatePlatformState,databaseAvailable}));
   app.use('/api/trader-training',createTrainingRouter({requireAuth,resolveUser:resolveMfaUser,readState:readPlatformState,store:trainingStore,databaseAvailable}));
   app.use('/api/branding',createBrandingRouter({requireAuth,resolveUser:resolveMfaUser,readState:readPlatformState,updateState:updatePlatformState}));
@@ -383,7 +390,7 @@ export function createApp({ databaseAvailable = true, accountStorage = 'platform
       legacyHeaders: false,
       message: { message: 'Too many registration attempts. Please try again later.' }
     }),
-    multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 9, fieldSize: 2048 } }).single('idDocument'),
+    multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 14, fieldSize: 2048 } }).single('idDocument'),
     async (req, res, next) => {
       const firstName = String(req.body?.firstName ?? '').trim();
       const lastName = String(req.body?.lastName ?? '').trim();
@@ -404,6 +411,8 @@ export function createApp({ databaseAvailable = true, accountStorage = 'platform
 
       try {
         const details = registrationDetails(req.body, req.file);
+        const location = memberLocation(req.body);
+        details.location = location;
         const passwordHash = await hashPassword(req.body.password);
         let user;
 
@@ -447,8 +456,8 @@ export function createApp({ databaseAvailable = true, accountStorage = 'platform
               `INSERT INTO member_profiles
                 (user_id, telephone_number, id_number, email, address, city, postal_code,
                  emergency_contact_name, emergency_contact_number)
-               VALUES (?, ?, ?, NULL, '', '', '', '', '')`,
-              [userId, telephoneNumber, details.idNumber]
+               VALUES (?, ?, ?, NULL, ?, ?, ?, '', '')`,
+              [userId, telephoneNumber, details.idNumber, location.address, location.city, location.postalCode]
             );
             await saveSqlRegistrationDetails(connection, userId, details, req.file);
             await connection.execute(
@@ -512,9 +521,7 @@ export function createApp({ databaseAvailable = true, accountStorage = 'platform
               identityVerificationMethod: details.verificationMethod,
               telephoneNumber,
               email: '',
-              address: '',
-              city: '',
-              postalCode: '',
+              ...location,
               emergencyContactName: '',
               emergencyContactNumber: ''
             });
@@ -706,7 +713,7 @@ export function createApp({ databaseAvailable = true, accountStorage = 'platform
           return mapSubscription({ ...row, plan_label: plan?.label ?? row.plan_code });
         });
       } else if (allowPlatformAccounts) {
-        subscriptions = getDemoSubscriptions(req.auth.sub).map(mapSubscription);
+        subscriptions = getDemoSubscriptions(req.auth.sub).filter(s=>s.status==='active').map(mapSubscription);
       } else {
         subscriptions = [];
       }
@@ -717,7 +724,7 @@ export function createApp({ databaseAvailable = true, accountStorage = 'platform
       const community=requestedCommunity?joinableCommunities(readPlatformState()).find(c=>c.id===requestedCommunity||c.aliases?.includes(requestedCommunity)):null;
       const paid=databaseAvailable||!community?[]:await cycleBilling.active(req.auth.sub,community.id);
       subscriptions.push(...funeralSubscriptions(readPlatformState(),req.auth.sub,community?.id));
-      return res.json([...subscriptions.filter(s=>!s.communityId||s.communityId===community?.id),...(databaseAvailable?[]:await heritageStore.subscriptions(req.auth.sub)),...paid]);
+      return res.json([...subscriptions.filter(s=>!s.communityId||s.communityId===community?.id),...(databaseAvailable?[]:(await heritageStore.subscriptions(req.auth.sub)).filter(s=>s.status==='active')),...paid]);
     } catch (error) {
       return next(error);
     }
@@ -845,6 +852,28 @@ export function createApp({ databaseAvailable = true, accountStorage = 'platform
     } catch (error) {
       return next(error);
     }
+  });
+
+  app.post('/api/subscriptions/cancel', requireAuth, async (req, res, next) => {
+    try {
+      const {serviceCode, communityId = '', provider, id} = req.body || {};
+      if (typeof serviceCode !== 'string' || !serviceCode || typeof communityId !== 'string') return res.status(400).json({message:'Choose a subscription.'});
+      if (provider === 'cycle') {
+        if (typeof id !== 'string' || !id) return res.status(400).json({message:'Choose a subscription.'});
+        return res.json(await cycleBilling.cancel(req.auth.sub, id));
+      }
+      if (serviceCode === 'duranki-heritage') {
+        const result = await heritageStore.tx(()=>heritageStore.run("UPDATE heritage_enrolment SET status='cancelled' WHERE user_id=? AND community_id=?", String(req.auth.sub), communityId));
+        if (!result.affectedRows) return res.status(404).json({message:'Subscription not found.'});
+        return res.json({cancelled:true,message:'Heritage subscription cancelled. Your family records have been retained.'});
+      }
+      if (databaseAvailable) {
+        const [result] = await getPool().execute("UPDATE service_subscriptions SET status='cancelled' WHERE user_id=? AND service_code=?", [req.auth.sub,serviceCode]);
+        if (!result.affectedRows) return res.status(404).json({message:'Subscription not found.'});
+        return res.json({cancelled:true,message:'Subscription cancelled. Your records have been retained.'});
+      }
+      return res.json(await updatePlatformState(state=>cancelStoredSubscription(state,req.auth.sub,serviceCode,communityId)));
+    } catch(error) { next(error); }
   });
 
   app.delete('/api/subscriptions', requireAuth, async (req, res, next) => {

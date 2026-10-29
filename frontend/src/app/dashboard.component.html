@@ -19,11 +19,11 @@
       <span class="top-powered-by">{{ "Powered by Duranki" | translate }}</span>
     </div>
 
-    @if (user()) {
-      <app-role-switcher
-        [userFullName]="user()!.firstName + ' ' + user()!.lastName"
-      ></app-role-switcher>
-    }
+      @if (user()) {
+        <app-role-switcher
+          [userFullName]="user()!.firstName + ' ' + user()!.lastName"
+        ></app-role-switcher>
+      }
     <div class="account">
       <app-language-selector [compact]="true" />
       @if (user()) {
@@ -44,6 +44,7 @@
     </div>
   </header>
 
+  <div class="member-workspace">
   <section class="subscribed-banner" aria-labelledby="subscribed-heading">
       <div class="subscribed-heading">
         <div>
@@ -57,6 +58,11 @@
       <div class="subscribed-list">
         @for (service of subscribedServices(); track service.code) {
           <article class="subscribed-service" [style.--accent]="service.accent">
+            @if (subscriptionFor(service.code)) {
+              <button class="unsubscribe-service" type="button" [disabled]="cancellingService() !== ''" (click)="unsubscribeService(service)">
+                {{ cancellingService() === service.code ? ('Unsubscribing...' | translate) : ('Unsubscribe' | translate) }}
+              </button>
+            }
             <div class="subscribed-logo">
               <img [attr.src]="serviceLogo(service) || null" [alt]="service.name" (error)="serviceLogoFailed($event)">
             </div>
@@ -143,6 +149,7 @@
       }
   </section>
 
+  <div class="member-workspace-content">
   <section class="hero">
     <div>
       <p class="eyebrow">{{ "YOUR DURANKI ECOSYSTEM" | translate }}</p>
@@ -216,7 +223,7 @@
       <div class="section-heading">
         <div>
           <p class="eyebrow">{{ "EXPLORE" | translate }}</p>
-          <h2>{{ 'Duranki services' | translate }}</h2>
+          <h2>{{ memberCommunity()?.churchName || ('Community' | translate) }} {{ 'services' | translate }}</h2>
         </div>
         <span>{{ availableServices().length }} {{ 'enabled services' | translate }}</span>
       </div>
@@ -385,6 +392,8 @@
     <span>Duranki Platform</span>
     <span>{{ 'One account. A growing ecosystem.' | translate }}</span>
   </footer>
+  </div>
+  </div>
 
   @if (selectedService(); as service) {
     <div class="modal-backdrop" (click)="closeSubscription()">

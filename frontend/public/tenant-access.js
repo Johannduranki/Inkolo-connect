@@ -1,4 +1,7 @@
 const $=s=>document.querySelector(s);
+if (new URLSearchParams(location.search).get('tenantId') === 'tenant-trader-connect') {
+  location.replace('/dashboard/tenant?tenantId=tenant-inkolo');
+}
 let tenants=[],staff=[],labels={},editing=null,generation=0;
 const current=()=>tenants.find(t=>t.id===$('#tenant').value);
 async function api(path='',method='GET',body){
@@ -28,7 +31,8 @@ async function show(view){
 }
 function selectTenant(){
   const t=current();if(!t)return;
-  $('#service-settings').hidden=!t.permissions.some(p=>['services.manage','users.manage'].includes(p));
+  $('#service-settings').hidden=false;
+  $('#service-settings').textContent='Assigned services';
   $('#service-settings').href='/dashboard/service-pricing?tenantId='+encodeURIComponent(t.id);
   $('#wholesaler-admin').href='/dashboard/wholesaler-orders?admin=1&tenantId='+encodeURIComponent(t.id);
   $('#community-reports-link').href='/dashboard/community-reports?tenantId='+encodeURIComponent(t.id);

@@ -3,7 +3,7 @@ export function resolveCommunityConfiguration(member, communities, tenants) {
   const aliases = { 'trader-ilembe': 'community-ilembe-traders' };
   const id = member?.communityId || member?.churchId;
   if (!id || !Array.isArray(communities) || !Array.isArray(tenants)) return null;
-  const community = communities.find(item => item.id === id || item.id === aliases[id]);
+  const community = communities.find(item => item.id === id || item.id === aliases[id] || item.aliases?.includes(id));
   if (!community) return null;
   const tenant = tenants.find(item => item.id === community.tenantId);
   if (!tenant) return { ...community, serviceCodes: [] };

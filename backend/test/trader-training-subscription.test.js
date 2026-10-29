@@ -29,11 +29,13 @@ test('free Trader Training subscription is accepted without recording money',asy
   assert.equal(res.code,201);assert.equal(res.body.amountCents,0);assert.equal(res.body.status,'active');assert.equal(res.body.planLabel,'Trader Training access');assert.equal(f.saved.length,1);assert.equal(f.acceptances.length,1);
 });
 
-test('new free access saves canonical community scope and cannot bypass its paid override',async()=>{
+test('new free access saves canonical membership scope and cannot bypass Duranki paid pricing',async()=>{
   const state={tenantAccessDirectory:[{id:'tenant-a',name:'Tenant A'}],importedCommunities:[{id:'legacy-a',platformCommunityId:'community-a',tenantId:'tenant-a'}],memberCommunities:[{memberId:'7',communityId:'legacy-a',tenantId:'tenant-a'}],servicePricing:{'trader-training':{mode:'free',amountCents:0}},tenantServicePricing:{'tenant-a':{'trader-training':{inheritPrice:true,enabled:true}}},communityServicePricing:{'community-a':{'trader-training':{inheritPrice:true,enabled:true}}}};
+  state.durankiServiceAssignments={'tenant-a':{serviceCodes:['trader-training'],revision:1}};
   const f=fixture(state),body={serviceCode:'trader-training',planCode:'free',acceptance:{accepted:true}};
   assert.equal((await f.request(body)).code,201);assert.equal(f.saved[0].communityId,'community-a');assert.equal(f.saved[0].tenantId,'tenant-a');
   state.communityServicePricing['community-a']['trader-training']={enabled:true,mode:'paid',amountCents:500};
+  state.servicePricing['trader-training']={enabled:true,mode:'paid',amountCents:500};
   assert.equal((await f.request(body)).code,400);assert.equal(f.saved.length,1);
 });
 test('training requires terms and rejects unknown plans before saving',async()=>{

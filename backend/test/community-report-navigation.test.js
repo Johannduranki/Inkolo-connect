@@ -6,9 +6,9 @@ import { readFileSync } from 'node:fs';
 const script = readFileSync(new URL('../../frontend/public/community-reports.js', import.meta.url), 'utf8');
 const communities = ['a', 'b'].map(id => ({ id, name: id.toUpperCase(), tenantId: 'tenant-' + id, aliases: ['alias-' + id] }));
 const settle = () => new Promise(resolve => setImmediate(resolve));
-async function screen(query, allowed = communities) {
+async function screen(query, allowed = communities, members = []) {
   const elements = new Map(), requests = [], payment = { href: '/payments/cycle' + query };
-  const make = () => ({ value: '', children: [], textContent: '', append(...children) { this.children.push(...children); }, replaceChildren(...children) { this.children = children; } });
+  const make = () => ({ value: '', children: [], get options() { return this.children; }, textContent: '', append(...children) { this.children.push(...children); }, replaceChildren(...children) { this.children = children; } });
   const get = id => { if (!elements.has(id)) elements.set(id, make()); return elements.get(id); };
   const select = get('community');
   select.append = option => { select.children.push(option); if (!select.value) select.value = option.value; };
@@ -22,7 +22,7 @@ async function screen(query, allowed = communities) {
       requests.push(url);
       if (!url.includes('?')) return { ok: true, json: async () => ({ communities: allowed }) };
       const id = new URL(url, address).searchParams.get('communityId');
-      return { ok: true, json: async () => ({ community: allowed.find(c => c.id === id), generatedAt: new Date().toISOString(), summary: {}, totals: [], payments: [], members: [], notes: [] }) };
+      return { ok: true, json: async () => ({ community: allowed.find(c => c.id === id), generatedAt: new Date().toISOString(), summary: {}, totals: [], payments: [], members, notes: [] }) };
     }
   });
   await settle();
@@ -59,4 +59,21 @@ test('selection is limited to the filtered tenant and empty scopes make no repor
   assert.equal(empty.address().search, '');
   assert.equal(empty.payment.href, '/payments/cycle');
   assert.match(empty.get('notice').textContent, /No communities available/);
+});
+
+test('address region and town are member filters, not community selection or access changes', async () => {
+  const ui = await screen('', [communities[0]], [
+    { id: '1', name: 'Synthetic One', region: 'Gauteng', city: 'Pretoria', services: [] },
+    { id: '2', name: 'Synthetic Two', region: 'Gauteng', city: 'Johannesburg', services: [] },
+    { id: '3', name: 'Synthetic Three', region: '', city: '', services: [] }
+  ]);
+  assert.equal(ui.get('members').children.length, 3);
+  ui.get('region').value = 'Gauteng'; ui.get('region').onchange();
+  assert.equal(ui.get('members').children.length, 2);
+  ui.get('city').value = 'Pretoria'; ui.get('city').onchange();
+  assert.equal(ui.get('members').children.length, 1);
+  assert.equal(ui.get('members').children[0].children[0].textContent, 'Synthetic One');
+  ui.get('region').value = 'Not provided'; ui.get('city').value = ''; ui.get('region').onchange();
+  assert.equal(ui.get('members').children[0].children[0].textContent, 'Synthetic Three');
+  assert.equal(ui.requests.length, 2); assert.equal(ui.get('community').value, 'a');
 });

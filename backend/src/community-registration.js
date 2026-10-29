@@ -26,6 +26,7 @@ export function registerCommunityMember(state, userId, communityId) {
   // Keep legacy community identifiers so existing member pages and services agree.
   const id = community.aliases?.[0] || community.id;
   const membership = existing || {memberId:String(userId), tenantId:community.tenantId,
+    platformCommunityId:community.id,
     communityId:id, communityName:community.name, churchId:id, churchName:community.name,
     branchId:'', branchName:'', isPrimary:!(state.memberCommunities || []).some(m => String(m.memberId) === String(userId))};
   user.roles = [...new Set([...(user.roles || []), 'Member'])];

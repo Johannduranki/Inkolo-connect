@@ -1,16 +1,23 @@
 (()=>{
   const rows=document.getElementById('prices'),notice=document.getElementById('notice');
   const tenant=document.getElementById('tenant'),community=document.getElementById('community');
+  const picker=document.getElementById('service-picker'),selectedService=document.getElementById('selected-service');
+  let selectedCode=null;
+  const showSelectedService=()=>{for(const form of rows.children)form.hidden=selectedCode!==''&&form.dataset.serviceCode!==selectedCode;};
+  selectedService.onchange=()=>{selectedCode=selectedService.value;showSelectedService();};
   let scopes={tenants:[],communities:[]},generation=0;
-  const query=()=>'?'+new URLSearchParams({tenantId:tenant.value,communityId:community.value});
+  const query=()=>scopes.platform?'':'?tenantId='+encodeURIComponent(tenant.value);
   const option=(value,text)=>{const o=document.createElement('option');o.value=value;o.textContent=text;return o;};
-  function communities(){community.replaceChildren(option('','Tenant defaults'));for(const c of scopes.communities.filter(c=>c.tenantId===tenant.value))community.append(option(c.id,c.name));document.getElementById('community-label').hidden=!tenant.value;const back=document.getElementById('tenant-return');back.hidden=!tenant.value;back.href='/dashboard/tenant?tenantId='+encodeURIComponent(tenant.value);}
+  function communities(){community.replaceChildren(...(scopes.tenants.find(t=>t.id===tenant.value)?.communityOnly?[]:[option('','Tenant defaults')]));for(const c of scopes.communities.filter(c=>c.tenantId===tenant.value))community.append(option(c.id,c.name));document.getElementById('community-label').hidden=!tenant.value;const back=document.getElementById('tenant-return');back.hidden=!tenant.value;back.href='/dashboard/tenant?tenantId='+encodeURIComponent(tenant.value);}
   const token=()=>sessionStorage.getItem('duranki_access_token')||localStorage.getItem('duranki_access_token')||'';
   async function api(path='',body){const response=await fetch('/api/service-pricing'+path,{method:body?'PUT':'GET',headers:{Authorization:'Bearer '+token(),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,cache:'no-store'});const data=await response.json().catch(()=>({}));if(!response.ok)throw Object.assign(Error(data.message||'Sign in with service configuration permission.'),{status:response.status});return data;}
   function label(text,control){const node=document.createElement('label'),span=document.createElement('span');span.textContent=text;node.append(span,control);return node;}
   async function load(){const ticket=++generation,scopeQuery=query();rows.replaceChildren();try{const data=await api(scopeQuery);if(ticket!==generation)return;const legacy=!data.scope;data.scope??={level:'platform'};notice.textContent=legacy?'Tenant and community configuration is awaiting API activation. Existing Duranki prices remain available.':data.canEdit?(data.scope.level==='platform'?'Duranki default prices and availability.':data.scope.level==='tenant'?'Tenant defaults. Community overrides remain independent.':'Community-specific settings. Other communities remain unchanged.'):'Read-only service prices.';
+    selectedCode=selectedCode===''||data.services.some(item=>item.code===selectedCode)?selectedCode:(data.services[0]?.code??'');
+    selectedService.replaceChildren(option('','All services'),...data.services.map(item=>option(item.code,item.name)));
+    selectedService.value=selectedCode;picker.hidden=data.services.length===0;
     for(const item of data.services){
-      const form=document.createElement('form');form.className='price-row';
+      const form=document.createElement('form');form.className='price-row';form.dataset.serviceCode=item.code;
       const title=document.createElement('h2');title.textContent=item.name;
       if(item.code==='funeral-cover'&&data.scope.level==='platform'&&data.canEdit){const link=document.createElement('a');link.href='/dashboard/funeral-cover';link.textContent='Configure funeral cover plans';form.append(link);}
       const source=document.createElement('small');source.className='price-source';source.textContent='Price: '+item.priceSource+' | '+(item.effectiveEnabled?'Enabled':'Disabled');title.append(source);
@@ -49,8 +56,9 @@
       }
       rows.append(form);
     }
-  }catch(error){if(ticket===generation){notice.textContent=error.message;rows.replaceChildren();}}}
+    showSelectedService();
+  }catch(error){if(ticket===generation){notice.textContent=error.message;rows.replaceChildren();picker.hidden=true;}}}
   const change=()=>{history.replaceState(null,'',query());load();};tenant.onchange=()=>{communities();change();};community.onchange=change;
   document.getElementById('refresh').onclick=load;
-  (async()=>{try{try{scopes=await api('/scopes');}catch(error){if(error.status!==404)throw error;}if(scopes.platform||!scopes.tenants.length)tenant.append(option('','Duranki defaults'));for(const t of scopes.tenants)tenant.append(option(t.id,t.name));const requested=new URLSearchParams(location.search);if(requested.get('tenantId')&&scopes.tenants.some(t=>t.id===requested.get('tenantId')))tenant.value=requested.get('tenantId');communities();if(scopes.communities.some(c=>c.tenantId===tenant.value&&c.id===requested.get('communityId')))community.value=requested.get('communityId');await load();}catch(error){notice.textContent=error.message;}})();
+  (async()=>{try{scopes=await api('/scopes');community.replaceChildren(option('',''));document.getElementById('tenant-return').hidden=true;if(scopes.platform){tenant.replaceChildren(option('','Duranki'));history.replaceState(null,'',location.pathname);}else{tenant.replaceChildren(...scopes.tenants.map(t=>option(t.id,t.name)));const requested=new URLSearchParams(location.search).get('tenantId');if(scopes.tenants.some(t=>t.id===requested))tenant.value=requested;tenant.parentElement.firstChild.textContent='Tenant';tenant.closest('.scope-controls').hidden=false;document.querySelector('h1').textContent='Assigned services';document.querySelector('.pricing-notes').hidden=true;document.querySelector('.pricing-intro').textContent='Services assigned by Duranki. Configuration is managed by Duranki administrators.';tenant.onchange=()=>{history.replaceState(null,'',query());load();};}await load();}catch(error){notice.textContent=error.message;rows.replaceChildren();}})();
 })();

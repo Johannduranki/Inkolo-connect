@@ -1,4 +1,6 @@
+import { communityHierarchy } from './community-hierarchy.js';
 export function buildAdminDestinations(roles, tenants, communities, services = []) {
+  ({ tenants, communities } = communityHierarchy(tenants, communities));
   if (!roles.some(role => ['Platform Admin', 'DURANKI_ADMIN'].includes(role))) return [];
   const base = '/dashboard/platform-admin';
   const groups = [

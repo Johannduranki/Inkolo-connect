@@ -6,8 +6,8 @@ label.textContent='Language / Ulimi ';select.setAttribute('aria-label','Language
 const nodes=new Map();
 function phrase(text){
  let result=translate(text);if(result!==text)return result;
- const option=text.match(/^(.*) - (Individual|Family) - (R[\d.,]+) per month$/);if(option)return option[1]+' - '+translate(option[2])+' - '+option[3]+' '+translate('per month');
- const field=text.match(/^(Member|Spouse|Child \d+) (First name|Surname|Date of birth)$/);
+ const option=text.match(/^(.*) - (Individual|Single|Family) - (R[\d.,]+) per month$/);if(option)return option[1]+' - '+translate(option[2]==='Single'&&currentLanguage()==='zu'?'Individual':option[2])+' - '+option[3]+' '+translate('per month');
+ const field=text.match(/^(Member|Spouse|Child \d+) (First name|Surname|Date of birth|ID number \(optional\)|Contact number \(optional\))$/);
  if(field)return field[1].replace(/^Child/,translate('Child')).replace(/^Member$/,translate('Member')).replace(/^Spouse$/,translate('Spouse'))+' '+translate(field[2]);
  const child=text.match(/^Child (\d+)$/);if(child)return translate('Child')+' '+child[1];
  const price=text.match(/^(Monthly amount payable: )?(R[\d.,]+) per month$/);if(price)return (price[1]?translate('Monthly amount payable')+': ':'')+price[2]+' '+translate('per month');

@@ -5,8 +5,8 @@ export const normalizeImportPhone=value=>{
 };
 export const coreCommunityMapping={
   1:{id:'community-zuc',tenantId:'tenant-zuc',tenantName:'ZUC',name:'ZUC Community',type:'Church'},
-  2:{id:'trader-ilembe',platformCommunityId:'community-ilembe-traders',tenantId:'tenant-trader-connect',tenantName:'Trader Connect',name:'Traders KZN',type:'Traders'},
-  16:{id:'community-core-inkolo',tenantId:'tenant-inkolo',tenantName:'Inkolo',name:'Inkolo Connect',type:'General'}
+  2:{id:'trader-ilembe',platformCommunityId:'community-ilembe-traders',tenantId:'tenant-inkolo',tenantName:'Inkolo Connect',name:'Trader Connect',type:'Traders'},
+  16:{id:'community-core-inkolo',tenantId:'tenant-inkolo',tenantName:'Inkolo Connect',name:'Inkolo Connect',type:'General'}
 };
 const demoPhones=['0712345678','0725550184','0736614209','0789441132','0741002003','0763004005','0795006007','0817008009','0714101001','0714101002','0714101003','0714101004','0714101005','0714101006','0714101007','0714101008','0714101009','0714101010','0829001001'];
 export function buildCoreImport(original,source){

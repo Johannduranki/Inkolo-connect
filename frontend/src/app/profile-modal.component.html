@@ -75,8 +75,10 @@
         </label>
         <label>
           <span>Town or city</span>
-          <input type="text" [formControl]="city" placeholder="Enter town or city">
+          <input type="text" [formControl]="city" placeholder="Enter town or city" maxlength="100">
         </label>
+        <label><span>Province / region</span><input type="text" [formControl]="region" autocomplete="address-level1" maxlength="100"></label>
+        <label><span>Country</span><input type="text" [formControl]="country" autocomplete="country-name" maxlength="100"></label>
         <label>
           <span>Postal code</span>
           <input type="text" [formControl]="postalCode" placeholder="Enter postal code">

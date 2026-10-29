@@ -1,21 +1,24 @@
 import express from 'express';
 import { brandingDirectory } from './branding.js';
-import { platformAdmin, permissionsFor } from './tenant-access.js';
+import { platformAdmin, communityPermissions } from './tenant-access.js';
+import { locationForMember } from './member-location.js';
+import { inkoloTenantId, legacyTraderTenantId, traderCommunityId } from './trader-community-hierarchy.js';
 
 export function reportCommunities(state,user){
-  return brandingDirectory(state).filter(c=>c.kind==='community' && (platformAdmin(user)||permissionsFor(state,user,c.tenantId).includes('reports.view')));
+  return brandingDirectory(state).filter(c=>c.kind==='community' && (platformAdmin(user)||communityPermissions(state,user,c).includes('reports.view')));
 }
 export function communityReport(state,community,charges,receipts,from,to){
   const ids=new Set([community.id,...(community.aliases||[])]);
-  const scoped=r=>ids.has(r.communityId??r.community_id) && (r.tenantId??r.tenant_id)===community.tenantId;
+  const tenantIds = [community.tenantId, ...(community.id === traderCommunityId && community.tenantId === inkoloTenantId ? [legacyTraderTenantId] : [])];
+  const scoped=r=>ids.has(r.communityId??r.community_id) && tenantIds.includes(r.tenantId??r.tenant_id);
   const inPeriod=value=>typeof value==='string'&&value.slice(0,10)>=from&&value.slice(0,10)<=to;
   const memberIds=new Set((state.memberCommunities||[]).filter(r=>scoped({...r,communityId:r.communityId||r.churchId})).map(r=>String(r.memberId)));
-  const subscriptions=(state.serviceSubscriptions||[]).filter(s=>ids.has(s.communityId)&&(!s.tenantId||s.tenantId===community.tenantId));
+  const subscriptions=(state.serviceSubscriptions||[]).filter(s=>ids.has(s.communityId)&&(!s.tenantId||tenantIds.includes(s.tenantId)));
   const payments=[...charges.filter(r=>scoped(r)&&r.mode==='live'&&inPeriod(r.status==='CHARGED'?r.charged_at:r.created_at)).map(r=>({userId:String(r.user_id),source:'Cycle Pay',status:r.review_required?'Review required':r.status,amountCents:r.amount_cents,currency:r.currency,reference:r.reference,date:r.charged_at||r.created_at})),
     ...receipts.filter(r=>scoped(r)&&inPeriod(r.received_on)).map(r=>({userId:String(r.user_id),source:'Treasury receipt',status:'Recorded receipt',amountCents:r.received_cents,currency:'ZAR',reference:r.reference,date:r.received_on}))];
   const totals=[];
   for(const p of payments){let total=totals.find(t=>t.source===p.source&&t.status===p.status&&t.currency===p.currency);if(!total){total={source:p.source,status:p.status,currency:p.currency,amountCents:0,count:0};totals.push(total);}total.amountCents+=p.amountCents;total.count++;}
-  const members=(state.users||[]).filter(u=>memberIds.has(String(u.id))).map(u=>({id:String(u.id),name:[u.firstName||u.first_name,u.lastName||u.last_name].filter(Boolean).join(' ')||'Unnamed member',status:u.status,
+  const members=(state.users||[]).filter(u=>memberIds.has(String(u.id))).map(u=>({id:String(u.id),name:[u.firstName||u.first_name,u.lastName||u.last_name].filter(Boolean).join(' ')||'Unnamed member',status:u.status,...locationForMember(state,u.id),
     services:subscriptions.filter(s=>String(s.userId)===String(u.id)).map(s=>({name:s.serviceName||s.serviceCode,status:s.status||'Not recorded',reason:s.terminationReason||s.statusReason||null,amountCents:Number.isSafeInteger(s.amountCents)?s.amountCents:null,currency:s.currency||'ZAR',billingCycle:s.billingCycle||s.billingPeriod||(s.planCode==='monthly'?'monthly':'Not recorded')}))}));
   return {community,generatedAt:new Date().toISOString(),from,to,members,payments,totals,
     summary:{members:members.length,activeMembers:members.filter(m=>m.status==='active').length,activeServices:subscriptions.filter(s=>s.status==='active').length,
@@ -36,6 +39,10 @@ export function createCommunityReportsRouter({requireAuth,resolveUser,readState,
     if(!valid(from)||!valid(to)||from>to)return res.status(400).json({message:'Choose a valid date range.'});
     const charges=await cycleStore.tenantCharges(community.tenantId);
     const receipts=await treasuryStore.tenantReceipts(community.tenantId);
+    if (community.id === traderCommunityId && community.tenantId === inkoloTenantId) {
+      charges.push(...await cycleStore.tenantCharges(legacyTraderTenantId));
+      receipts.push(...await treasuryStore.tenantReceipts(legacyTraderTenantId));
+    }
     // Financial reads can await storage while permissions or community ownership change.
     const current=readState(),actor=current.users.find(u=>String(u.id)===String(req.auth.sub));
     const currentCommunity=reportCommunities(current,actor).find(c=>c.id===community.id&&c.tenantId===community.tenantId);

@@ -28,6 +28,8 @@ export class ProfileModalComponent implements OnInit {
   readonly email = new FormControl(this.current.email, { nonNullable: true });
   readonly address = new FormControl(this.current.address, { nonNullable: true });
   readonly city = new FormControl(this.current.city, { nonNullable: true });
+  readonly region = new FormControl(this.current.region, { nonNullable: true });
+  readonly country = new FormControl(this.current.country, { nonNullable: true });
   readonly postalCode = new FormControl(this.current.postalCode, { nonNullable: true });
   readonly emergencyContactName = new FormControl(this.current.emergencyContactName, { nonNullable: true });
   readonly emergencyContactNumber = new FormControl(this.current.emergencyContactNumber, { nonNullable: true });
@@ -51,6 +53,8 @@ export class ProfileModalComponent implements OnInit {
       email: this.email.value.trim(),
       address: this.address.value.trim(),
       city: this.city.value.trim(),
+      region: this.region.value.trim(),
+      country: this.country.value.trim(),
       postalCode: this.postalCode.value.trim(),
       emergencyContactName: this.emergencyContactName.value.trim(),
       emergencyContactNumber: this.emergencyContactNumber.value.trim()
@@ -88,6 +92,8 @@ export class ProfileModalComponent implements OnInit {
     this.email.setValue(current.email);
     this.address.setValue(current.address);
     this.city.setValue(current.city);
+    this.region.setValue(current.region);
+    this.country.setValue(current.country);
     this.postalCode.setValue(current.postalCode);
     this.emergencyContactName.setValue(current.emergencyContactName);
     this.emergencyContactNumber.setValue(current.emergencyContactNumber);

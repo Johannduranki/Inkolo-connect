@@ -20,7 +20,13 @@
     }
   }
   @if ((activeRole$ | async) === 'Member') {
-    @if (communities().length) {
+    @if (communities().length === 1) {
+      <div class="registered-community" aria-label="Registered community">
+        <span>{{ 'Community' | translate }}</span>
+        <strong>{{ communities()[0].name }}</strong>
+        <small>{{ communities()[0].tenantName }}</small>
+      </div>
+    } @else if (communities().length > 1) {
       <label>
         <span>{{ 'Community' | translate }}</span>
         <select aria-label="Member community" [ngModel]="selectedCommunity" (ngModelChange)="switchCommunity($event)">

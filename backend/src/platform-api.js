@@ -11,11 +11,12 @@ import path from 'node:path';
 import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { createPlatformId, readPlatformState as defaultReadState, updatePlatformState as defaultUpdateState } from './platform-store.js';
+import { memberLocation } from './member-location.js';
 import { resetUserServiceData } from './user-reset.js';
 import { getPool } from './database.js';
 import { editAdminProfile, profileVersion } from './admin-profile.js';
 import { userContributions } from './user-contributions.js';
-import { selectMemberCommunity } from './community-selection.js';
+import { selectMemberCommunity, memberCommunityRows } from './community-selection.js';
 import { resolveCommunityConfiguration } from '../../frontend/public/tenant-service-policy.js';
 import { serviceCatalogue, serviceEnabled } from './service-pricing.js';
 import { memberServiceScope } from './service-scope.js';
@@ -417,8 +418,9 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false, a
     const profile = await updatePlatformState((state) => {
       const existing = state.profiles.find((item) => item.userId === userId);
       const updates = Object.fromEntries(
-        allowedFields.map((field) => [field, String(req.body?.[field] ?? '').trim()])
+        allowedFields.filter(field => Object.hasOwn(req.body || {}, field)).map((field) => [field, String(req.body[field] ?? '').trim()])
       );
+      Object.assign(updates, memberLocation(req.body, existing));
       if (existing) {
         Object.assign(existing, updates);
         return existing;
@@ -999,14 +1001,14 @@ export function createPlatformRouter({ requireAuth, databaseAvailable = false, a
     );
   });
 
-  router.get('/community/me/all',(req,res)=>res.json(readPlatformState().memberCommunities.filter(m=>String(m.memberId)===currentUserId(req))));
+  router.get('/community/me/all',(req,res)=>res.json(memberCommunityRows(readPlatformState().memberCommunities,currentUserId(req))));
   router.get('/community/me', (req, res) => {
     const communityId = req.query.communityId;
     if (communityId !== undefined && (typeof communityId !== 'string' || !communityId.trim())) {
       return res.status(400).json({ message: 'Invalid community selection.' });
     }
     const membership = selectMemberCommunity(
-      readPlatformState().memberCommunities, currentUserId(req), communityId
+      memberCommunityRows(readPlatformState().memberCommunities,currentUserId(req)), currentUserId(req), communityId
     );
     if (communityId && !membership) {
       return res.status(403).json({ message: 'You are not registered in the selected community.' });
