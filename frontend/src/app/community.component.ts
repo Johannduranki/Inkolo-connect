@@ -21,6 +21,8 @@ import {
   MemberCommunicationService
 } from './core/services/member-communication.service';
 import { ProfileService } from './profile.service';
+import { HttpClient } from '@angular/common/http';
+import { membershipPayment } from '../../public/community-membership-payment.js';
 
 interface ChurchEvent {
   day: string;
@@ -56,6 +58,9 @@ export class CommunityComponent implements OnInit {
   readonly profiles = inject(ProfileService);
 
   readonly user = signal<User | null>(null);
+  private readonly http = inject(HttpClient);
+  readonly membershipPayment = signal<{ amount: string; url: string; ready: boolean } | null>(null);
+  readonly membershipNotice = signal('');
   readonly profileOpen = signal(false);
   readonly subscriptions = signal<ServiceSubscription[]>([]);
   readonly walletOpen = signal(false);
@@ -139,6 +144,12 @@ export class CommunityComponent implements OnInit {
         this.loadDirectContacts();
         this.communities.getMemberCommunity(String(user.id), this.route.snapshot.queryParamMap.get('communityId') ?? undefined).subscribe((community) => {
           this.memberCommunity.set(community);
+          if (community?.churchId && !user.communityMembershipAccess?.exempt) {
+            this.http.get('/api/cycle/billing').subscribe({
+              next: (billing) => this.membershipPayment.set(membershipPayment(billing, community.churchId)),
+              error: () => this.membershipNotice.set('Membership payment status is unavailable. Please refresh to retry.')
+            });
+          }
           this.churchSelection.setValue(community?.churchId ?? '');
           this.branchSelection.setValue(community?.branchId ?? '');
           this.loadBranches(false);

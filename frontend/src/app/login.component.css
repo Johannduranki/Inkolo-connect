@@ -189,6 +189,18 @@
   box-shadow: 0 1.5rem 4rem rgba(11, 47, 85, 0.12);
 }
 
+.login-language-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 24px;
+}
+
+.login-language-toolbar app-language-selector {
+  width: 208px;
+  max-width: 100%;
+  padding: 0;
+}
+
 .access-mode-switcher {
   display: grid;
   margin-bottom: 1.25rem;

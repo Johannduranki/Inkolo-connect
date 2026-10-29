@@ -10,7 +10,7 @@ let method;
 function visit(node){if(ts.isMethodDeclaration(node)&&node.name.getText(ast)==='availableServices'&&node.getText(ast).includes('scopedMemberCatalogue'))method=node.getText(ast);ts.forEachChild(node,visit);}
 visit(ast);assert.ok(method,'Expected current component method');
 const available=vm.runInNewContext('({'+method+'})',{scopedMemberCatalogue}).availableServices;
-const services=[{code:'community-membership'},{code:'grant-distribution'},{code:'trader-training'}];
+const services=[{code:'community-membership'},{code:'grant-distribution'},{code:'trader-training'}].map(s=>({...s,catalogueConfigured:true}));
 for(const [label,exempt,active,expected] of [
   ['exempt administrator',true,false,2],
   ['subscribed member',false,true,2],

@@ -8,7 +8,7 @@ test('every admin service has exactly one member card and explicit readiness',()
   assert.deepEqual(Object.keys(memberCapabilities).sort(),Object.keys(serviceCatalogue).sort());
   const cards=reconcileMemberCatalogue([],rows);assert.equal(cards.length,rows.length);
   assert.equal(new Set(cards.map(c=>c.canonicalCode)).size,rows.length);
-  assert.ok(cards.every(c=>c.catalogueStatus&&c.description&&c.image&&c.catalogueBlocked));
+  assert.ok(cards.every(c=>c.catalogueStatus&&c.description&&typeof c.image==='string'&&c.catalogueBlocked));
 });
 test('all enabled standard services appear while disabled tenant or community services do not',()=>{
   const cards=reconcileMemberCatalogue([],rows),codes=rows.map(r=>r.code);

@@ -66,7 +66,7 @@
         @for (service of subscribedServices(); track service.code) {
           <article class="subscribed-service" [style.--accent]="service.accent">
             <div class="subscribed-logo">
-              <img [src]="service.image" [alt]="service.name">
+              <img [attr.src]="serviceLogo(service) || null" [alt]="service.name" (error)="serviceLogoFailed($event)">
             </div>
             <div class="subscribed-copy">
               <span>{{ service.tag | translate }}</span>
@@ -237,7 +237,7 @@
           >
             <div class="image-wrap">
               <span class="service-tag">{{ service.tag | translate }}</span>
-              <img [src]="service.image" [alt]="service.name">
+              <img [attr.src]="serviceLogo(service) || null" [alt]="service.name" (error)="serviceLogoFailed($event)">
             </div>
             <button
               class="image-subscribe-button"
@@ -245,7 +245,7 @@
               (click)="openService(service)"
             >
               {{
-                subscriptionFor(service.code)
+                ['community', 'community-membership'].includes(service.code) || subscriptionFor(service.code)
                   ? ('Open' | translate)
                   : service.application
                     ? ('Apply now' | translate)
@@ -260,7 +260,9 @@
                 [class.subscribed]="subscriptionFor(service.code)"
                 (click)="openService(service)"
               >
-                @if (service.availability === 'coming-soon') {
+                @if (['community', 'community-membership'].includes(service.code)) {
+                  {{ "Open" | translate }}
+                } @else if (service.availability === 'coming-soon') {
                   {{ "Coming soon" | translate }}
                 } @else if (service.application && stepUpApplicationStatus()) {
                   {{ "Application submitted" | translate }}
@@ -411,7 +413,7 @@
         </button>
 
         <div class="modal-service">
-          <img [src]="service.image" [alt]="service.name">
+          <img [attr.src]="serviceLogo(service) || null" [alt]="service.name" (error)="serviceLogoFailed($event)">
           <div>
             <p class="eyebrow">SERVICE SUBSCRIPTION</p>
             <h2 id="subscription-title">{{ service.name | translate }}</h2>

@@ -974,14 +974,24 @@ export class DashboardComponent implements OnInit {
       if (!response.ok) throw new Error('Pricing unavailable');
       const data = await response.json() as { services: Array<{ code: string; mode: string; amountCents: number }> };
       const training=await fetch('/api/trader-training/access',{headers:{Authorization:'Bearer '+token},cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
+      const funeral = data.services.some(s => s.code === 'funeral-cover')
+        ? await fetch('/api/funeral-cover/member?communityId=' + encodeURIComponent(selectedCommunity), {headers:{Authorization:'Bearer '+token},cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null)
+        : null;
       if (request !== this.catalogueRequest) return;
-      this.services.splice(0,this.services.length,...reconcileMemberCatalogue(this.services,data.services,true,programmeContext(training,this.memberCommunity()?.churchId)));
+      this.services.splice(0,this.services.length,...reconcileMemberCatalogue(this.services,data.services,true,{...programmeContext(training,this.memberCommunity()?.churchId),funeralReady:funeral?.plans?.length > 0,funeralLogo:funeral?.logoUrl}));
       // Native fetch does not schedule a render in the zoneless Angular client.
       this.changeDetector.markForCheck();
     } catch { if (request === this.catalogueRequest) this.subscriptionError.set('Service pricing could not be loaded. Please refresh.'); }
   }
 
   openService(service: Service): void {
+    if (['community', 'community-membership'].includes(service.code)) {
+      const communityId = this.memberCommunity()?.churchId;
+      if (communityId) {
+        void this.router.navigate(['/community'], { queryParams: { communityId } });
+      }
+      return;
+    }
     if(service.code==='funeral'){
       window.location.assign('/dashboard/funeral-application?communityId='+encodeURIComponent(this.memberCommunity()?.churchId||''));return;
     }
@@ -995,11 +1005,6 @@ export class DashboardComponent implements OnInit {
     }
     if (service.code === 'loans') {
       window.alert('Loans is enabled for this community, but loan applications, approvals and payouts are not yet connected.');
-      return;
-    }
-    if (service.code === 'community-membership' && this.user()?.communityMembershipAccess?.exempt === true) {
-      const id = this.memberCommunity()?.churchId ?? new URLSearchParams(window.location.search).get('communityId');
-      window.location.assign('/community' + (id ? '?communityId=' + encodeURIComponent(id) : ''));
       return;
     }
     if (!this.isServiceActive(service) && !service.plans.length) {
@@ -1018,10 +1023,6 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
-    if (service.code === 'community' && this.isServiceActive(service)) {
-      void this.router.navigate(['/community']);
-      return;
-    }
 
     if (service.code === 'job-search' && this.isServiceActive(service)) {
       this.jobsOpen.set(true);
@@ -1642,8 +1643,21 @@ export class DashboardComponent implements OnInit {
     return Boolean(this.subscriptionFor(service.code));
   }
 
+  readonly failedServiceImages = signal<string[]>([]);
+
+  serviceLogo(service: Service): string {
+    const member = this.memberCommunity();
+    const logo = this.communityChurches().find(c => c.id === member?.churchId || c.id === member?.serviceConfiguration?.id)?.branding?.logoUrl;
+    return [service.image, logo, '/duranki-up-logo.png'].find(url => url && !this.failedServiceImages().includes(url)) || '';
+  }
+
+  serviceLogoFailed(event: Event): void {
+    const url = (event.target as HTMLImageElement).getAttribute('src');
+    if (url && !this.failedServiceImages().includes(url)) this.failedServiceImages.update(urls => [...urls, url]);
+  }
+
   subscribedServices(): Service[] {
-    return this.services
+    return scopedMemberCatalogue(this.services,this.memberCommunity()?.serviceConfiguration,true)
       .filter((service) => this.isServiceActive(service))
       .sort((first, second) => {
         if (first.code === 'wallet') return -1;
@@ -1873,7 +1887,7 @@ export class DashboardComponent implements OnInit {
   availableServices(): Service[] {
     try {
       const configuration=this.memberCommunity()?.serviceConfiguration ?? null;
-      return scopedMemberCatalogue(this.services,configuration).filter(service=>!this.isServiceActive(service)&&!(service.code==='community-membership'&&this.user()?.communityMembershipAccess?.exempt===true));
+      return scopedMemberCatalogue(this.services,configuration,true).filter(service=>!this.isServiceActive(service)&&!(service.code==='community-membership'&&this.user()?.communityMembershipAccess?.exempt===true));
     } catch {return [];}
   }
 

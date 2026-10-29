@@ -42,6 +42,19 @@
     </div>
   </header>
 
+  @if (membershipPayment(); as payment) {
+    <section class="membership-payment" aria-label="Community membership payment">
+      <div>
+        <strong>Community membership: {{ payment.amount }} per month</strong>
+        <p>{{ payment.ready ? 'Membership payment is due. You can still view your community.' : 'Membership payment is due. Online collection is not available yet; no payment has been taken.' }}</p>
+      </div>
+      <a [href]="payment.url">Pay membership</a>
+    </section>
+  }
+  @if (membershipNotice()) {
+    <p class="membership-payment" role="status">{{ membershipNotice() }}</p>
+  }
+
   <section class="community-workspace-banner" aria-labelledby="community-active-heading">
     <div class="community-workspace-top">
       <div class="community-workspace-switcher" aria-label="Workspace navigation">

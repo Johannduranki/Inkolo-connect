@@ -16,7 +16,9 @@
 
   <section class="form-panel">
     <form class="login-card" (submit)="submit(); $event.preventDefault()" novalidate>
-      <app-language-selector />
+      <div class="login-language-toolbar">
+        <app-language-selector [compact]="true" />
+      </div>
       <div class="mobile-brand">
         <img class="inkolo-logo mobile" src="/duranki-up-logo-transparent.png" alt="Duranki">
       </div>

@@ -1726,3 +1726,25 @@
     grid-column: 1 / -1;
   }
 }
+:host .membership-payment {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  background: #edf7fa;
+  border-bottom: 1px solid #c6dfe6;
+  color: #174859;
+}
+:host .membership-payment p { margin: 6px 0 0; }
+:host .membership-payment a {
+  flex-shrink: 0;
+  padding: 12px 18px;
+  border-radius: 8px;
+  background: #116b71;
+  color: white;
+  font-weight: 600;
+  text-decoration: none;
+}
+:host .membership-payment a:focus-visible { outline: 3px solid #087ce8; outline-offset: 3px; }

@@ -31,20 +31,21 @@ export function reconcileMemberCatalogue(existing, rows, loaded = true, context 
     const detail = cap.detail || (cap.issue ? 'The member workflow has not been implemented yet.' : '');
     const priceNote = !loaded ? 'Service pricing could not be loaded. Refresh to retry.' : !row.mode || row.mode === 'unconfigured' ? 'An administrator must set free access or a monthly price.' : row.mode === 'paid' ? 'Monthly access price: R'+(row.amountCents/100).toFixed(2)+(row.checkoutReady?'. Pay securely through Cycle Pay.':'. Cycle Pay configuration is required.') : 'No monthly access fee.';
     const blocked = !['Available','Cycle Pay checkout'].includes(status);
-    return {...old,code,name:row.name,canonicalCode:row.code,image:old.image || '/duranki-up-logo.png',accent:old.accent || '#007c94',
+    return {...old,code,name:row.name,canonicalCode:row.code,image:row.logoUrl || (row.code === 'funeral-cover' ? context.funeralLogo : '') || old.image || '',accent:old.accent || '#007c94',
       description:[detail,priceNote].filter(Boolean).join(' '),tag:status,catalogueStatus:status,catalogueDetail:[detail,priceNote].filter(Boolean).join(' '),
+      catalogueConfigured: loaded && (row.code === 'funeral-cover' ? context.funeralReady === true : ['Available','Cycle Pay checkout'].includes(status)),
       catalogueBlocked:blocked,catalogueRoute:cap.route || '',availability:blocked?'coming-soon':'available',
       billingNote:priceNote,plans:['free','paid'].includes(row.mode)&&!cap.issue?[{code:row.mode==='free'?'configured-free':'configured-monthly',name:row.name+' access',price:row.mode==='free'?'Free':'R'+(row.amountCents/100).toFixed(2)+' / month',description:priceNote}]:[]};
   });
 }
 
-export function scopedMemberCatalogue(services,configuration) {
+export function scopedMemberCatalogue(services,configuration,configuredOnly = false) {
   const selected=services.filter(service=>enabledMemberService(service,configuration));
   for(const code of configuration?.serviceCodes || []){
     if(selected.some(service=>enabledMemberService(service,{serviceCodes:[code]})))continue;
     selected.push({code,canonicalCode:code,name:String(code).replace(/-/g,' '),image:'/duranki-up-logo.png',accent:'#007c94',tag:'Not yet implemented',catalogueStatus:'Not yet implemented',catalogueDetail:'This enabled custom service does not yet have a member workflow.',catalogueBlocked:true,description:'This enabled custom service does not yet have a member workflow.',availability:'coming-soon',plans:[]});
   }
-  return selected;
+  return configuredOnly ? selected.filter(service => service.catalogueConfigured === true) : selected;
 }
 
 export function programmeContext(data,communityId) {
