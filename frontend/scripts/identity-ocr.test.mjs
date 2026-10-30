@@ -23,10 +23,31 @@ test('reads smart-card labels on separate lines without consuming the next label
   assert.equal(parseIdentityText('Names\nSurname\nSAMPLE').firstName,'');
 });
 
-test('does not invent unreadable fields or infer gender/date from an ID number', () => {
+test('does not invent unreadable fields or override an explicitly invalid date', () => {
   assert.deepEqual(parseIdentityText('No readable fields'),{firstName:'',lastName:'',idNumber:'',dateOfBirth:'',gender:''});
   const result = parseIdentityText('ID Number: 9001015009087\nDOB: 31 FEB 1990\nSex: unclear\nSurname: 1234');
   assert.equal(result.dateOfBirth,'');assert.equal(result.gender,'');assert.equal(result.lastName,'');
+});
+
+test('derives missing date only from checksum-valid synthetic ID and keeps gender explicit', () => {
+  const prefix = '900101500908';
+  const sum = [...prefix].reduce((total,digit,index) => {
+    const n = Number(digit) * (index % 2 ? 2 : 1);
+    return total + (n > 9 ? n - 9 : n);
+  },0);
+  const id = prefix + ((10 - sum % 10) % 10);
+  const fields = parseIdentityText(`Identity Number: ${id}`);
+  assert.equal(fields.dateOfBirth,'1990-01-01');
+  assert.equal(fields.gender,'');
+  assert.equal(parseIdentityText(`Identity Number: ${prefix}${(Number(id[12])+1)%10}`).dateOfBirth,'');
+});
+
+test('reads punctuation noise around smart-card labels', () => {
+  const fields = parseIdentityText('| Surname;\nSAMPLE\nNames :\nEXAMPLE PERSON\nSex;\nM\nDate of Birth:\n01  JAN  1990');
+  assert.equal(fields.firstName,'EXAMPLE PERSON');
+  assert.equal(fields.lastName,'SAMPLE');
+  assert.equal(fields.gender,'male');
+  assert.equal(fields.dateOfBirth,'1990-01-01');
 });
 
 test('validates calendar dates and supports hyphenated names', () => {

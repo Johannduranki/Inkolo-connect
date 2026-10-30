@@ -9,12 +9,12 @@ export interface IdentityTextFields {
 const labels = /^(?:surname|last name|first names?|forenames?|names?|sex|gender|date of birth|birth date|dob|identity number|id number|nationality|country(?: of birth)?|date of issue)\b/i;
 
 export function parseIdentityText(text: string): IdentityTextFields {
-  const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  const lines = text.split(/\r?\n/).map(line => line.trim().replace(/^[|:;.]+\s*/, '').replace(/\s+/g, ' ')).filter(Boolean);
   function field(label: RegExp): string {
     for (let i = 0; i < lines.length; i++) {
       const match = lines[i].match(label);
       if (!match) continue;
-      const value = (match[1] || '').trim() || lines[i + 1] || '';
+      const value = (match[1] || '').replace(/^[:;.\s|]+/, '').trim() || lines[i + 1] || '';
       if (!labels.test(value)) return value;
     }
     return '';
@@ -23,11 +23,26 @@ export function parseIdentityText(text: string): IdentityTextFields {
   const id = field(/^(?:identity number|id number)\s*[:.]?\s*(.*)$/i).replace(/[ \t-]/g, '');
   const birth = field(/^(?:date of birth|birth date|dob)\s*[:.]?\s*(.*)$/i);
   const gender = field(/^(?:sex|gender)\s*[:.]?\s*(.*)$/i);
+  const idNumber = /^\d{13}$/.test(id) ? id : text.match(/\b\d{13}\b/)?.[0] || '';
+  // Only derive a missing date from a checksum-valid SA identity number.
+  let derivedBirth = '';
+  if (/^\d{10}[01]8\d$/.test(idNumber)) {
+    const sum = [...idNumber].reduce((total, digit, index) => {
+      const n = Number(digit) * (index % 2 ? 2 : 1);
+      return total + (n > 9 ? n - 9 : n);
+    }, 0);
+    if (sum % 10 === 0) {
+      const yy = Number(idNumber.slice(0, 2));
+      const year = yy > new Date().getFullYear() % 100 ? 1900 + yy : 2000 + yy;
+      derivedBirth = parseBirthDate(`${year}-${idNumber.slice(2,4)}-${idNumber.slice(4,6)}`);
+      if (derivedBirth > new Date().toISOString().slice(0,10)) derivedBirth = '';
+    }
+  }
   return {
     firstName: name(field(/^(?:first names?|forenames?|names?)\s*[:.]?\s*(.*)$/i)),
     lastName: name(field(/^(?:surname|last name)\s*[:.]?\s*(.*)$/i)),
-    idNumber: /^\d{13}$/.test(id) ? id : text.match(/\b\d{13}\b/)?.[0] || '',
-    dateOfBirth: parseBirthDate(birth),
+    idNumber,
+    dateOfBirth: birth ? parseBirthDate(birth) : derivedBirth,
     gender: /^(?:m|male)$/i.test(gender) ? 'male' : /^(?:f|female)$/i.test(gender) ? 'female' : ''
   };
 }

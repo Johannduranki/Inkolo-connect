@@ -8,7 +8,6 @@ import { Router } from '@angular/router';
 import { AuthService } from './auth.service';
 import { MemberCommunityService } from './core/services/member-community.service';
 import { RoleService, UserRole } from './core/services/role.service';
-import { parseIdentityText } from './identity-ocr';
 
 @Component({
   selector: 'app-login',
@@ -92,16 +91,41 @@ export class LoginComponent {
       if (!model.ok) throw new Error('OCR model is unavailable.');
       if (version !== this.scanVersion) return;
       const module = await import('tesseract.js');
+      const { parseIdentityText } = await import('./identity-ocr');
       const { recognize } = module.default ?? module;
-      const result = await recognize(file, 'eng', {
+      const options = {
         workerPath: window.location.origin + '/tesseract/worker.min.js',
         corePath: window.location.origin + '/tesseract-core',
         langPath: window.location.origin + '/tesseract-data',
-        cacheMethod: 'none',
+        cacheMethod: 'none' as const,
         errorHandler: () => { /* Show the existing safe manual-entry fallback. */ }
-      });
+      };
+      const result = await recognize(file, 'eng', options);
       if (version !== this.scanVersion) return;
       const fields = parseIdentityText(result.data.text);
+      if (!fields.firstName || !fields.lastName || !fields.dateOfBirth || !fields.gender) {
+        // Enlarge the text side of landscape smart cards without uploading it.
+        try {
+          const bitmap = await createImageBitmap(file);
+          try {
+            const canvas = document.createElement('canvas');
+            const width = bitmap.width > bitmap.height * 1.3 ? bitmap.width * 0.65 : bitmap.width;
+            const scale = Math.min(4, 2000 / Math.max(width, bitmap.height));
+            canvas.width = Math.round(width * scale);
+            canvas.height = Math.round(bitmap.height * scale);
+            const context = canvas.getContext('2d');
+            if (context && version === this.scanVersion) {
+              context.filter = 'grayscale(1) contrast(1.3)';
+              context.drawImage(bitmap, 0, 0, width, bitmap.height, 0, 0, canvas.width, canvas.height);
+              const retry = parseIdentityText((await recognize(canvas, 'eng', options)).data.text);
+              for (const key of ['firstName','lastName','idNumber','dateOfBirth','gender'] as const) {
+                if (!fields[key]) fields[key] = retry[key];
+              }
+            }
+          } finally { bitmap.close(); }
+        } catch { /* Keep any fields read successfully by the first pass. */ }
+      }
+      if (version !== this.scanVersion) return;
       for (const key of ['firstName','lastName','idNumber','dateOfBirth','gender'] as const) {
         if (fields[key] && !this[key].value) this[key].setValue(fields[key]);
       }
