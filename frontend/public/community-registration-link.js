@@ -78,7 +78,9 @@
     existingLoginNotice();
     if (location.pathname === '/two-factor' || location.pathname === '/join-community') return;
     const header = document.querySelector('header');
-    if (header && !header.querySelector('[data-join-community]')) {
+    const communityPage = location.pathname.replace(/\/+$/, '') === '/community';
+    if (communityPage) header?.querySelector('[data-join-community]')?.remove();
+    if (header && !communityPage && !header.querySelector('[data-join-community]')) {
       const link = document.createElement('a'); link.dataset.joinCommunity = 'true';
       link.href = '/join-community'; link.textContent = 'Join a community';
       link.style.cssText = 'display:inline-block;padding:10px 14px;font:600 14px/1.4 Segoe UI,sans-serif;color:inherit'; header.append(link);

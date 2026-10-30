@@ -60,11 +60,12 @@ if (typeof document !== 'undefined') {
   const sync = () => {
     installTenantOperations(document, location);
     applyCommunityIdentity(document, location.href);
-    if (['/community','/dashboard/member'].includes(location.pathname)) {
+    if (['/community','/dashboard/member'].includes(location.pathname.replace(/\/+$/, ''))) {
       const header=document.querySelector('header');
       if(header&&header.querySelector('app-role-switcher')&&!header.querySelector('[data-cycle-pay]')){
         const link=document.createElement('a');link.dataset.cyclePay='true';link.href='/payments/cycle';link.textContent='My payments';link.style.cssText='padding:10px;color:#166853;font-weight:600';header.append(link);
       }
+      header?.querySelector('[data-cycle-pay]')?.classList.toggle('community-payments-button', location.pathname.replace(/\/+$/, '') === '/community');
     } else document.querySelector('[data-cycle-pay]')?.remove();
     document.querySelectorAll('app-role-switcher select').forEach(select => synchronizeSwitcher(select, location));
     if (location.pathname === '/dashboard/platform-admin') {
