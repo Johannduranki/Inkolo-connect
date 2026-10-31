@@ -36,11 +36,27 @@ export async function writeSqlDocument(connection,id,state,revision,expectedRevi
 }
 
 export class MysqlPlatformStore {
-  constructor(pool,id='platform') { this.pool=pool;this.id=id;this.queue=Promise.resolve();this.healthy=false; }
+  constructor(pool,id='platform',{heartbeatMs=30000}={}) {
+    if (!Number.isInteger(heartbeatMs) || heartbeatMs<100) throw Error('Invalid storage heartbeat interval.');
+    this.pool=pool;this.id=id;this.queue=Promise.resolve();this.healthy=false;this.heartbeatMs=heartbeatMs;this.closed=false;
+  }
   async open() {
+    await this.connect();
+    this.timer=setInterval(()=>{this.maintain().catch(()=>{});},this.heartbeatMs);
+    this.timer.unref?.();
+  }
+  discard() {
+    this.healthy=false;
+    const previous=this.connection;this.connection=undefined;
+    previous?.destroy();
+  }
+  async connect() {
+    if(this.closed)throw unavailable();
+    this.discard();
     const c = this.connection = await this.pool.getConnection();
-    c.on('error',()=>{this.healthy=false;});
-    c.on('end',()=>{this.healthy=false;});
+    const lost=()=>{if(this.connection===c)this.healthy=false;};
+    c.on('error',lost);
+    c.on('end',lost);
     try {
       const [[database]] = await c.query('SELECT DATABASE() AS name');
       this.lockName='duranki-platform-'+platformDigest(`${database.name}:${this.id}`).slice(0,40);
@@ -50,23 +66,44 @@ export class MysqlPlatformStore {
         const [[migration]]=await c.query('SELECT id FROM duranki_platform_migration WHERE id=1');
         if(!migration)throw Error('Platform storage is not initialized. Run npm run bootstrap.');
       }
+      await c.beginTransaction();
       const loaded = await readSqlDocument(c,this.id);
+      await c.commit();
+      if(this.closed)throw unavailable();
       this.state=freeze(loaded.state);this.revision=loaded.revision;this.healthy=true;
-    } catch(error) { c.destroy();throw error; }
+    } catch(error) { this.discard();throw error; }
+  }
+  async checkConnection() {
+    try {
+      const [[lock]]=await this.connection.execute('SELECT IS_USED_LOCK(?)=CONNECTION_ID() AS owned',[this.lockName]);
+      if(Number(lock.owned)!==1)throw unavailable();
+    } catch(error) {this.discard();throw error;}
+  }
+  maintain() {
+    if(this.closed)return Promise.resolve();
+    if(this.maintenance)return this.maintenance;
+    const work=this.queue.then(async()=>{
+      if(this.closed)return;
+      if(this.healthy)await this.checkConnection().catch(()=>{});
+      if(!this.healthy)await this.connect();
+    });
+    this.queue=work.catch(()=>{});this.maintenance=work;
+    work.then(()=>{this.maintenance=undefined;},()=>{this.maintenance=undefined;});
+    return work;
   }
   read() {
-    if (!this.healthy) throw unavailable();
+    if (!this.healthy) {this.maintain().catch(()=>{});throw unavailable();}
     return this.state;
   }
   update(mutator) {
     const work = this.queue.then(async()=>{
-      this.read();
+      if(this.closed)throw unavailable();
+      if(!this.healthy)await this.connect();
+      await this.checkConnection();
       const draft=structuredClone(this.state);
       const result=mutator(draft);
       if (result && typeof result.then==='function') throw Error('Platform mutations must be synchronous.');
       const c=this.connection;
-      const [[lock]] = await c.execute('SELECT IS_USED_LOCK(?)=CONNECTION_ID() AS owned',[this.lockName]);
-      if (Number(lock.owned)!==1) {this.healthy=false;throw unavailable();}
       let committing=false;
       await c.beginTransaction();
       try {
@@ -86,6 +123,8 @@ export class MysqlPlatformStore {
     return work;
   }
   async close() {
+    this.closed=true;
+    clearInterval(this.timer);
     await this.queue;
     this.healthy=false;
     if(this.connection){
